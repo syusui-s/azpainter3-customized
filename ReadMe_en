@@ -1,0 +1,137 @@
+**********************************************
+  AzPainter
+  Copyright (C) 2013-2020 Azel
+
+  http://azsky2.html.xdomain.jp/
+  <azelpg@gmail.com>
+**********************************************
+
+This software is released under the GPL3 License.
+Please see the file GPL3 for details.
+
+
+=====================================
+ * Overview
+=====================================
+
+It is mainly full color painting software for illustration drawing.
+
+
+=====================================
+ * Operating environment
+=====================================
+
+- Linux/FreeBSD/macOS(need XQuartz)
+
+- X11R6 or later
+
+
+=====================================
+ * What you need to compile
+=====================================
+
+You need the C compiler, make, and development files for various libraries.
+
+[Required libraries]
+  x11 xext xinput
+  zlib libpng jpeglib(jpeg-turbo) fontconfig freetype2
+
+
+## Required packages in each distribution
+----------------------------------------------
+
+(Debian/Ubuntu)
+
+  gcc or clang, make libx11-dev libxext-dev libxi-dev libfreetype6-dev
+  libfontconfig1-dev zlib1g-dev libpng-dev libjpeg-dev
+
+(RedHat)
+
+  gcc or clang, make libX11-devel libXext-devel libXi-devel libfreetype6-devel
+  libfontconfig-devel zlib-devel libpng-devel libjpeg-devel
+
+(Arch Linux)
+
+  gcc or clang, make libx11 libxext libxi freetype2 fontconfig zlib
+  libpng libjpeg-turbo
+  
+(FreeBSD)
+
+  gmake png jpeg-turbo
+
+  - Not compatible with BSD make.
+
+(macOS)
+
+  xcode libpng jpeg-turbo
+
+  - It is assumed that XQuartz is installed.
+
+
+=====================================
+ * Compile and install
+=====================================
+
+After extracting the source archive,
+go to the directory where it was extracted, and execute the following.
+
+## Linux
+
+$ ./configure
+$ make
+$ sudo make install
+
+## FreeBSD
+
+$ ./configure
+$ gmake
+# gmake install
+
+## macOS
+
+$ ./configure --prefix=/opt/X11
+$ make
+$ sudo make install
+
+
+It will be installed in the "/usr/local" by default.
+
+You can change the compile configuration by specifying options at configure runtime.
+The help for configure can be found at . /configure --help for help with configure.
+
+
+[exsample] Install to /usr
+
+$ ./configure --prefix=/usr
+
+
+=====================================
+ * Setting files
+=====================================
+
+'~/.azpainter'
+
+
+=====================================
+ * How to use
+=====================================
+
+Shortcut to the "graphics" category of the main menu of the desktop
+has been created, you can start from there.
+
+If you want to start from the terminal, you can start with the following command.
+
+$ azpainter
+
+
+=====================================
+ * Environment variable
+=====================================
+
+If the following environment variables are defined at startup,
+settings etc. can be changed.
+
+MLIB_APPDATADIR
+	Specify the location of the directory where the data files necessary
+	for running the application are located.
+	By default, it is "<INSTALLDIR>/share/azpainterb".

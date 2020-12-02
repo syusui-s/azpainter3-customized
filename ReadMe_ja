@@ -1,0 +1,226 @@
+**********************************************
+  AzPainter for Linux
+  Copyright (C) 2013-2020 Azel
+
+  http://azsky2.html.xdomain.jp/
+  <azelpg@gmail.com>
+**********************************************
+
+このソフトウェアは、GPL3 ライセンスです。
+詳しくは GPL3 ファイルをご覧ください。
+
+
+=====================================
+ * 概要
+=====================================
+
+主にイラスト描画用のフルカラーペイントソフトです。
+レタッチとしても使えますが、ドット編集や画像編集には向いていません。
+
+- 内部では、色は 16bit カラー (15bit 固定小数点数) で処理されます。
+  精度が高くなる代わりに、メモリを多く消費します。
+
+- 筆圧対応 (XInput2 使用)
+
+
+=====================================
+ * 動作環境
+=====================================
+
+- Linux/FreeBSD/macOS(要XQuartz)
+
+- X11R6 以降
+  (筆圧を認識したい場合は X11R7.5 以降)
+
+
+=====================================
+ * コンパイルに必要なもの
+=====================================
+
+- C コンパイラ
+- make
+- 各種ライブラリの開発用ファイル
+
+[必要なライブラリ]
+  x11 xext xinput
+  zlib libpng jpeglib(jpeg-turbo) fontconfig freetype2
+
+
+＃ 各ディストリビューションごとの必要なパッケージ
+---------------------------------------------------
+
+※パッケージ名は変化している場合があります。
+
+(Debian/Ubuntu 系)
+
+  gcc or clang, make libx11-dev libxext-dev libxi-dev libfreetype6-dev
+  libfontconfig1-dev zlib1g-dev libpng-dev libjpeg-dev
+
+(RedHat 系)
+
+  gcc or clang, make libX11-devel libXext-devel libXi-devel libfreetype6-devel
+  libfontconfig-devel zlib-devel libpng-devel libjpeg-devel
+
+(Arch Linux)
+
+  gcc or clang, make libx11 libxext libxi freetype2 fontconfig zlib
+  libpng libjpeg-turbo
+  
+  [*] GUI 環境がインストールされていれば、ほぼインストールされています。
+
+(FreeBSD)
+
+  gmake png jpeg-turbo
+
+  [*] xorg がインストールされていれば、ほぼインストールされています。
+  [*] BSD make には対応していません。
+
+(macOS)
+
+  xcode libpng jpeg-turbo
+
+  [*] XQuartz がインストールされていることが前提です。
+
+
+=====================================
+ * コンパイル/インストール
+=====================================
+
+アーカイブの展開後、展開したディレクトリ内に移動して、
+以下を実行してください。
+
+## Linux
+
+$ ./configure
+$ make
+$ sudo make install
+
+## FreeBSD
+
+$ ./configure
+$ gmake
+# gmake install
+
+## macOS
+
+$ ./configure --prefix=/opt/X11
+$ make
+$ sudo make install
+
+
+デフォルトで /usr/local 下にインストールされます。
+
+./configure 実行時にオプションを指定すると、コンパイルの設定を変更できます。
+configure のヘルプは、$ ./configure --help で表示できます。
+
+
+[例] /usr にインストール
+
+$ ./configure --prefix=/usr
+
+
+=====================================
+ * 使い方
+=====================================
+
+デスクトップのメインメニューの「グラフィックス」カテゴリーに
+ショートカットが作成されているので、そこから起動できます。
+(ショートカットやアイコンはすぐに反映されない場合があります)
+
+端末から起動する場合は、以下のコマンドで起動します。
+
+$ azpainter
+
+
+=====================================
+ * 設定ファイル
+=====================================
+
+"~/.azpainter" に設定ファイルが保存されます。
+
+
+=====================================
+ * アンインストール
+=====================================
+
+＃ Makefile を使う
+-----------------------
+
+./configure で生成した Makefile が残っている場合は、
+Makefile があるディレクトリ上で、以下を実行します。
+
+$ sudo make uninstall
+
+※設定ファイルのディレクトリは削除されないため、手動で削除してください。
+
+
+＃ 手動でファイル削除
+-----------------------
+
+手動でアンインストールする場合は、以下のファイルを削除してください。
+
+<INSTALLDIR> は、インストール先のディレクトリです。
+(configure の --prefix で指定したディレクトリ。デフォルトで "/usr/local")
+
+** ディレクトリごと削除するもの
+
+<INSTALLDIR>/share/azpainter
+<INSTALLDIR>/doc
+~/.azpainter (設定ファイル)
+
+** ファイルを個別に削除するもの
+
+<INSTALLDIR>/share/applications
+  azpainter.desktop
+
+<INSTALLDIR>/share/mime/packages
+  azpainter.xml
+
+<INSTALLDIR>/share/icons/hicolor/48x48/apps
+  azpainter.png
+  application-x-azpainter-apd.png
+
+<INSTALLDIR>/share/icons/hicolor/scalable/apps
+  azpainter.svg
+  application-x-azpainter-apd.svg
+
+
+=====================================
+ * 環境変数
+=====================================
+
+起動時に以下の環境変数が定義されていると、設定などを変更できます。
+
+MLIB_APPDATADIR
+	アプリを動作させるのに必要なデータファイルのディレクトリの場所を指定します。
+	デフォルトでは、"<INSTALLDIR>/share/azpainterb" になっています。
+
+
+=====================================
+ * ver.1 からの移行について
+=====================================
+
+ver.1 -> ver.2 は大幅な変更となっております。
+
+ver.2 の設定ファイルは、ver.1 と同じ場所に作成されます。
+ただし、各ファイル名はバージョンごとに異なるので、ver.1 のデータはそのまま残ります。
+
+ver.1 の設定ファイルが必要ない場合は、削除して構いません。
+(main.conf, brush.dat, key.dat, palette.dat)
+
+[!] グラデーションデータ (grad.dat) は ver.1 と同じフォーマットのため、
+    そのまま同じファイル名で共有します。
+
+ブラシとテクスチャの画像は、そのまま ver.1 と同じ状態で、引き続き使うことが出来ます。
+
+
+＃ データ移行
+---------------------
+
+ver.1 の設定ファイルが存在する場合、
+初回起動時に ver.1 のデータを ver.2 に移行するかどうかのメッセージが出るので、
+それに「はい」と答えれば、
+ver.1 のブラシデータとカラーパレットデータを ver.2 用に変換することが出来ます。
+
+ブラシとカラーパレット以外のデータは移行されません。
+

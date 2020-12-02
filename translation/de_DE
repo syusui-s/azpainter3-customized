@@ -1,0 +1,1307 @@
+[65535]
+1=OK
+2=Abbrechen
+3=Ja
+4=Nein
+5=Speichern
+6=Nicht speichern
+7=Abbrechen
+8=Diese Meldung nicht anzeigen
+9=Öffnen
+10=Dateiname
+11=Typ
+12=Vorschau
+13=Stil
+14=Größe
+15=Gewicht
+16=Slant
+17=Rendering
+18=abcdefg ABCDEFG 01234
+19=Dateigröße
+20=Änderungsdatum
+21=Verborgene Dateien anzeigen
+1000=Datei öffnen
+1001=Datei speichern
+1002=Verzeichnis auswählen
+1003=Farbe auswählen
+1004=Schriftart auswählen
+2000=Die Datei existiert bereits. \nWollen Sie sie überschreiben?
+2001=Dateiname ist nicht korrekt.
+
+#-----------------
+# word
+
+[0]
+0=Breite
+1=Höhe
+2=Farbe
+3=Density
+4=Painting
+5=Anti-Aliasing
+6=Ordner
+7=Ebene
+8=Name
+
+#-------------------------------
+# MainWindow - toolbar tooltip
+
+[4]
+0=Neu
++=Öffnen
++=Überschreiben
++=Speichern unter
++=Als Kopie speichern
++=Panels anzeigen
++=Leinwand horizontal spiegeln
++=Hintergrund als Karomuster anzeigen
++=Gitter anzeigen
++=Trennlinie anzeigen
++=Zoom
++=Rückgängig
++=Wiederholen
++=Ebene löschen
++=Auswahl freigeben
++=Zuletzt verwendete Dateien
+
+#-----------------------
+# drop menu - save dup
+
+[5]
+0=speichern als
++=gleicher Dateityp wie die aktuelle Datei
+
+#------------------------
+# status bar - help
+
+[8]
+0=[Shift: Pinselgröße ändern] [Strg: Linealeinstellungen] [Alt: Farbe mit Farbpipette auswählen]
++=[Shift: Quellebene des Füllwerkzeugs ignorieren] [Strg: durch "transparent" bestimmen]
++=[Klicken Sie um Text einzugeben] [Klicken  um die Textposition zu ändern]
++=[Shift: horizontal] [Strg: vertikal]
++=[+Strg beim Drücken: Auswahl löschen]
++=[+Umschalttaste beim Drücken: überschreiben] [Strg: Auswahlrahmen beim Ziehen ausblenden] [Strg: Auswahlrahmen beim Ziehen ausblenden
++=[Klicken Sie um einzufügen, wenn ein Bild vorhanden ist] [Strg: Bild löschen und erneut auswählen]
++=[Strg: Farbe auf der aktuellen Ebene] [Shift: als Maskenfarbe festlegen] [Alt: zur Maskenfarbe hinzufügen]
+
++=[Shift: im Winkel von 45°]
++=[Shift: Quadrat]
++=[Shift: Kreis]
++=[Shift: im Winkel von 45°] [Rechts/Links DBLCLK/Enter/ESC: Ziel] [BS: mit Startpunkt verbinden und abschließen ]
++=[Shift: im Winkel von 45°] [Rechts/Links DBLCLK/Enter/ESC: Ende] [Rechts/Links DBLCLK/Enter/ESC: abschließen]
++=[Shift: im Winkelvon 45°] [Rechts/ESC: Abbrechen] [BS: Zum Kontrollpunkt 1 zurückkehren]
++=[Punkte durch Anklicken hinzufügen (+Ctrl: Druck 0)] [BS: einen zurück] [Rechts/Links DBLCLK/Enter: zeichnen] [ESC: abbrechen]
++=[Verschiebung: im Winkel von 45°] [Rechts/Links DBLCLK/Eingabe: zeichnen] [ESC: abbrechen]
+
+
+#----------------
+# tool
+
+[100]
+0=Brush
++=eckiges Füllwerkzeug
++=eckiger Radiergummi
++=Füllwerkzeug
++=Opaque area clear
++=Gradient
++=Text
++=Verschieben
++=Zauberstab-Werkzeug
++=Auswählen
++=Rechteck-Bearbeitung
++=Stempel
++=Leinwand verschieben
++=Leinwand drehen
++=Farbpipette
+
+#----------------
+# tool sub
+
+[101]
+0=Freihand zeichnen
++=Linie
++=Rechteck
++=Kreis
++=Unterbrochene Linie
++=Zentraler Punkt
++=Bézier-Kurve
++=Spline-Kurve
+100=Rechteck
++=Ellipse
++=Polygon
++=Freihand
+200=Bild verschieben
++=Bild kopieren
++=Position verschieben
+300=Horizontal spiegeln
++=Oben und Unten umkehren
++=Nach links um 90 Grad drehen
++=Nach rechts um 90 Grad drehen
++=Transformation
++=Trimmen
+
+#-----------------
+# layer color type
+
+[102]
+0=Voller Farbbereich
++=Graustufen
++=Nur Alpha-Wert
++=Nur Alpha-Wert (1bit)
+
+#---------------------
+# pixel mode (brush)
+
+[103]
+0=Pixel-Überlappung
++=Linien überlappung
++=überschreiben im Vergleich zu A
++=eckiges Überschreiben
++=rechtwinkliges Überschreiben
++=dodge
++=Burn
++=Addition
++=Radierer
+
+#--------------------
+# pixel mode (tool)
+
+[104]
+0=Pixel-Überlappung
++=überschreiben im Vergleich zu A
++=überschreiben
++=Radierer
+
+#------------------------
+# select material image
+
+[105]
+0=keine
++=keine (erzwingen)
++=optionale Textur verwenden
++=normal kreisförmig
+100=Bild auswählen
++=Textur-Bild auswählen
+
+#-----------------
+# blend mode
+
+[106]
+0=normal
++=Multiplikation
++=Addition
++=Subtraktion
++=Bildschirm (Farbfilter)
++=Überlagerung
++=hartes Licht
++=weiches Licht
++=dodge
++=burn
++=linear Burn
++=lebendiges Licht
++=lineares Licht
++=Pin light
++=dim
++=aufhellen
++=Differenz
++=Helligkeit (addieren)
++=Helligkeit (dodge)
+
+#----------------
+# scale type
+
+[107]
+0=nächster Nachbar
++=Mitchell
++=Lagrange
++=Lanczos2
++=Lanczos3
+
+#-----------------
+# Name des Docks
+
+[108]
+0=Werkzeug
++=Option
++=Ebene
++=Pinsel
++=Farbe
++=Farbpalette
++=Leinwand-Steuerung
++=Leinwand-Ansicht
++=Bildbetrachter
++=Liste filtern
++=Farbrad
+
+
+#**********************
+# Panel-Fenster
+#**********************
+
+
+#-------------------
+# Bildbetrachter
+
+[1000]
+0=Öffnen(&O)...
++=Vorherige(&P)
++=Nächstes(&N)
++=Löschen(&C)
++=Betriebseinstellungen(&S)...
++=Vollständige Ansicht(&F)
++=Spiegeln(&H)
+
+100=Menü
++=Öffnen
++=Vorheriges
++=Nächstes
++=Zoom
++=Vollständige Ansicht
++=Spiegeln
+
+#------------------
+# canvas view
+
+[1001]
+0=Lupenmodus
++=Vollständige Ansicht (Autozoom)
++=Zoom
++=Einstellungen
+
+#-------------------
+# color
+
+[1002]
+0=Eingabewert
+1=RGB-Wert\n(Text mit Ausnahme der Zahl wird als separate Markierung behandelt)\Beispiel:255,0,128
+
+100=Malfarbe als Maskenfarbe setzen(&S) [Linksklick]
++=Malfarbe zur Maskierungsfarbe hinzufügen(&A)
++=Maskenfarbe nur auf die erste Farbe umstellen(&F)
++=ausgewählte Farbe löschen(&D) [Strg+Linksklick]
++=ausgewählte Farbe als Malfarbe festlegen(&P) [Umschalt+Linksklick].
+
+#----------------------
+# Farbpalette
+
+[1003]
+0=Palette
++=HLS
++=Halbton
+
+100=Segment-Einstellung
++=Segment (3~64, 0 für das größte)
+
+1000=Farbe hier einstellen(&S) [Umschalt+Linksklick]
++=diese Farbe aufnehmen(&P) [Linksklick]
+
+1100=Bearbeiten(&E)...
++=Zähler ändern(&R)...
++=Palette aus dem Bild holen(&M)...
++=Alles weiß machen(&C)...
++=Datei laden(&L)...
++=Speichern in Datei(&S)...
++=Einstellung anzeigen(&O)...
+
+1200=Zähler ändern
++=Zähler
++=Die aktuelle Palette wird ganz weiß eingefärbt, OK?
++=Display-Einstellung
++=maximale Anzahl horizontaler\n(0 = automatisch)
+
+#------------------
+# option
+
+[1004]
+0=Werkzeug
++=Linial
++=Textur
++=Fade
+
+#------------------
+# Ebene
+
+[1005]
+## tooltip
+0=Neu
++=Kopieren
++=Bild löschen
++=löschen
++=mit darunterliegender Ebene verschmelzen
++=Ebene bewegen
++=nach oben bewegen
++=nach unten bewegen
+
+## alpha maske
+100=Alpha-Maske ausgeschaltwt
++=Alpha-Wert beibehalten
++=Transparenz schützen
++=Deckkraft schützen
+
+## menu
+1000=Einstellung(&O)...
++=Einstellungen der Farbe(&C)...
++=Ebenentyp ändern(&T)...
++=Palette1(&P)...
++=Palette2(&A)
++=Bild sperren(&L)
++=Quelle des Füllwerkzeugs(&F)
++=Maskenebene setzen(&S)
++=Ebene unter Maske setzen(&M)
++=Prüfen(&K)
++=Erstelle neue Ebene über diesem Ordner(&N)
++=Geprüfte Ebene in diesen Ordner verschieben(&V)
+
+#---------------------
+# Pinsel - Größenliste
+
+[1006]
+0=Hinzufügen(&A)
++=Löschen(&D) [Umschalt+Linksklick]
+100=Hinzufügen
++=Bitte Pinselgröße eingeben.\nMehrfache Ergänzungen durch '/'. (Beispiel: 1.0/2.4/100)
+
+#----------------------
+# brush - brush list
+
+[1007]
+0=Neuer Pinsel - Standard(&B)
++=Neuer Pinsel - Einfügen(&P)
++=Neue Gruppe(&G)
++=Einstellungsgruppe(&O)
++=Liste bearbeiten(&E)
++=Neuer Pinsel - Kopie(&D)
+
+100=Umbenennen(&N)
++=Kopieren(&C)
++=Einfügen überschreiben(&P)
++=Löschen(&D)
++=Registrierter Pinsel einstellen(&R)
++=Registrierter Pinsel freigeben(&L)
+200=Neue Gruppe
++=Einstellungsgruppe
++=Spalte
++=Umbenennen
+1000=Es ist nicht möglich, Pinseldaten einzufügen
+
+#----------------------
+# brush - item value
+
+[1008]
+10=Grundeinstellungen
++=Minimum & Intervall
++=zufällig
++=Wasser
++=Form
++=Drehung der Form
++=Druck
++=andere
+
+100=Typ
++=Radius
++=Dichte
++=Malerei
++=Korrektur
++=Mindestgröße (%)
++=Mindestdichte (%)
++=Punktabstand (1,0 = Radius)
++=Mindestgröße (%)
++=Position maximaler Abstand
++=Voreinstellung
++=Farbauffrischung
++=Leinwandfarbenverhältnis
++=Prozentsatz der Malfarbe
++=Härte
++=Rauhigkeit
++=fortschreitende Richtung
++=Winkel
++=Winkel zufällige Breite
++=Textur
++=Anti-Aliasing
++=Kurven Ergänzung
+
+200=normal
++=Radierer
++=Aquarellfarbe
++=Blur
++=1px Punktstift
++=Fingerspitze
+
+220=nein
++=schwach
++=mittel
++=stark
+
+230=Kurve
++=linear ein Punkt
++=linear zwei Punkt
+
+240=an %c registrieren
++=zurücksetzen
+
+#-------------------
+# color wheel
+
+[1009]
+0=HSV-Dreieck
++=HSV-Rechteck
+
+
+#**********************
+# tool option
+#**********************
+
+
+#---------------
+# move
+
+[1100]
+0=Aktuelle Ebene
++=Gesicherte Ebene
++=Alle Ebenen
+
+#---------------
+# gradation
+
+[1101]
+0=Malfarbe -> Hintergrundfarbe
++=Anpassen
++=Invertieren
++=Wiederholen
+
+100=Bearbeiten(&E)...
++=Neu(&N)
++=Kopieren(&C)
++=Löschen(&D)
+
+#-----------------------
+# Füllwerkzeug/Zauberstab
+
+[1102]
+0=bestimmen
++=Farbdifferenz
++=Quellebene ignorieren
+100=RGB (* Es existiert nue eine Quellebene)
++=Alpha-Wert
++=transparent (Anti-Aliasing ist automatisch)
++=Leinwandfarbe
++=transparent (A=0)
+
+#---------------
+# stamp
+
+[1103]
+0=Löschen
++=Bild laden
++=überschreiben
++=einfügen auf oben-links
+
+#--------------
+# rule
+
+[1104]
+0=AUS
++=parallele Linie
++=parallele Linie (Gitter)
++=Zentraler Punkt
++=konzentrische Kreise (Kreis)
++=konzentrische Kreise (Ellipse)
+100=herausnehmen
++=Datensatz
+
+#---------------
+# head/tail
+
+[1105]
+0=Linie
++=Bézier-Kurve
++=einblenden
++=Ausblenden
++=herausnehmen
++=Aufnehmen
+
+
+#**********************
+# dialog
+#**********************
+
+
+#----------------
+# Datei Dialog
+
+[2000]
+1=Alpha-Kanal ignorieren
+
+#------------------------------------
+# canvas view/image viewer - setting
+
+[2001]
+0=Einstellungen
++=links
++=Strg+links
++=Umschalt+links
++=rechts
++=Mitte
+
+100=Bildlauf scrollen
++=Leinwand scrollen
++=Aufwärts-Abwärts-Ziehen zum Ändern der Zoomrate
+
+200=Blättern
++=Aufwärts-Abwärts-Ziehen zum Ändern der Zoomrate
++=Farbpicker (Malfarbe)
++=Farbpicker (Hintergrundfarbe)
+
+#---------------------
+# grid setting
+
+[2002]
+0=Grid-Einstellung
++=Gitter
++=Trennlinie
++=horizontal
++=vertikal
+
+#--------------------
+# Neues Bild
+
+[2003]
+0=Neu
++=Auflösung
++=Ebenentyp
++=Hinzufügen
++=Löschen
+100=Verlauf
++=Registrieren
++=Vorlage
+1000=Die maximale Bearbeitungsgröße ist %d px
+
+#------------------
+# Palette bearbeiten
+
+[2004]
+0=Palette bearbeiten
++=Löschen
++=Abstufung
++=Zahl
++=Hinzufügen
++=Einfügen
++=RGB-Wert (Beispiel: 255,0,128)\n Drücken Sie die Eingabetaste, um
++=+Verschiebung: Auswahl zur angegebenen Position\nD&D: Verschiebung
+
+#-------------------
+# Ebenen dialogs
+
+[2005]
+0=Neu
++=Farbe auswählen
++=Einstellungs Ebene
++=Farbtyp ändern
++=Verschiedene Ebenen zusammenführen
+
+100=Typ
++=Blend-Modus
++=Farbe
++=[Palette]\nRechtsklick/Strg+Linksklick: Farbe registrieren
++=Durch Doppelklicken auf die Bildvorschau der Ebenenliste\n  wird ein Farbauswahldialog angezeigt.
++=invertierte Farbluminanz zum Alphawert
++=Mit neuer Ebene verschmelzen
++=Farbtyp
++=Wenn der Blend-Modus nicht "normal" ist, kann nicht korrekt zusammengefügt werden, es sei denn, die unterste  Ebene enthält keine transparenz..
++=Registrierungsliste bearbeiten(&E)
++=Ebenenamen-Registrierungsliste bearbeiten
++=Bitte geben Sie mehrere Listen von Ebenenamen an, getrennt durch ";".\n[Beispiel] ebene1;ebene2;ebene3
+
+200=alle sichtbaren Ebenen
++=alle sichtbaren Ebenen im Ordner
++=geprüfte Ebenen (wenn neue Ebene)
+
+#--------------------
+# gradient edit
+
+[2006]
+0=Gradient bearbeiten
++=Farbe
++=Position
++=Malfarbe
++=Hintergrundfarbe
++=zugewiesene Farbe
++=Opazität
++=Wert
++=wiederholen (immer)
++=monochrom
++=+Strg: Punkte von der aktuellen bis zur gedrückten Position mit gleichem Abstand trennen\n+Shift: aktuelle Farbe auf gedrückte Position setzen\n+Alt: Punkt löschen
+
+100=aktuellen Punkt löschen(&D)
++=Leerzeichen zwischen dem rechten (&V)
++=Bewegen zur Mitte des linken und rechten Punktes(&C)
++=alle Punkte gleichmäßig beabstandet setzen(&E)
++=Umkehrpunkte(&R)
+
+#-----------------
+# canvas resize
+
+[2007]
+0=Leinwandgröße ändern
++=konfigurieren
++=Außenbereich ausschneiden
+
+#--------------------
+# Leinwand-Skalierung
+
+[2008]
+0=Leinwand-Skalierung
++=Größe(px)
++=%
++=Bildformat beibehalten
++=DPI ändern
++=Komplement-Methode
+
+#-------------------
+# DPI-Wert ändern
+
+[2009]
+0=DPI-Wert ändern
++=Bitte geben Sie den DPI-Wert ein.\nNur durch Neuschreiben des Wertes wird das Bild nicht verändert.
+
+#--------------------
+# Speicheroption
+
+[2010]
+0=Einstellungen speichern
++=Kompressionsrate [0-9]
++=Alpha-Kanal
++=↑Alle Ebenen in eine zusammenfügen
++=Qualität [0-100]
++=Abtastverhältnis
++=progressiv
++=keine Komprimierung
+100=Erhaltungsebene
++=ein Bild (8bit RGB)
++=ein Bild (Graustufen)
++=ein Bild (monochrom)
+110=4:4:4 (hohe Qualität)
++=4:2:2
++=4:2:0 (niedrige Qualität)
+
+#--------------------------
+# Brush detailed setting
+
+[2011]
+0=Detaillierte  Pinsel-Einstellung
++=immer speichern, wenn sich der Wert ändert
++=Radius
++=minimaler Wert
++=Maximalwert
+
+#----------------------------
+# Editing groups and brushes
+
+[2012]
+0=Bearbeiten von Gruppen und Pinsel
++=Gruppe
++=Pinsel
+
+100=Hinzufügen
++=Löschen
++=Bearbeiten
++=Kopieren
++=Einfügen
++=Nach oben
++=Nach unten verschieben
++=Gruppe verschieben
+
+500=umbenennen
+
+1000=Löschen Sie die Gruppe. Ist das OK? Diese Operation kann nicht rückgängig gemacht werden.
++=Sie kann nicht gelöscht werden, wenn es nur eine Gruppe gibt.
+
+#-------------------------
+# selection expand/shrink
+
+[2013]
+0=Auswahl erweitern und verkleinern
++=Anzahl der Pixel (schrumpfen bei negativen Werten)
+
+#---------------------------------
+# Rectangle editing - transform
+
+[2014]
+0=Transformation
++=Zurücksetzen
++=X-Vergrößerung
++=Y-Vergrößerung
++=Rotation
++=Bestimmen
++=Bildformat beibehalten
++=[Strg+Links, Mitte]\Leinwand scrollen\n[Umschalt+Links]\Leinwand zoomen
+100=normal
++=Perspektive
+
+#----------------------
+# Text drawing
+
+[2015]
+0=Text-Zeichnung
++=Vorschau
++=- Klicken Sie mit der linken Maustaste innerhalb der Leinwand, um die Zeichnungsposition zu ändern.\n- Verwenden Sie im Texteingabefeld [Strg+auf/ab/links/rechts], um die Zeichnungsposition um 1 px zu verschieben.
++=Stil
++=Fett
++=Kursiv
++=Größe
++=Hinweis
++=Wortzwischenraum
++=Zeilenraum
++=Text vertikal zeichnen
++=Anti-Aliasing
++=Monitor DPI verwenden
++=U+309B/U+309C
+100=Standard
++=nein
++=Normal
++=Max
+110=Normal
++=Fett
+120=Normal
++=Kursiv
++=Oblique
+130=so wie es ist
++=Ersetzen U+3099/U+309A
++=ersetzen und horizontal
+
+#-----------------------
+# Shortcut key setting
+
+[2016]
+0=Shortcut-Tasteneinstellung
++=Befehl
++=Schlüssel
++=Löschen
++=Alle löschen
+
+#--------------------
+# canvas key setting
+
+[2017]
+0=Leinwand-Tasteneinstellung
++=Bei der Einstellung des ausgewählten Elements drücken Sie bitte eine einzige Taste. Sie können es mit gedrückter Leertaste löschen.
++=Alle löschen
+
+100=Werkzeug wechseln
++=Bildtyp ändern
++=andere Befehle
++=+Taste zur Bedienung des Werkzeugs
++=+Taste zur Bedienung des Zeichenpinsels
++=+Taste zur Bedienung anderer Dinge
++=+Taste zur Bedienung des Auswahlwerkzeugs
+
+1000=selektieren Sie eine Ebene darüber
++=selektieren Sie eine Ebene darunter
++=aktuelle Ebene sichtbar/unsichtbar
++=Bild/Hintergrundfarbenaustausch
++=Zoomrate um eine Stufe erweitern
++=Zoomrate um eine Stufe reduzieren
++=Leinwandrotation zurücksetzen
++=Undo
++=wiederholen
++=Schalten zum vorherigen Pinsel
++=Wählen Sie die vorherigen Pinsel
++=nächsten Pinsel auswählen
+
+1100=freie Linienzeichnung mit registriertem Pinsel
++=freies Linienzeichnen mit registriertem Pinsel (Druckmaximum)
++=Zoomrate ändern (nach oben/unten ziehen)
++=Ändern der Pinselgröße (Links-Rechts-Ziehen)
++=registrierte Pinselgröße ändern (Links-Rechts-Ziehen)
++=Mittelfarbe erzeugen (2 Punkte anklicken)
++=Farbwechsel (mit Farbwähler ausgewählte Farbe -> Malfarbe)
++=Farbwechsel (Farbe mit Farbpicker ausgewählt -> transparent)
++=gegriffene Ebene auswählen
+
+1200=auswählen: Rechteck
++=auswählen: Polygon
++=auswählen: freihändig
++=Bild verschieben
++=Bild kopieren
++=Auswahlposition verschieben
+
+#--------------------
+# Panel setting
+
+[2018]
+0=Bedienfeld-Einstellung
++=Panels
++=Position
++=Panel%d
++=Leinwand
+
+#----------------------
+# Environment setting
+
+[2019]
+0=Umgebungs-Einstellung
++=Einstellung 1
++=Einstellung 2
++=Zoom-Bereich
++=Schaltfläche
++=System
++=Cursor
++=Schnittstelle
+
+100=Bildbreite beim Starten \n(negativer Wert: Stromstärke erhöhen / verringern * n / 100)
++=Bildhöhe beim Starten
++=Hintergrundfarbe der leinwand
++=Farbe des karierten Hintergrunds
++=maximale Rückgängig-Zeiten [2-400]
++=Puffergröße rückgängig machen
++=DPI beim Start
+
+200=Bestätigung beim Überschreiben
++=bestätigen, wenn Speichern außer bei dem Dateityp APD
++=wenn als APD speichern, darf ein Bild nicht enthalten sein
++=Doppelklicken Sie auf das Element in der Filterliste, um es auszuführen
+
+300=eine Stufe der Zoomrate (~100%)
++=eine Stufe der Zoomrate (100%~)
++=eine Ebene der Leinwanddrehung
++=jedes Pixel bei Änderung der Pinselgröße durch Links-Rechts-Ziehen
+
+400=Standard
++=Stifttablet
++=Radierer
++=keine (Standard)
++=Werkzeug-Aktion
++=andere Aktion
++=Befehl
++=Schaltfläche
++=Bitte drücken Sie daruf den Knopf
++=setzen
+
+500=Arbeitsverzeichnis
++=Pinsel-Verzeichnis
++=Textur-Verzeichnis
+
+600=Hotspot-Position
++=Bild laden
++=Standard
++=Breite und Höhe ist 1~32px.\Schwarz und weiß des Bildes bleiben erhalten.\Andere Farben werden in transparent umgewandelt.
+
++=Thema
++=Symbol
++=Werkzeugleiste
++=Ebenen
++=andere
++=Symbolleiste anpassen
++=Schriftart (wird beim Neustart des Programms angewendet)
++=Standard
++=Reiter
+
+1000=ein nicht existierendes Verzeichnis wird als Arbeitsverzeichnis festgelegt.
++=Einheiten können für K, M, G verwendet werden. Byte ohne Einheit.\nMaximal 1 GB.\n0 zur Ausgabe in alle Dateien.
+
+#-------------------------
+# Symbolleiste anpassen
+
+[2021]
+0=Symbolleiste anpassen
++=--- Trennzeichen ---
+
+#----------------------
+# filter
+
+[2020]
+1=zurücksetzen
++=nur den Bereich innerhalb der Leinwand bearbeiten
+10=Helligkeit
++=Kontrast
++=Gamma-Wert
++=Farbphase
++=Chroma
++=Schwelle
++=Typ
++=Graduation
++=Radius
++=cycle number
++=lebendig
++=Farbe
++=Zeilennummer
++=Dichte
++=Winkel
++=DPI
++=Anti-Aliasing
++=Größe
++=Durchschnittsfarbe verwenden
++=Winkel R
++=Winkel G
++=Winkel B
++=Winkel von G, B auf den gleichen wie R setzen
++=Graustufen
++=Dicke
++=Dicke min
++=Dicke max
++=Leerzeichen min
++=Leerzeichen max
++=horizontale Linie
++=Vertikale Linie
++=horizontaler Bereich
++=vertikaler Bereich
++=den vertikalen Bereich auf den gleichen Wert wie den horizontalen Bereich setzen
++=Stärke
++=Betrag
++=Dichte
++=zufällig: Radius min (%)
++=zufällig: Dichte min (%)
++=Art des Punktes
++=Entfernung
++=Umkehren
++=Länge
++=Breite
++=Side loop bilden
++=Wenn Sie mit der linken Maustaste auf die Leinwand klicken, können Sie die zentrale Position ändern.
++=Hintergrund
++=Zoom
++=glätten machen
++=Depression
++=Zeiten
++=geprüfte Ebenenquelle erzeugen
++=Ausschneiden des Quellbildes
++=Betonung
++=Anzahl der Farben
++=Aspekt-Verhältnis
++=Leerzeichen: zufällig
++=Dicke: zufällig
++=Länge: zufällig
++=Wellenlänge
++=Dicke ausblenden
++=einfache Vorschau
++=Vorschau in rot
+
+1000=Bayer2x2
++=Bayer4x4
++=Spirale
++=Punkt
++=Zufällig
+
+1010=Schwarz/Weiss
++=Bildfarbe/Hintergrundfarbe
++=Schwarz+Alpha-Wert
+
+1020=Malerei-Farbe
++=Hintergrundfarbe
++=schwarz
++=weiß
+
+1030=Punktkreis
++=Anti-Aliasing-Kreis
++=weicher Kreis
+
+1040=Malfarbe
++=zufällig (Graustufen)
++=zufällig (Farbphase)
++=zufällig (RGB)
+
+1050=Äußere Seite des Deckkraftbereichs
++=Innenseite des Deckkraftbereichs
+
+1060=slant
++=horizontal
++=vertikal
+
+1070=Mindestwert
++=Mittelwert
++=Max-Wert
+
+1080=nur horizontal
++=nur vertikal
++=beide
+
+1090=rechteckige Koordinaten -> Polarkoordinaten
++=polare Koordinaten -> rechtwinklige Koordinaten
+
+1100=transparent
++=Seitenfarbe
++=andere
+
+1110=Pinsel(Anti-Aliasing)
++=Pinsel (kein Antialiasing)
++=1px Punktstift
+
+
+#**********************
+# other
+#**********************
+
+
+#----------------
+# error message
+
+[1]
+1=fehlgeschlagen
++=Zuweisung des Speichers fehlgeschlagen
++=Format entspricht nicht
++=Laden fehlgeschlagen
++=Größe ist zu groß
++=kann nur APD ver3-Datei lesen
++=Dieser Schlüssel wird bereits verwendet.
++=Zielebene kann aufgrund des Ordners nicht gemalt werden.
++=Zielebene kann nicht gemalt werden, weil sie gesperrt ist.
++=Bitte überprüfen Sie die Ebene, die Sie anzeigen möchten, anhand der Ebenenliste.
++=Texturbild ist nicht gesetzt.
++=Da die aktuelle Ebene ein Farbtyp ohne Farbinformationen ist, hat der Filter keine Wirkung.
+
+#------------------
+# message
+
+[2]
+0=Datei Überschreiben und speichern?
++= Es scheint, Sie versuchen in einem anderen Format als APD  zu speichern. Möchten Sie es trotzdem überschreiben?
++=Das Bild wurde geändert. \nMöchten Sie es abspeichern?
++=Erstellung des Arbeitsverzeichnisses fehlgeschlagen.\n Rückgängig funktioniert nicht richtig.
++=Wollen Sie die Pinsel- und Palettendaten von ver.1 migrieren?\n(Gradationsdaten werden mit ver.1 geteilt)
++=Da die Datei nicht existiert, löschen Sie sie aus der Historie.
+
+#--------------------
+# Maskenprüfung
+
+[6]
+0=Maskenprüfung
++=Auswahl
++=Ebene - Sperren
++=Ebene - Maske in unterer Ebene
++=Ebene - Alphamaske
++=Ebenemaske
++=Farbmaske
+
+#--------------------
+# drawing message
+
+[7]
+1=Sie versuchen für einen Ordner zu zeichnen
++=Aktuelle Ebene ist gesperrt
++=Sie versuchen auf einer verborgenen Ebene zu zeichnen
+
+#----------------
+# main menu
+
+[3]
+1=Datei(&F)
++=Bearbeiten(&E)
++=Ebenen(&L)
++=Auswahl(&S)
++=Filter(&T)
++=Ansicht(&V)
++=Einstellungen(&O)
+
+### file
+1000=Neu(&N)...
++=Öffnen(&O)...
++=Speichern(&S)
++=Speichern unter(&W)...
++=Eine Kopie speichern(&D)...
++=Zuletzt verwendete Dateien(&R)
++=Beenden(&X)
++=Klare Geschichte(&C)
++=Verkleinern(&M)
+
+### edit
+2000=Rückgängig machen(&Z)
++=Wiederholen(&Y)
++=Zustand der Masken prüfen(&M)
++=Füllen(&F)
++=Löschen(&E)
++=Leinwandgröße ändern(&S)...
++=Leinwandgröße ändern(&R)...
++=DPI-Wert ändern(&D)...
+
+### select
+3000=Abwählen(&D)
++=Rückwärts(&I)
++=Alle auswählen(&A)
++=Kopieren(&C)
++=Schnitt(&X)
++=Neue Ebene einfügen(&V)
++=Erweitern/Schrumpfen(&E)...
++=Auswahl nach PNG exportieren(&P)
+
+### ebene
+4000=Neue Ebene(&N)...
++=Neuer Ordner(&F)
++=Neue Ebene aus Datei(&I)...
++=Kopieren(&C)
++=Löschen(&D)
++=Löschen(&X)
++=Einstellung(&O)...
++=Farbe einstellen(&R)...
++=Farbtyp ändern(&T)...
++=Bild auf darunterliegende Ebene verschieben(&Z)
++=Mit darunterliegender Ebene verschmelzen(&B)
++=Verschiedene Ebenen zusammenführen(&W)...
++=Alle zusammenführen(&M)
++=Bearbeiten(&E)
++=Ansicht(&V)
++=Flagge(&G)
++=Export in Datei(&S)...
++=Alle Ordner schließen(&Q)
+
+4100=Horizontal spiegeln(&H)
++=Umgekehrt(&V)
++=Nach links um 90 Grad drehen(&L)
++=Rechts um 90 Grad drehen(&R)
+
+4200=Alle anzeigen(&A)
++=Alle ausblenden(&H)
++=Nur die aktuelle Ebene anzeigen(&C)
++=Geprüfte Ebene umschalten(&K)
++=Ebenen umschalten, die Ordner ausschließen(&N)
+
+4300=Alle Sperren aufheben(&L)
++=Alle Quellschichten der Bestimmung sind ausgeschaltet(&F)
++= Alle Prüfungen deaktivieren(&K)
+
+### filter
+5000=Farbe
++=Farbe ersetzen
++=Alpha-Wert (ausgewählte Ebene)
++=Alpha-Wert (aktuelle Ebene)
++=Unschärfe
++=Farbe
++=Bild (Comic)
++=Verpixeln
++=Umriss
++=Effekt
++=Transformation
++=Sonstige
+
+5100=Helligkeit/Kontrast...
++=Gamma...
++=Niveau...
++=RGB-Anpassung...
++=HSV-Anpassung...
++=Invertieren
++=Graustufen
++=Sepia-Farbe
++=Farbverlaufskarte
++=Schwellenwert...
++=Schwellenwert (Dither)...
++=Plakatierung...
++=Farbreduktion...
+
++=Malfarbe ändern...
++=Malfarbe auf transparent ändern... 
++=Alle Farben, außer der Malfarbe in transparent ändern
++=Malfarbe als Hintergrund ändern
++=Transparente Farbe in Malfarbe ändern
+
++=(alle) alle Transparenten Werte transparent machen
++=(alle) entweder ein undurchsichtiger Punkt bis transparent
++=(alle) alle Werte kombinieren und kopieren
++=(alle) alle Werte addieren
++=(alle) alle Werte subtrahieren
++=(alle) alle Werte multiplizieren
++=(einzeln) umgekehrte Helligkeit der geprüften Ebene und setzen
++=(einzeln) Helligkeit der geprüften Ebene einstellen
++=Helligkeit umgekehrt einstellen
++=Von Helligkeit einstellen
++=Textur-Anwendung
++=Graustufen aus Alphawert erzeugen
+
++=Blur...
++=Gauß-Unschärfe...
++=Bewegungsunschärfe...
++=Radiale Unschärfe...
++=Linsenunschärfe...
+
++=Wolken...
++=Punktmuster (1)...
++=Punktmuster (2)...
++=Zufälliges Punktmuster...
++=Punkte entlang des Randes einzeichnen...
++=Rand...
++=Horizontale und vertikale Linien...
++=Kariert...
+
++=Konzentrationslinie...
++=Blitz (Feuerring)...
++=Solid-Blitz (Sonne)...
++=Uni-Blitz...
++=Uni-Blitz (Welle)...
+
++=Mosaik...
++=Kristall...
++=Halbton...
+
++=Schärfen...
+Unscharf... +=Unscharfe Maske...
++=Kontur-Extraktion (Sobel)
++=Kontur-Extraktion (laplacianisch)
++=Hochpass...
+
++=Tief...
++=RGB-Verschiebung...
++=Ölbild...
++=Emboss...
++=Geräusch...
++=Effekt...
++=Kratzer...
++=Median...
++=Unschärfe...
+
++=Welle...
++=Kräuseln...
++=Polare Koordinaten...
++=Radialer Versatz...
++=Spiralförmig...
+
++=Extraktion der Linienzeichnung
++=1px Punktlinien-Korrektur
++= Antialiasing...
++=Kanten...
++=Dreidimensionaler Rahmen...
++=Verschiebung...
+
++=Alle undurchsichtig bis perfekt undurchsichtig
++=HLS Anpassung...
+
+### Ansicht
+6000=Tafel(&P)
++=Leinwand horizontal spiegeln(&Q)
++=Hintergrund als Karomuster anzeigen(&K)
++=Gitter anzeigen(&G)
++=Trennlinie anzeigen(&M)
++=Werkzeugleiste(&T)
++=Statusleiste(&S)
++=Zoomrate der Leinwand(&C)
++=Leinwand drehen(&R)
+
+6100=Ansicht(&V)
++=Alle als Fenster(&W)
++=Alle in als Seitenleiste plazieren (&S)
++=Werkzeug(&T)
++=Option(&O)
++=Ebene(&L)
++=Pinsel(&B)
++=Farbe(&C)
++=Farbpalette(&P)
++=Canvas-Operation(&R)
++=Leinwand-Ansicht(&V)
++=Bildbetrachter(&I)
++=Liste filtern(&F)
++=Farbrad(&H)
+
+6200=Um  1 Schritt  erweitern(&U)
++=Um  1 Schritt verkleinern(&D)
++=Fenster anpassen(&F)
+
+6300=Drehen Sie einen Schritt nach links(&L)
++=Einen Schritt nach rechts drehen(&R)
++=0 Grad
++=90 Grad
++=180 Grad
++=270 Grad
+
+### Einstellungen
+7000=Umgebungs-Einstellungen(&E)...
++=Grid-Einstellung(&G)...
++=Leinwand-Tasten-Einstellung(&K)...
++=Tastenkürzel-Einstellung(&C)...
++=Panel-Einstellung(&P)...
++=Version (&A)...

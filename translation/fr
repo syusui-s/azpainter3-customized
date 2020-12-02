@@ -1,0 +1,1305 @@
+[65535]
+1=D'accord
+2=Annuler
+3=Oui
+4=Non
+5=Sauvegarder
+6=Ne pas sauvegarder
+7=Annuler
+8=Ne plus afficher ce message
+9=Ouvrir
+10=Nom du fichier
+11=Type
+12=Aperçu
+13=Style
+14=Taille
+15=Poids
+16=Inclinaison
+17=Rendu
+18=abcdefg ABCDEFG 01234
+19=Taille du fichier
+20=Modifié
+21=Afficher les fichiers cachés
+1000=Ouvrir le fichier
+1001=Sauvegarder
+1002=Ouvrir le dossier
+1003=Sélectioner la couleur
+1004=Sélectioner la police
+2000=Le fichier existe déjà.\nVoulez-vous l'écraser?
+2001=Nom de fichier incorrect.
+
+#-----------------
+# word
+
+[0]
+0=Largeur
+1=Hauteur
+2=Couleur
+3=Densité
+4=Peinture
+5=Anticrénelage
+6=Dossier
+7=Transparent
+8=Nom
+
+#-------------------------------
+# MainWindow - toolbar tooltip
+
+[4]
+0=Nouveau fichier
++=Ouvrir
++=Enregistrer
++=Enregistrer sous
++=Enregistrer une copie
++=Montrer les panneaux
++=Tourner la toile horizontalement
++=Montrer l'arriêre plan comme motif
++=Montrer la grille
++=Montrer la division
++=Agrandissement
++=Annuler
++=Rétablir
++=Nouvelle toile
++=Déselectionner
++=Fichiers récents
+
+#-----------------------
+# drop menu - save dup
+
+[5]
+0=Enregistrer comme
++=Même type que le fichier actuel
+
+#------------------------
+# status bar - help
+
+[8]
+0=[Majuscule: change la taille du pinceau] [Ctrl: paramètres de la règle] [Alt: Sélectionne la couleur avec la pipette]
++=[Majuscule: ignorer le transparent source de l'outil de remplissage] [Ctrl: déterminé par le "transparent"]
++=[cliquer pour afficher le texte] [clique pour changer de position le texte]
++=[Majuscule: horizontalement] [Ctrl: verticalement]
++=[+Ctrl quand appuyer: supprime la sélection]
++=[+Majuscule quand appuyer: écraser] [Ctrl: cacher la trame sélectionnée quand tirer]
++=[clique pour coller quand il y a une image] [Ctrl: effacer l'image et resélectionner]
++=[Ctrl: couleur du transparent actuelle] [Majuscule: définir comme couleur de masque] [Alt: ajouter à la couleur du masque]
+
++=[Majuscule: en dénomination de 45°]
++=[Majuscule: carré]
++=[Majuscule: cercle]
++=[Majuscule: en dénomination de 45°] [Droite/Gauche Double-clique/Entrée/Échap: finition] [Retour arrière: connecter avec le point de départ et d'arrivée]
++=[Majuscule: en dénomination de 45°] [Droite/Gauche Double-clique/Entrée/Échap: finition]
++=[Majuscule: en dénomination de 45°] [Droite/Échap: Annuler] [Retour arrière: retour au point de contrôle 1]
++=[ajouter des points en cliquant (+Ctrl: pression 0)] [Retour arrière: retour en arrière] [Droite/Gauche Double-clique/Entrée: dessiner] [Échap: annuler]
++=[Majuscule: en dénomination de 45°] [Droite/Gauche Double-clique/Entrée: dessiner] [Échap: annuler]
+
+
+#----------------
+# tool
+
+[100]
+0=Pinceau
++=Outil de remplissage avec contour
++=Outil gomme avec contour
++=Outil de remplissage
++=Suppression opaque
++=Gradient
++=Texte
++=Bouger
++=Outil main magique
++=Selectionner
++=Èdition rectangulaire
++=Marquer
++=Bouger le canevas
++=Rotation du canevas
++=Pipette à couleurs
+
+#----------------
+# tool sub
+
+[101]
+0=Dessin à la main
++=Ligne
++=Rectangle
++=Cercle
++=Ligne cassée
++=Point central
++=Courbe bézier
++=Courbe pointée
+100=Rectangle
++=Èllipse
++=Polygone
++=Main libre
+200=Bouger l'image
++=Copier l'image
++=Bouger la position
+300=Tourner horizontalement
++=Renverser
++=Tourner à gauche 90 degrés
++=Tourner à droite 90 degrés
++=Transformation
++=Découpage
+
+#-----------------
+# layer color type
+
+[102]
+0=Couleur
++=Niveau de gris
++=Valeur Alpha uniquement
++=Valeur Alpha uniquement (1bit)
+
+#---------------------
+# pixel mode (brush)
+
+[103]
+0=recouvrement pixelisé
++=chevauchements
++=écraser en comparaison de A
++=écrasement formel
++=écrasement rectangulaire
++=esquive
++=brüler
++=addition
++=effaceur
+
+#--------------------
+# pixel mode (tool)
+
+[104]
+0=recouvrement pixelisé
++=écraser en comparaison de A
++=écraser
++=effaceur
+
+#------------------------
+# select material image
+
+[105]
+0=rien
++=rien (forcé)
++=utilisation de texture en option
++=normalement circulaire
+100=sélectionner l'image
++=sélectionner la texture
+
+#-----------------
+# blend mode
+
+[106]
+0=normal
++=multiplication
++=addition
++=soustraction
++=écran (filtre de couleur)
++=surcouche
++=lumière sombre
++=lumière claire
++=esquive
++=brüler
++=brülement linéaire
++=lumière vive
++=lumière linéaire
++=épingler la lumière
++=flou
++=éclaicir
++=différence
+
+#----------------
+# scale type
+
+[107]
+0=Proche voisin
++=Mitchell
++=Lagrange
++=Lanczos2
++=Lanczos3
+
+#-----------------
+# dock name
+
+[108]
+0=Outil
++=Option
++=Transparent
++=Pinceau
++=Couleur
++=Palette de couleurs
++=Contrôle du canevas
++=Vue du canevas
++=Vue de l'image
++=Liste de filtre
++=Roue de couleur
+
+
+#**********************
+# panel window
+#**********************
+
+
+#-------------------
+# image viewer
+
+[1000]
+0=Ouvrir(&O)...
++=Précédent(&P)
++=Suivant(&N)
++=Supprimer(&C)
++=Paramètres(&S)...
++=Vue complète(&F)
++=Mirroir(&H)
+
+100=Menu
++=Ouvrir
++=Précédent
++=Suivant
++=Agrandissement
++=Vue complète
++=Mirroir
+
+#------------------
+# canvas view
+
+[1001]
+0=Mode Loupe
++=Vue complète (auto zoom)
++=Agrandissement
++=Paramètres
+
+#-------------------
+# color
+
+[1002]
+0=valeur d'entrée
+1=valeur RVB \n(le texte sans numéro est traité comme une marque distincte)\nexemple:255,0,128
+
+100=définir la couleur de la peinture comme couleur du masque(&S) [clique gauche]
++=ajouter une couleur de peinture au masque de couleur(&A)
++=changer la couleur du masque à la première couleur seulement(&F)
++=supprimer la couleur sélectionnée(&D) [Ctrl+gauche clique]
++=définir la couleur sélectionnée comme couleur de peinture(&P) [Majuscule+clique gauche]
+
+#----------------------
+# color palette
+
+[1003]
+0=palette
++=HLS (Teinte saturation lumière)
++=demi-teinte
+
+100=réglage du segment
++=segment (3~64, 0 pour plus gros)
+
+1000=définir la couleur ici(&S) [Majuscule+clique gauche]
++=se procurer cette couleur(&P) [clique gauche]
+
+1100=Édition(&E)...
++=Changer les comptes(&R)...
++=Obtenir la palette de l'image(&M)...
++=Faire tout blanc(&C)...
++=Charger le fichier(&L)...
++=Enregistrer dans le fichier(&S)...
++=Paramètre d'affichage(&O)...
+
+1200=Changer les comptes
++=comptes
++=La palette actuelle sera toute blanche, d'accord ?
++=Paramètre d'affichage
++=nombre maximum d'horizontal\n(0 = automatique)
+
+#------------------
+# option
+
+[1004]
+0=outil
++=règle
++=texture
++=fondu
+
+#------------------
+# layer
+
+[1005]
+## tooltip
+0=nouveau
++=copier
++=effacer l'image
++=supprimer
++=fusionner avec le transparent en dessous
++=déplacer l'image
++=déplacer vers le haut
++=déplacer vers le bas
+
+## alpha mask
+100=masque alpha désactivé
++=garder la valeur alpha
++=protéger la transparence
++=protéger l'opacité
+
+## menu
+1000=Paramètre(&O)...
++=Paramètre de couleur(&C)...
++=Changer le type de transparent(&T)...
++=Palette1(&P)
++=Palette2(&A)
++=Verrouiller la peinture(&L)
++=Source de l'outil de remplissage(&F)
++=Définir le transparent de masque(&S)
++=Définir le transparent sous le masque(&M)
++=Vérifier(&K)
++=Créer un nouveau transparent au dessus de ce dossier(&N)
++=Déplacer le transparent cochée dans ce dossier(&V)
+
+#---------------------
+# brush - size list
+
+[1006]
+0=Ajouter(&A)
++=Supprimer(&D) [Majuscule+clique gauche]
+100=Ajouter
++=Veuillez entrer la taille du pinceau.\n Ajouts multiples par '/'. (exemple: 1.0/2.4/100)
+
+#----------------------
+# brush - brush list
+
+[1007]
+0=Nouveau pinceau - par défaut(&B)
++=Nouveau pinceau - coller(&P)
++=Nouveau groupe(&G)
++=Paramètre du grouple(&O)
++=Éditer la liste(&E)
++=Nouveau pinceau- copier(&D)
+
+100=Renommer(&N)
++=Copier(&C)
++=Écraser le coller(&P)
++=Supprimer(&D)
++=Définir le pinceau enregistré(&R)
++=Relâchez brosse enregistrée(&L)
+200=Nouveau groupe
++=Paramètre du groupe
++=colonne
++=Renommer
+1000=Il n'est pas possible de coller des données de pinceau
+
+#----------------------
+# brush - item value
+
+[1008]
+10=principale
++=min & intervalle
++=aléatoire
++=eau
++=contour
++=rotation du contour
++=pression
++=autre
+
+100=type
++=rayon
++=densité
++=peinture
++=correction
++=taille minimale (%)
++=densité minimale (%)
++=point d'intervalle (1.0 = rayon)
++=taille minimale (%)
++=position distance maximale
++=préréglage
++=reconstitution des couleurs
++=rapport de couleur de canevas
++=pourcentage de couleur de peinture
++=dureté
++=rugosité
++=direction progressive
++=angle
++=angle de largeur aléatoire
++=texture
++=anticrénelage
++=complément de courbe
+
+200=normal
++=effaceur
++=aquarelle
++=flou
++=1px point stylo
++=du bout du doigt
+
+220=non
++=faible
++=moyenne
++=forte
+
+230=courbe
++=linéaire un point
++=linéaire deux points
+
+240=Enregistrement à %c
++=réinitialisation
+
+#-------------------
+# color wheel
+
+[1009]
+0=HSV triangle
++=HSV rectangle
+
+
+#**********************
+# tool option
+#**********************
+
+
+#---------------
+# move
+
+[1100]
+0=Transparent actuelle
++=Transparent redimensionnée
++=Tous les transparents
+
+#---------------
+# gradation
+
+[1101]
+0=couleur de peinture -> couleur d'arrière plan
++=Personnaliser
++=Inverser
++=Répéter
+
+100=Éditer(&E)...
++=Nouveau(&N)
++=Copier(&C)
++=Supprimer(&D)
+
+#-----------------------
+# fill tool/magic wand
+
+[1102]
+0=déterminer
++=différence de couleur
++=ignorer le transparent source de détermination
+100=RVB (*source de détermination existe un seul)
++=valeur alpha value
++=transparent (anticrénelage est automatique)
++=couleur du canevas
++=transparent (A=0)
+
+#---------------
+# stamp
+
+[1103]
+0=supprimer
++=charger l'image
++=écraser
++=coller en haut à gauche
+
+#--------------
+# rule
+
+[1104]
+0=éteint
++=ligne Parallèle
++=ligne Parallèle (grille)
++=point central
++=cercles concentrique (Cercles)
++=cercles concentrique (Ellipse)
+100=sortir
++=enregistrer
+
+#---------------
+# head/tail
+
+[1105]
+0=Ligne
++=Courbe bézier
++=Fondu
++=Disparition
++=Sortir
++=Enregistrer
+
+
+#**********************
+# dialog
+#**********************
+
+
+#----------------
+# file dialog
+
+[2000]
+1=Ignorer la chaîne alpha
+
+#------------------------------------
+# canvas view/image viewer - setting
+
+[2001]
+0=Paramètres
++=gauche
++=Ctrl+gauche
++=Majuscule+gauche
++=droite
++=centre
+
+100=voir le défilement
++=défilement du canevas
++=haut-bas faire défiler pour changer l'agrandissement
+
+200=Scroll
++=haut-bas faire défiler pour changer l'agrandissement
++=pipette à couleurs (couleur de peinture)
++=pipette à couleurs (couleur d'arrière plan)
+
+#---------------------
+# grid setting
+
+[2002]
+0=Paramètres de grille
++=Grille
++=Ligne de division
++=horizontale
++=verticale
+
+#--------------------
+# new image
+
+[2003]
+0=Nouveau
++=Résolution
++=Type de transparent
++=Ajout
++=Supprimer
+100=Historique
++=Enregistrement
++=Modèle
+1000=La taille d'édition maximale est %d px
+
+#------------------
+# palette edit
+
+[2004]
+0=Édition de la Palette
++=Supprimer
++=Graduation
++=nombre
++=Ajout
++=Insertion
++=valeur RVB (exemple: 255,0,128)\nappuyez sur Entrée pour définir
++=+Majuscule: sélectionner la position spécifiée\nD&D: déplacer
+
+#-------------------
+# layer dialogs
+
+[2005]
+0=Nouveau
++=Selectionner la couleur
++=Paramètre de transparent
++=Changer le type de couleur
++=Fusionner plusieurs transparent
+
+100=type
++=mode mélange
++=couleur
++=[palette]\nclique droit/Ctrl+gauche clique: Enregistrement de la couleur
++=Double-clique sur la partie de la liste des transparents pour voir un aperçu de l’image.\nCela affichera une fenêtre de selection de couleur.
++=luminance de couleur inversée en valeur alpha
++=fusionner avec un nouveau transparent
++=type de couleur
++=Si le mode de fusion est différent de "normal", il ne peut pas être fusionné correctement.\nsauf lorsque le transparent inférieure est complètement opaque.
++=Modifier la liste d'inscription(&E)
++=Modifier la liste d'enregistrement du nom du transparent
++=Veuillez spécifier plusieurs listes de noms de transparent, séparées par ";".\n[exemple] transparent1;transparent2;transparent3
+
+200=tous les transparent visibles
++=tous les transparent visibles dans le dossier
++=transparents cochés (quand nouveau transparent)
+
+#--------------------
+# gradient edit
+
+[2006]
+0=Édition Gradient
++=couleur
++=position
++=couleur de peinture
++=couleur d'arrière plan
++=couleur assignée
++=opacité
++=valeur
++=répéter (toujours)
++=monochrome
++=+Ctrl: Séparer les points de la position actuelle à la position pressée uniformément espacés\n+Majuscule: régler la couleur actuelle sur la position appuyée\n+Alt: supprimer le point
+
+100=supprimer le point actuel(&D)
++=diviser l'espace entre le droit(&V)
++=se déplacer au milieu des points gauche et droit(&C)
++=définir tous les points uniformément espacés(&E)
++=Inverser les points(&R)
+
+#-----------------
+# canvas resize
+
+[2007]
+0=changer la taille du canevas
++=configurer
++=découper la zone à l'extérieur
+
+#--------------------
+# canvas scaling
+
+[2008]
+0=mise à l'échelle du canevas
++=taille(px)
++=%
++=garder les proportions
++=changer le DPI
++=procédé complément
+
+#-------------------
+# Change DPI value
+
+[2009]
+0=Changer la valeur DPI
++=Veuillez saisir une valeur DPI.\nPar la réécriture de la valeur, il n'y a pas de changement dans l'image.
+
+#--------------------
+# save option
+
+[2010]
+0=paramètre de sauvegarde
++=taux de compression [0-9]
++=chaîne alpha
++=↑Fusionner les modes de transparent, tous en normal
++=qualité [0-100]
++=taux d'échantillonnage
++=progression
++=sans compression
+100=garder le transparent
++=une peinture (8bit RVB)
++=une peinture (niveaux de gris)
++=une peinture (monochrome)
+110=4:4:4 (haute qualité)
++=4:2:2
++=4:2:0 (basse qualité)
+
+#--------------------------
+# Brush detailed setting
+
+[2011]
+0=paramètre de brosse détaillée
++=toujours sauvegarder lorsque la valeur change
++=Rayon
++=valeur minimale
++=valeur maximale
+
+#----------------------------
+# Editing groups and brushes
+
+[2012]
+0=Modification des groupes et pinceaux
++=Groupes
++=Pinceau
+
+100=Ajout
++=Supprimer
++=Éditer
++=Copier
++=Coller
++=Déplacer vers le haut
++=Déplacer vers le bas
++=Déplacer le groupe
+
+500=renommer
+
+1000=Supprimer le groupe. Est-ce correct?\nCette opération ne peut pas être annulée.
++=Il ne peut pas être supprimé s'il n'y a qu'un seul groupe
+
+#-------------------------
+# selection expand/shrink
+
+[2013]
+0=sélection élargir et réduire
++=Nombre de pixels (réduire avec des valeurs négatives)
+
+#---------------------------------
+# Rectangle editing - transform
+
+[2014]
+0=Transformation
++=Réinitialiser
++=Agrandissement X
++=Agrandissement Y
++=rotation
++=Déterminer
++=Conserver les proportions
++=[Ctrl+Gauche, Milieu]\ndéfilement du canevas\n[Majuscule+Gauche]\nagrandissement du canevas
+100=normal
++=perspective
+
+#----------------------
+# Text drawing
+
+[2015]
+0=Dessin de texte
++=Aperçu
++=- Clique gauche intérieur de la toile pour changer la position du dessin.\n- Dans la zone de saisie de texte, utilisez [Ctrl+haut/bas/gauche/droite] pour déplacer la position de dessin de 1 px.
++=Style
++=Gras
++=Italique
++=Taille
++=Insinuer
++=Espace de mot
++=Rangée
++=dessine le texte verticalement
++=anticrénelage
++=utilise le DPI de l'écran
++=U+309B/U+309C
+100=Par défaut
++=non
++=Normal
++=Maximum
+110=Normal
++=Gras
+120=Normal
++=Italique
++=Oblique
+130=tel quel
++=remettre U+3099/U+309A
++=remettre et horizontale
+
+#-----------------------
+# Shortcut key setting
+
+[2016]
+0=paramètre de raccourci
++=Commande
++=Touche
++=Supprimer
++=Tout supprimer
+
+#--------------------
+# canvas key setting
+
+[2017]
+0=paramètre du canevas
++=Lorsque vous définissez l’élément sélectionné,\nveuillez appuyer sur une seule touche.\nVous pouvez l’effacer avec la touche espace.
++=Tout supprimer
+
+100=changer d'outil
++=changer le type de peinture
++=autres commandes
++=+touche pour utiliser l'outil
++=+touche pour faire fonctionner le pinceau
++=+touche pour utiliser autre chose
++=+touche pour utiliser l'outil sélectionné
+
+1000=Selectionner un transparent plus haut
++=Selectionner un transparent plus bas
++=transparent actuel visible/invisible
++=peinture/couleur de fond interchangeable
++=Élargir d'un niveau l'agrandissement
++=Reduire d'un niveau l'agrandissement
++=Réinitialiser la rotation du canevas
++=annuler
++=refaire
++=passer avec la brosse précédente
++=sélectionner la brosse précédente
++=sélectionner la brosse suivante
+
+1100=dessin au trait libre avec un pinceau enregistré
++=dessin au trait libre avec un pinceau enregistré (pression maximum)
++=changer l'agrandissement (défilement haut-bas)
++=changer la taille du pinceau (défilement gauche-droite)
++=changer la taille du pinceau enregistré (défilement gauche-droite)
++=générer la couleur moyenne (clique en 2 points)
++=changer la couleur (couleur sélectionnée avec le sélecteur de couleur -> couleur de peinture)
++=changer la couleur (couleur sélectionnée avec le sélecteur de couleur -> transparent)
++=sélectionner le transparent saisie
+
+1200=selection: rectangle
++=select: polygone
++=select: à main levée
++=déplacer l'image
++=copier l'image
++=déplacer la position de sélection
+
+#--------------------
+# Panel setting
+
+[2018]
+0=Réglage du panneau
++=panneaux
++=position
++=panneau%d
++=Canevas
+
+#----------------------
+# Environment setting
+
+[2019]
+0=Paramétres géneraux
++=Paramétre 1
++=Paramétre 2
++=Plage d'agrandissement
++=Bouton
++=Système
++=Curseur
++=Interface
+
+100=largeur de l'image au démarrage
++=hauteur de l'image au démarrage
++=couleur d'arrière-plan du canevas
++=couleur de l'arrière-plan
++=nombre maximum d'annulation [2-400]
++=taille de la mémoire tampon de l'annulation
++=DPI au démarrage
+
+200=confirmer pour écraser
++=confirmer pour sauvegarder en tant que types APD attendus
++=lors de la sauvegarde en tant que APD, l'inclusion d'une seule peinture n'est pas autorisée
++=double-clique sur l'élément dans la liste de filtres pour l'exécuter
+
+300=premier niveau d'agrandissement (~100%)
++=premier niveau d'agrandissement (100%~)
++=premier niveau pour la rotation du canevas
++=chaque pixel lors du changement de la taille du pinceau en utilisant le glissement gauche-droit
+
+400=par defaut
++=tablette tactile
++=effaceur
++=rien (par défaut)
++=action de l'outil
++=autre action
++=commande
++=bouton
++=S'il vous plaît appuyez sur le bouton
++=fixer
+
+500=dossier de travail
++=dossier du pinceau
++=dossier de texture
+
+600=position à chaud
++=charger l'image
++=par défaut
++=la largeur comme la hauteur et de 1~32px.\nle noir est blanc de l'image resteront comme tel.\nles autres couleurs seront transparente.
+
++=Thème
++=Icône
++=Barre d'outil
++=Transparent
++=Autre
++=Paramétre de la barre d'outil
++=Police (s'applique au redémarrage)
++=Par défaut
++=Panneau
+
+1000=un répertoire non existant est défini comme répertoire de travail.
++=Les unités peuvent être utilisées pour K, M, G. octet sans appareil.\n1Gb Maximum.\n0 pour sortir tous les fichiers.
+
+#-------------------------
+# customize toolbar
+
+[2021]
+0=Personnaliser barre d'outil
++=--- séparateur ---
+
+#----------------------
+# filter
+
+[2020]
+1=réinitialiser
++=procéder uniquement à l'intérieur du canevas
+10=luminosité
++=contraste
++=valeur gamma
++=phase de couleur
++=chroma
++=seuil
++=type
++=gradation
++=rayon
++=nombre de cycle
++=vif
++=couleur
++=nombre de ligne
++=densité
++=angle
++=DPI
++=anticrénelage
++=taille
++=utiliser la couleur moyenne
++=angle R
++=angle V
++=angle B
++=régler l'angle de V, B sur le même que R
++=niveaux de gris
++=épaisseur
++=épaisseur minimale
++=épaisseur maximale
++=espace minimale
++=espace maximale
++=ligne horizontale
++=ligne verticale
++=distance horizontale
++=distance verticale
++=définir la plage verticale sur la même que la plage horizontale
++=force
++=quantité
++=densité
++=aléatoire: rayon minimum (%)
++=aléatoire: rayon minimum (%)
++=type de point
++=distance
++=inverser
++=longueur
++=largeur
++=faire une boucle latérale
++=clique gauche sur le canevas,\nvous pouvez changer la position centrale.
++=arrière-plan
++=agrandissement
++=rendre lisse
++=dépression
++=temps
++=faire la source du transparent cochée
++=découper l'image source
++=emphase
++=nombre de couleur
++=rapport d'aspect
++=espace: aléatoire
++=épaisseur: aléatoire
++=longueur: aléatoire
++=longueur de vague
++=disparition de l'épaisseur
++=simple aperçu
++=aperçu en rouge
+
+1000=Bayer2x2
++=Bayer4x4
++=Spirale
++=Point
++=Aléatoire
+
+1010=Noir/Blanc
++=couleur de peinture/couleur d'arrière-plan
++=noir+valeur alpha
+
+1020=couleur de peinture
++=couleur d'arrière-plan
++=noir
++=blanc
+
+1030=point cerclé
++=anticrénelage du cercle
++=cercle doux
+
+1040=couleur de peinture
++=aléatoire (échelle de gris)
++=aléatoire (phase de couleur)
++=aléatoire (RVB)
+
+1050=côté extérieur de la zone d'opacité
++=côté intérieur de la zone d'opacité
+
+1060=oblique
++=horizontale
++=verticale
+
+1070=valeur minimale
++=valeur moyenne
++=valeur maximale
+
+1080=en horizontale seulement
++=verticalement seutlement
++=les deux
+
+1090=coordonnées rectangulaires -> coordonnées polaires
++=coordonnées polaires -> coordonnées rectangulaires
+
+1100=transparent
++=couleur de côté
++=autres
+
+1110=pinceau (anticrénelage)
++=pinceau (sans anticrénelage)
++=stylo à point d'1px
+
+
+#**********************
+# other
+#**********************
+
+
+#----------------
+# error message
+
+[1]
+1=Échoué
++=L'allocation de mémoire a échoué
++=Le format ne correspond pas
++=Chargement échoué
++=Poids trop lourd
++=Ne peut lire que le fichier APD ver3
++=Cette touche est déjà utilisé.
++=Le transparent cible ne peut pas être peinte à cause du dossier.
++=La transparent cible ne peut pas être peinte parce qu'elle est verrouillé.
++=veuillez cocher le transparent que vous voulez voir en fonction de la liste.
++=L'image de texture n'est pas définie.
++=Le transparent actuel étant un type de couleur sans information de couleur,\nle filtre n'a aucun effet.
+
+#------------------
+# message
+
+[2]
+0=Écraser et sauvegarder ?
++=Il semble que vous essayez de sauvegarder dans un format autre que APD.\nVoulez-vous l'écraser ?
++=L'image a été modifié.\nVoulez-vous la sauvegarder ?
++=La création du répertoire de travail a échoué.\nL'annulation ne fonctionne pas correctement.
++=Souhaitez-vous migrer les données de pinceau et de palette ver.1 ?\n(Les données de dégradé sont partagées avec ver.1)
++=Comme le fichier n'existe pas, suppression dans l'historique.
+
+#--------------------
+# Mask check
+
+[6]
+0=Vérification du masque
++=sélection
++=transparent - vérouiller
++=transparent - masque en dessous du transparent
++=transparent - masque alpha
++=masque du transparent
++=masque de couleur
+
+#--------------------
+# drawing message
+
+[7]
+1=Vous essayez de dessiner pour un dossier
++=Le transparent actuel est vérouiller
++=Vous essayez de dessiner dans un transparent cachée
+
+#----------------
+# main menu
+
+[3]
+1=Fichier(&F)
++=Édition(&E)
++=Transparent(&L)
++=Sélection(&S)
++=Filtre(&T)
++=Vue(&V)
++=Paramétre(&O)
+
+### file
+1000=Nouveau(&N)...
++=Ouvrir(&O)...
++=Enregistrer(&S)
++=Enregistrer sous(&W)...
++=Enregistrer une copie(&D)...
++=Fichiers récents(&R)
++=Fermer(&X)
++=Vider l'historique(&C)
++=Réduire(&M)
+
+### edit
+2000=Annuler(&Z)
++=Refaire(&Y)
++=Vérifier l'état des masques(&M)
++=Remplir(&F)
++=Tout effacer(&E)
++=Changement de la taille du canevas (&S)...
++=Redimensionner le canevas(&R)...
++=Changement de DPI(&D)...
+
+### select
+3000=Déselectionner(&D)
++=Inverser(&I)
++=Tout sélectionner(&A)
++=Copier(&C)
++=Couper(&X)
++=Coller le nouveau transparent(&V)
++=Développer/Réduire(&E)...
++=Exporter la sélection au format PNG(&P)
+
+### layer
+4000=Nouveau transparent(&N)...
++=Nouveau dossier(&F)
++=Nouveau transparent depuis le fichier(&I)...
++=Copier(&C)
++=Supprimer(&D)
++=Tout effacer(&X)
++=Paramétre(&O)...
++=Paramétre de couleur(&R)...
++=Changer le type de couleur(&T)...
++=Déplacer l'image vers le transparent inférieur(&Z)
++=Fusionner avec le transparent en dessous(&B)
++=Fusionner divers transparent(&W)...
++=Fusionner tout(&M)
++=Éditer(&E)
++=Vue(&V)
++=Drapeau(&G)
++=Exporter dans un fichier(&S)...
++=Fermer tous les dossiers(&Q)
+
+4100=Retourner horizontalement(&H)
++=Renverser(&V)
++=Rotation à gauche 90 degrés(&L)
++=Rotation à droite 90 degrés(&R)
+
+4200=Tout montrer(&A)
++=Tout cacher(&H)
++=Montrer seulement le transparent actuel(&C)
++=Basculer au transparent coché(&K)
++=Basculer les transparent excluant les dossiers(&N)
+
+4300=Déverouiller tous les verrous(&L)
++=Tous les transparents source de détermination sont désactivées(&F)
++=Décocher toutes les vérifications(&K)
+
+### filter
+5000=Couleur
++=Remplacement de couleur
++=Valeur alpha (transparent coché)
++=Valeur alpha (transparent actuel)
++=Flou
++=Peinture
++=Peinture (bande-dessinée)
++=Pixelisation
++=Esquisse
++=Éffet
++=Transformation
++=Autres
+
+5100=Luminosité/Contraste...
++=Gamma...
++=Niveau...
++=Ajustement RVB...
++=Ajustement HSV...
++=Inversion negatif-positif
++=Niveau de gris
++=Couleur Sepia
++=Carte de gradient
++=Seuillage...
++=Seuillage (Tremblement)...
++=Postérisation...
++=Réduction de la couleur...
+
++=Changer la couleur de peinture...
++=Changer la couleur de peinture vers le transparent
++=Changer la couleur sauf la couleur de la peinture vers le transparent
++=Changer la couleur de peinture à l'arrière-plan
++=Changer la couleur du transparent à la couleur de peinture
+
++=(multiple) tous points de transparence au transparent
++=(multiple) point opaque au transparent
++=(multiple) combiner toutes les valeurs et copier
++=(multiple) ajouter toutes les valeurs
++=(multiple) soustraire toutes les valeurs
++=(multiple) multiplier toutes les valeurs
++=(simple) Inverser la luminosité du transparent vérifié et définir
++=(simple) régler la luminosité du transparent vérifié
++=Inverser la luminosité
++=Régler suivant la luminosité
++=Application de texture
++=Créer l'échelle de gris suivant la valeur alpha
+
++=Flou...
++=Flou Gauss...
++=Mouvement flou...
++=Rayon flou...
++=Lentille flou...
+
++=Nuages...
++=Modèle de point (1)...
++=Modèle de point (2)...
++=Point aléatoire pour croquis...
++=Dessin de points le long du bord...
++=Bordure...
++=Lignes horizontales et verticales...
++=Tissu...
+
++=Lignes concentrées...
++=Clignotement (anneau de feu)...
++=Clignotement solide (soleil)...
++=Clignotement uni...
++=Clignotement uni (vague)...
+
++=Mosaïque...
++=Cristal...
++=Demi-ton...
+
++=Tranchant...
++=Masque flou...
++=Extraction du contour (Sobel)
++=Extraction du contour (Laplacian)
++=Passe-haut...
+
++=Éclat...
++=Compensation RVB...
++=Peinture à l'huile...
++=Ciseler...
++=Bruit...
++=Effusion...
++=Rayure...
++=Médian...
++=Flou...
+
++=Vague...
++=Ondulation...
++=Coordonnées polaires...
++=Décalage radial...
++=Spirale...
+
++=Extraction de la ligne dessinée
++=1px ligne de correction
++=Anticrénelage...
++=Bordure...
++=Cadre tridimensionnel...
++=Décalage...
+
++=Tout opaque pour parfaire l'opaque
++=Ajustement HLS...
+
+### 表示
+6000=Panneau(&P)
++=Retourner le canevas horizontalement(&Q)
++=Afficher le fond comme grillagé(&K)
++=Montrer la grille(&G)
++=Montrer une ligne de division(&M)
++=Barre d'outil(&T)
++=Barre de status(&S)
++=Taux d'agrandissement du canevas(&C)
++=Rotation du canevas(&R)
+
+6100=Vue(&V)
++=Tout régler en mode fenêtre(&W)
++=Tout stocker dans la barre latérale(&S)
++=Outil(&T)
++=Option(&O)
++=Transparent(&L)
++=Pinceau(&B)
++=Couleur(&C)
++=Palette de couleur(&P)
++=Operation de canevas(&R)
++=Vue du canevas(&V)
++=Aperçu de l'image(&I)
++=Liste de filtres(&F)
++=Roue de couleurs (&H)
+
+6200=Agrandir le premier niveau(&U)
++=Réduire le premier niveau(&D)
++=Ajustement de la fenêtre(&F)
+
+6300=Rotation à gauche(&L)
++=Rotation à droite(&R)
++=0 degré
++=90 degrés
++=180 degrés
++=270 degrés
+
+### 設定ほか
+7000=Paramétre géneraux(&E)...
++=Paramétre de grille(&G)...
++=Paramétre de raccourci(&K)...
++=Raccourci de canevas(&C)...
++=Paramétre de panneau(&P)...
++=Information de version(&A)...

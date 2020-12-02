@@ -1,0 +1,364 @@
+#!/bin/sh
+
+#--------------
+# function
+
+fc_put_help() {
+cat <<_ZYXW_
+[Usage] ./configure [option] [VAR=VALUE]...
+
+Options:
+  --help         display this help
+  --debug        create debug exe (CFLAGS='-g -Wall')
+  --arch=[ARCH]  CFLAGS += "-march=ARCH"
+
+  --prefix=[PREFIX]   install dir
+                      [/usr/local]
+  --bindir=[DIR]      install dir of executables
+                      [PREFIX/bin]
+  --datarootdir=[DIR] install dir of system data files
+                      [PREFIX/share]
+  --datadir=[DIR]     install dir of application data files
+                      [DATAROOTDIR]
+  --docdir=[DIR]      install dir of document files
+                      [DATAROOTDIR/doc/$PACKAGE]
+
+  --no-check-lib      do not check library
+  --no-pkgconfig      do not use pkg-config command
+
+Optional flags:
+
+Variables:
+  CC       c compiler command
+  CFLAGS   c compiler flags
+  LDFLAGS  linker flags
+  LIBS     libraries (-l<lib>)
+_ZYXW_
+exit 0
+}
+
+fc_check_command() {
+	type "$1" > /dev/null 2>&1
+}
+
+fc_check_command_err() {
+	if ! type "$1" > /dev/null 2>&1;then
+		echo "! '$1' command not found."
+		echo "please install '$1'"
+		exit 1
+	fi
+}
+
+fc_add_string() {
+	tmpstr=`echo "$2" | sed -e 's|^ *||' -e 's| *$||'`
+	if test -z "$1";then
+		echo "$tmpstr"
+	elif test -z "$tmpstr";then
+		echo "$1"
+	else
+		echo "$1 $tmpstr"
+	fi
+}
+
+fc_check_sharedlib() {
+	set $1
+	for tmp1;do
+		echo "int main() { return 0; }" > conftest.c
+
+		tmp2="-l$tmp1"
+		if $CC $LDFLAGS -o conftest conftest.c $tmp2 > /dev/null 2>&1;then
+			LIBS_ADD=`fc_add_string "$LIBS_ADD" $tmp2`
+			tmp2=yes
+		else
+			tmp2=no
+		fi
+
+		echo "checking lib$tmp1...$tmp2"
+	done
+
+	rm -f conftest.c conftest
+}
+
+fc_check_lib() {
+	tmp_name=$1
+	tmp_pkgconf=$2
+	tmp_cflags=$3
+	tmp_libs=$4
+	tmp_includes=$5
+	tmp_incdirs=$6
+	tmp_help=$7
+
+	echo "checking $tmp_name"
+
+	if test "$tmp_libs";then
+		tmp1=0
+		if test $cf_pkgconfig = yes;then
+			if pkg-config --exists $tmp_pkgconf > /dev/null 2>&1;then tmp1=1; fi
+		fi
+		
+		if test $tmp1 = 1;then
+			tmp1=`pkg-config --cflags $tmp_pkgconf`
+			tmp2=`pkg-config --libs $tmp_pkgconf`
+		else
+			tmp1=$tmp_cflags
+			tmp2=$tmp_libs
+
+			if test -n "$tmp_incdirs";then
+				set $tmp_incdirs
+				for tmp3;do
+					if test -d $tmp3;then
+						tmp1=`fc_add_string "$tmp1" "-I$tmp3"`
+						break
+					fi
+				done
+			fi
+		fi
+
+		CFLAGS_ADD=`fc_add_string "$CFLAGS_ADD" "$tmp1"`
+		LIBS_ADD=`fc_add_string "$LIBS_ADD" "$tmp2"`
+	fi
+
+	# include test
+	if test $cf_check_lib = yes;then
+		touch conftest.c
+
+		set $tmp_includes
+		for tmp1;do
+			echo "#include <$tmp1>" >> conftest.c
+		done
+
+		echo "int main() { return 0; }" >> conftest.c
+
+		$CC $CFLAGS $CFLAGS_ADD -o conftest conftest.c > /dev/null 2>&1
+		tmp1=$?
+		rm -f conftest.c conftest
+
+		if test $tmp1 != 0;then
+			echo "! '$tmp_name': include file not found."
+			echo "please install $tmp_help"
+			exit 1
+		fi
+	fi
+}
+
+fc_create_makefile() {
+	cat - <<_ZYXW_ > conftmp
+s|@CC@|$CC|
+s|@CFLAGS@|$CFLAGS|
+s|@LDFLAGS@|$LDFLAGS|
+s|@LIBS@|$LIBS|
+s|@PREFIX@|$cf_prefix|
+s|@BINDIR@|$cf_bindir|
+s|@DATAROOTDIR@|$cf_datarootdir|
+s|@DATADIR@|$cf_datadir|
+s|@DOCDIR@|$cf_docdir|
+s|@PACKAGE_NAME@|$PACKAGE|
+s|@PACKAGE_VERSION@|$PACKAGE_VERSION|
+_ZYXW_
+
+	sed -f conftmp $1 > $2
+	rm -f conftmp
+	echo "create $2"
+}
+
+#----------------
+# command check
+
+fc_check_command_err sed
+
+#-------------
+# option
+
+CC=
+CFLAGS=
+LDFLAGS=
+LIBS=
+
+CFLAGS_ADD=
+LDFLAGS_ADD=
+LIBS_ADD=
+
+cf_prefix=/usr/local
+cf_bindir=
+cf_datarootdir=
+cf_datadir=
+cf_docdir=
+
+cf_os=unknown
+cf_debug=no
+cf_bigendian=no
+cf_make=make
+cf_check_lib=yes
+cf_pkgconfig=no
+
+if fc_check_command pkg-config;then cf_pkgconfig=yes; fi
+
+PACKAGE=azpainter
+PACKAGE_VERSION=2.1.7
+
+for opt;do
+	case $opt in
+	*=?*) tmp1=`expr "X$opt" : '[^=]*=\(.*\)'` ;;
+	*) tmp1= ;;
+	esac
+
+	case $opt in
+	--help)
+		fc_put_help ;;
+	--debug)
+		cf_debug=yes ;;
+	--arch=*)
+		CFLAGS_ADD=`fc_add_string "$CFLAGS_ADD" "-march=$tmp1"` ;;
+	--without-*)
+		tmp1=`expr "x$opt" : 'x--without-\(.*\)'`
+		eval cf_without_$tmp1=yes
+		;;
+	--prefix=*)
+		cf_prefix=$tmp1 ;;
+	--bindir=*)
+		cf_bindir=$tmp1 ;;
+	--datarootdir=*)
+		cf_datarootdir=$tmp1 ;;
+	--datadir=*)
+		cf_datadir=$tmp1 ;;
+	--docdir=*)
+		cf_docdir=$tmp1 ;;
+	--no-check-lib)
+		cf_check_lib=no ;;
+	--no-pkgconfig)
+		cf_pkgconfig=no ;;
+	*=*)
+		tmp2=`expr "X$opt" : 'X\([^=]*\)=.*'`
+		eval $tmp2=\'$tmp1\' ;;
+	*)
+		echo "unknown option: $opt"
+		exit 1 ;;
+	esac
+done
+
+# debug/release
+
+if test -z "$CFLAGS";then
+	if test "$cf_debug" = yes;then
+		CFLAGS_ADD=`fc_add_string "$CFLAGS_ADD" "-g -Wall"`
+	else
+		CFLAGS_ADD=`fc_add_string "$CFLAGS_ADD" "-O2 -Wall"`
+	fi
+fi
+
+# os
+
+tmp1=`uname`
+
+if test "$tmp1" = Linux;then cf_os=linux
+elif test "$tmp1" = Darwin;then
+	cf_os=mac
+	CFLAGS=`fc_add_string "$CFLAGS" "-I/opt/X11/include"`
+	LDFLAGS=`fc_add_string "$LDFLAGS" "-L/opt/X11/lib"`
+elif test "$tmp1" = FreeBSD;then
+	cf_os=freebsd
+	cf_make=gmake
+	CFLAGS=`fc_add_string "$CFLAGS" "-I/usr/local/include"`
+	LDFLAGS=`fc_add_string "$LDFLAGS" "-L/usr/local/lib"`
+fi
+
+# dir
+
+if test -z "$cf_bindir";then cf_bindir=$cf_prefix/bin; fi
+if test -z "$cf_datarootdir";then cf_datarootdir=$cf_prefix/share; fi
+if test -z "$cf_datadir";then cf_datadir=$cf_datarootdir; fi
+if test -z "$cf_docdir";then cf_docdir=$cf_datarootdir/doc/$PACKAGE; fi
+
+
+fc_check_command_err $cf_make
+
+if test $cf_os = linux;then
+	LIBS_ADD=`fc_add_string "$LIBS_ADD" "-lrt"`
+fi
+
+#-------------
+# compiler
+
+if test -z "$CC";then
+	if fc_check_command clang;then CC=clang
+	elif fc_check_command gcc;then CC=gcc
+	else CC=cc
+	fi
+fi
+
+echo "c compiler = $CC"
+
+#---------------
+# bigendian
+
+cat - <<_SRC > conftest.c
+int main()
+{
+	unsigned short a = 0x1234;
+	if(*((unsigned char *)&a) == 0x12)
+		return 0;
+	else
+		return 1;
+}
+_SRC
+
+if $CC $CFLAGS -o conftest conftest.c > /dev/null 2>&1 && ./conftest;then
+	cf_bigendian=yes
+	echo "endian = big"
+else
+	echo "endian = little"
+fi
+
+rm -f conftest.c conftest
+
+#--------------------
+# config.h & CFLAGS
+
+touch conftmp
+
+if test $cf_bigendian = yes;then
+	echo "s|\\#undef MLIB_BIGENDIAN|\\#define MLIB_BIGENDIAN|" >> conftmp
+fi
+
+if test -s conftmp;then
+	sed -f conftmp config.h.in > config.h
+else
+	cp config.h.in config.h
+fi
+
+rm -f conftmp
+echo "create config.h"
+
+#------------------
+# libs
+
+
+fc_check_lib libpng "libpng" "" "-lpng -lz" "png.h" "" "libpng-dev or libpng-devel or libpng or png"
+fc_check_lib zlib "zlib" "" "" "zlib.h" "" "zlib1g-dev or zlib-devel or zlib"
+fc_check_lib libjpeg "libjpeg" "" "-ljpeg" "stdio.h jpeglib.h" "" "libjpeg-dev or libjpeg-devel or libjpeg-turbo or jpeg-turbo"
+fc_check_lib x11 "x11" "" "-lX11" "X11/Xlib.h" "" "libx11-dev or libX11-devel or libx11"
+fc_check_lib xext "xext" "" "-lXext" "X11/Xlib.h X11/extensions/XShm.h" "" "libxext-dev or libXext-devel or libxext"
+fc_check_lib xinput "xi" "" "-lXi" "X11/Xlib.h X11/extensions/XInput2.h" "" "libxi-dev or libXi-devel or libxi"
+fc_check_lib fontconfig "fontconfig" "" "-lfontconfig -lfreetype" "fontconfig/fontconfig.h" "/usr/include/freetype2 /usr/local/include/freetype2 /opt/X11/include/freetype2" "libfontconfig1-dev or libfontconfig-devel or fontconfig"
+fc_check_lib freetype2 "freetype2" "" "" "ft2build.h" "" "libfreetype6-dev or libfreetype6-devel or freetype2"
+
+#------------------
+# Makefile
+
+CFLAGS=`fc_add_string "$CFLAGS" "$CFLAGS_ADD"`
+LDFLAGS=`fc_add_string "$LDFLAGS" "$LDFLAGS_ADD"`
+LIBS=`fc_add_string "$LIBS" "$LIBS_ADD"`
+
+fc_create_makefile Makefile.in Makefile
+fc_create_makefile mlib/Makefile.in mlib/Makefile
+
+cat <<_ZYXW_
+---------------
+CFLAGS = $CFLAGS
+LDFLAGS = $LDFLAGS
+LIBS = $LIBS
+
+please run...
+$ ${cf_make}
+# ${cf_make} install
+_ZYXW_
