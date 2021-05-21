@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,26 +18,27 @@
 $*/
 
 /*****************************************
- * DrawData
+ * AppDraw
  *
  * ADW 読み込み (ver1,ver2)
  *****************************************/
 
 #include <stdio.h>
 
-#include "mDef.h"
-#include "mPopupProgress.h"
-#include "mZlib.h"
-#include "mUtilStdio.h"
-#include "mUtilCharCode.h"
-#include "mUtil.h"
+#include "mlk_gui.h"
+#include "mlk_widget_def.h"
+#include "mlk_popup_progress.h"
+#include "mlk_zlib.h"
+#include "mlk_stdio.h"
+#include "mlk_unicode.h"
+#include "mlk_util.h"
 
-#include "defDraw.h"
-#include "defLoadErr.h"
+#include "def_draw.h"
 
-#include "LayerList.h"
-#include "LayerItem.h"
-#include "TileImage.h"
+#include "layerlist.h"
+#include "layeritem.h"
+#include "tileimage.h"
+#include "imagecanvas.h"
 
 #include "draw_main.h"
 
@@ -48,46 +49,46 @@ typedef struct
 {
 	mPopupProgress *prog;
 	
-	mZlibDecode *dec;
-	uint8_t *tmpbuf;
+	mZlib *zlib;
 }_load_adw;
 
 //------------------
 
 
-/** ver 2 読み込み (LE)
+/* ver 2 読み込み (LE)
  *
  * Alpha-8bit 64x64 タイルイメージ */
 
-static int _load_ver2(_load_adw *p,FILE *fp)
+static mlkerr _load_ver2(_load_adw *p,FILE *fp)
 {
 	int i;
 	uint32_t size,tilenum,col;
 	uint16_t wsize,imgw,imgh,dpi,layernum,layersel,layerinfosize,name[25],tx,ty;
 	uint8_t opacity,flags,*tile;
+	mlkerr ret;
 	LayerItem *item;
 	TileImage *img;
 	mRect rc;
 
 	//プレビューイメージをスキップ
 
-	if(fseek(fp, 4, SEEK_CUR)			//幅、高さ
-		|| !mFILEread32LE(fp, &size)	//イメージサイズ
+	if(fseek(fp, 4, SEEK_CUR)		//幅、高さ
+		|| mFILEreadLE32(fp, &size)	//イメージサイズ
 		|| fseek(fp, size, SEEK_CUR))
-		return LOADERR_CORRUPTED;
+		return MLKERR_DAMAGED;
 
 	//メイン情報
 
-	if(!mFILEreadArgsLE(fp, "2222222",
+	if(mFILEreadFormatLE(fp, "hhhhhhh",
 		&wsize, &imgw, &imgh, &dpi, &layernum, &layersel, &layerinfosize))
-		return LOADERR_CORRUPTED;
+		return MLKERR_DAMAGED;
 
 	fseek(fp, wsize - 12, SEEK_CUR);
 
 	//新規イメージ
 
-	if(!drawImage_new(APP_DRAW, imgw, imgh, dpi, -1))
-		return LOADERR_ALLOC;
+	if(!drawImage_newCanvas_openFile(APPDRAW, imgw, imgh, 8, dpi))
+		return MLKERR_ALLOC;
 
 	//--------- レイヤ
 
@@ -97,28 +98,37 @@ static int _load_ver2(_load_adw *p,FILE *fp)
 	{
 		//px 範囲とタイル数
 
-		if(!mFILEreadArgsLE(fp, "44444",
+		if(mFILEreadFormatLE(fp, "iiiii",
 			&rc.x1, &rc.y1, &rc.x2, &rc.y2, &tilenum))
-			return LOADERR_CORRUPTED;
-
-		//レイヤ追加
-
-		item = LayerList_addLayer(APP_DRAW->layerlist, item);
-		if(!item) return LOADERR_ALLOC;
-
-		//イメージ作成 (A16)
-
-		img = TileImage_newFromRect_forFile(TILEIMAGE_COLTYPE_ALPHA16, &rc);
-		if(!img) return LOADERR_ALLOC;
-
-		LayerItem_replaceImage(item, img);
+			return MLKERR_DAMAGED;
 
 		//レイヤ情報
 
-		if(fread(name, 1, 50, fp) != 50
-			|| !mFILEreadArgsLE(fp, "141", &opacity, &col, &flags)
-			|| fseek(fp, 3, SEEK_CUR))
-			return LOADERR_CORRUPTED;
+		if(mFILEreadOK(fp, name, 50)
+			|| mFILEreadFormatLE(fp, "bib", &opacity, &col, &flags)
+			|| fseek(fp, 3 + (layerinfosize - 79), SEEK_CUR))
+			return MLKERR_DAMAGED;
+
+		//レイヤ追加 (最後のレイヤの上に)
+
+		item = LayerList_addLayer(APPDRAW->layerlist, item);
+		if(!item) return MLKERR_ALLOC;
+
+		//イメージ作成 (アルファのみ)
+
+		img = TileImage_newFromRect_forFile(TILEIMAGE_COLTYPE_ALPHA, &rc);
+		if(!img) return MLKERR_ALLOC;
+
+		LayerItem_replaceImage(item, img, LAYERTYPE_ALPHA);
+
+		//名前 (UTF-16 => UTF-8)
+
+		for(i = 0; i < 24; i++)
+			name[i] = mGetBufLE16(name + i);
+
+		name[24] = 0;
+
+		item->name = mUTF16toUTF8_alloc(name, -1, NULL);
 
 		//
 
@@ -128,19 +138,6 @@ static int _load_ver2(_load_adw *p,FILE *fp)
 			item->flags &= ~LAYERITEM_F_VISIBLE;
 
 		LayerItem_setLayerColor(item, col);
-
-		//名前 (UTF-16 => UTF-8)
-
-		for(i = 0; i < 24; i++)
-			name[i] = mGetBuf16LE(name + i);
-
-		name[24] = 0;
-
-		item->name = mUTF16ToUTF8_alloc(name, -1, NULL);
-
-		//seek
-
-		fseek(fp, layerinfosize - 79, SEEK_CUR);
 
 		//空イメージ
 
@@ -152,22 +149,22 @@ static int _load_ver2(_load_adw *p,FILE *fp)
 
 		//タイル
 		
-		mPopupProgressThreadBeginSubStep(p->prog, 6, tilenum);
+		mPopupProgressThreadSubStep_begin(p->prog, 6, tilenum);
 
 		for(; tilenum; tilenum--)
 		{
 			//タイル位置、圧縮サイズ
 
-			if(!mFILEreadArgsLE(fp, "222", &tx, &ty, &wsize))
-				return LOADERR_CORRUPTED;
+			if(mFILEreadFormatLE(fp, "hhh", &tx, &ty, &wsize))
+				return MLKERR_DAMAGED;
 
 			if(wsize == 0 || wsize > 4096)
-				return LOADERR_INVALID_VALUE;
+				return MLKERR_INVALID_VALUE;
 
 			//タイル作成
 
 			tile = TileImage_getTileAlloc_atpos(img, tx, ty, FALSE);
-			if(!tile) return LOADERR_ALLOC;
+			if(!tile) return MLKERR_ALLOC;
 
 			//読み込み
 
@@ -175,26 +172,22 @@ static int _load_ver2(_load_adw *p,FILE *fp)
 			{
 				//無圧縮
 				
-				if(fread(tile, 1, 4096, fp) != 4096)
-					return LOADERR_CORRUPTED;
+				if(mFILEreadOK(fp, tile, 4096))
+					return MLKERR_DAMAGED;
 			}
 			else
 			{
 				//zlib
 				
-				mZlibDecodeReset(p->dec);
+				mZlibDecReset(p->zlib);
 
-				if(mZlibDecodeReadOnce(p->dec, tile, 4096, wsize))
-					return LOADERR_DECODE;
+				ret = mZlibDecReadOnce(p->zlib, tile, 4096, wsize);
+				if(ret) return ret;
 			}
-
-			//A8 => A16 変換
-
-			TileImage_convertTile_A8toA16(tile);
 
 			//progress
 			
-			mPopupProgressThreadIncSubStep(p->prog);
+			mPopupProgressThreadSubStep_inc(p->prog);
 		}
 
 		//念のため空タイルを解放
@@ -204,84 +197,82 @@ static int _load_ver2(_load_adw *p,FILE *fp)
 
 	//カレントレイヤ
 
-	APP_DRAW->curlayer = LayerList_getItem_byPos_topdown(APP_DRAW->layerlist, layersel);
+	APPDRAW->curlayer = LayerList_getTopItem(APPDRAW->layerlist);
 
-	return LOADERR_OK;
+	return MLKERR_OK;
 }
 
-/** ver 1 読み込み (LE)
+/* ver 1 読み込み (LE)
  *
  * Alpha-8bit 幅x高さのベタイメージ */
 
-static int _load_ver1(_load_adw *p,FILE *fp)
+static mlkerr _load_ver1(_load_adw *p,FILE *fp)
 {
 	uint32_t size,col;
 	uint16_t imgw,imgh,layernum,layercnt,layersel;
 	uint8_t comp,opacity,flags;
 	int pitch,ix,iy;
+	mlkerr ret;
 	char name[32];
 	LayerItem *item;
 	TileImage *img;
-	uint8_t *ps;
-	RGBAFix15 pix;
+	uint8_t *buf,*ps,pixcol[4] = {0,0,0,0};
 
 	//メイン情報
 
-	if(!mFILEreadArgsLE(fp, "222221",
+	if(mFILEreadFormatLE(fp, "hhhhhb",
 		&imgw, &imgh, &layernum, &layercnt, &layersel, &comp))
-		return LOADERR_CORRUPTED;
+		return MLKERR_DAMAGED;
 
-	if(comp != 0) return LOADERR_INVALID_VALUE;
+	if(comp != 0) return MLKERR_INVALID_VALUE;
 
 	//プレビューイメージをスキップ
 
-	if(!mFILEread32LE(fp, &size)
+	if(mFILEreadLE32(fp, &size)
 		|| fseek(fp, size, SEEK_CUR))
-		return LOADERR_CORRUPTED;
+		return MLKERR_DAMAGED;
 
 	//新規イメージ
 
-	if(!drawImage_new(APP_DRAW, imgw, imgh, -1, -1))
-		return LOADERR_ALLOC;
+	if(!drawImage_newCanvas_openFile(APPDRAW, imgw, imgh, 8, -1))
+		return MLKERR_ALLOC;
 
-	//作業用バッファ
+	//Y1行サイズ
 
+	buf = *(APPDRAW->imgcanvas->ppbuf);
 	pitch = (imgw + 3) & (~3);
 
-	p->tmpbuf = (uint8_t *)mMalloc(pitch, FALSE);
-	if(!p->tmpbuf) return LOADERR_ALLOC;
-
 	//------- レイヤ
-
-	pix.v64 = 0;
 
 	mPopupProgressThreadSetMax(p->prog, layernum * 6);
 
 	for(item = NULL; layernum; layernum--)
 	{
-		//レイヤ追加 (下から順なので、現在のトップレイヤの上へ挿入)
-
-		item = LayerList_addLayer(APP_DRAW->layerlist, item);
-		if(!item) return LOADERR_ALLOC;
-
-		//イメージ作成 (A16)
-
-		img = TileImage_new(TILEIMAGE_COLTYPE_ALPHA16, imgw, imgh);
-		if(!img) return LOADERR_ALLOC;
-
-		LayerItem_replaceImage(item, img);
-
 		//レイヤ情報
 
-		if(fread(name, 1, 32, fp) != 32
-			|| !mFILEreadArgsLE(fp, "1144", &opacity, &flags, &col, &size))
-			return LOADERR_CORRUPTED;
+		if(mFILEreadOK(fp, name, 32)
+			|| mFILEreadFormatLE(fp, "bbii", &opacity, &flags, &col, &size))
+			return MLKERR_DAMAGED;
 
-		/* 名前は Shift-JIS。
-		 * すべて ASCII 文字ならそのままセット。 */
+		//レイヤ追加
+		// :下層レイヤから順のため、最後のレイヤの上に追加
+
+		item = LayerList_addLayer(APPDRAW->layerlist, item);
+		if(!item) return MLKERR_ALLOC;
+
+		//イメージ作成 (アルファのみ)
+
+		img = TileImage_new(TILEIMAGE_COLTYPE_ALPHA, imgw, imgh);
+		if(!img) return MLKERR_ALLOC;
+
+		LayerItem_replaceImage(item, img, LAYERTYPE_ALPHA);
+
+		//名前 (Shift-JIS)
 
 		name[31] = 0;
-		LayerList_setItemName_ascii(APP_DRAW->layerlist, item, name);
+		LayerList_setItemName_shiftjis(APPDRAW->layerlist, item, name);
+
+		//
 
 		item->opacity = opacity;
 
@@ -292,106 +283,99 @@ static int _load_ver1(_load_adw *p,FILE *fp)
 
 		//イメージ読み込み
 
-		mZlibDecodeReset(p->dec);
-		mZlibDecodeSetInSize(p->dec, size);
+		mZlibDecReset(p->zlib);
+		mZlibDecSetSize(p->zlib, size);
 
-		mPopupProgressThreadBeginSubStep(p->prog, 6, imgh);
+		mPopupProgressThreadSubStep_begin(p->prog, 6, imgh);
 
 		for(iy = 0; iy < imgh; iy++)
 		{
-			if(mZlibDecodeRead(p->dec, p->tmpbuf, pitch))
-				return LOADERR_DECODE;
+			ret = mZlibDecRead(p->zlib, buf, pitch);
+			if(ret) return ret;
 
-			//横一列セット
-
-			ps = p->tmpbuf;
+			ps = buf;
 
 			for(ix = 0; ix < imgw; ix++, ps++)
 			{
 				if(*ps)
 				{
-					pix.a = RGBCONV_8_TO_FIX15(*ps);
+					pixcol[3] = *ps;
 
-					TileImage_setPixel_new(img, ix, iy, &pix);
+					TileImage_setPixel_new(img, ix, iy, pixcol);
 				}
 			}
 
-			mPopupProgressThreadIncSubStep(p->prog);
+			mPopupProgressThreadSubStep_inc(p->prog);
 		}
 
-		if(mZlibDecodeReadEnd(p->dec))
-			return LOADERR_DECODE;
+		ret = mZlibDecFinish(p->zlib);
+		if(ret) return ret;
 	}
 
-	//カレントレイヤ (layersel は先頭からの位置)
+	//カレントレイヤ
 
-	APP_DRAW->curlayer = LayerList_getItem_byPos_topdown(APP_DRAW->layerlist, layersel);
+	APPDRAW->curlayer = LayerList_getTopItem(APPDRAW->layerlist);
 
-	return LOADERR_OK;
+	return MLKERR_OK;
 }
 
 
 //==============================
 
 
-/** 読み込みメイン */
+/* 読み込みメイン */
 
-static int _load_main(_load_adw *p,FILE *fp)
+static mlkerr _load_main(_load_adw *p,FILE *fp)
 {
 	uint8_t ver;
-	int err;
+	mlkerr ret;
 
 	//ヘッダ
 
-	if(!mFILEreadCompareStr(fp, "AZDWDAT"))
-		return LOADERR_HEADER;
-
-	//バージョン
-
-	if(!mFILEreadByte(fp, &ver) || ver > 2)
-		return LOADERR_VERSION;
+	if(mFILEreadStr_compare(fp, "AZDWDAT")
+		|| mFILEreadByte(fp, &ver)
+		|| ver >= 2)
+		return MLKERR_UNSUPPORTED;
 
 	//zlib 初期化
 
-	p->dec = mZlibDecodeNew(16 * 1024, MZLIBDEC_WINDOWBITS_ZLIB);
-	if(!p->dec) return LOADERR_ALLOC;
+	p->zlib = mZlibDecNew(16 * 1024, MZLIB_WINDOWBITS_ZLIB);
+	if(!p->zlib) return MLKERR_ALLOC;
 
-	mZlibDecodeSetIO_stdio(p->dec, fp);
+	mZlibSetIO_stdio(p->zlib, fp);
 
 	//読み込み
 
 	if(ver == 0)
-		err = _load_ver1(p, fp);
+		ret = _load_ver1(p, fp);
 	else
-		err = _load_ver2(p, fp);
+		ret = _load_ver2(p, fp);
 
 	//解放
 
-	mZlibDecodeFree(p->dec);
-	mFree(p->tmpbuf);
+	mZlibFree(p->zlib);
 
-	return err;
+	return ret;
 }
 
-/** ADW 読み込み
- *
- * @return LOADERR_* */
+/** ADW 読み込み */
 
-int drawFile_load_adw(const char *filename,mPopupProgress *prog)
+mlkerr drawFile_load_adw(const char *filename,mPopupProgress *prog)
 {
 	_load_adw dat;
 	FILE *fp;
-	int err;
+	mlkerr ret;
 
-	mMemzero(&dat, sizeof(_load_adw));
+	mMemset0(&dat, sizeof(_load_adw));
 	dat.prog = prog;
 
-	fp = mFILEopenUTF8(filename, "rb");
-	if(!fp) return LOADERR_OPENFILE;
+	fp = mFILEopen(filename, "rb");
+	if(!fp) return MLKERR_OPEN;
 
-	err = _load_main(&dat, fp);
+	ret = _load_main(&dat, fp);
 
 	fclose(fp);
 
-	return err;
+	return ret;
 }
+

@@ -1,8 +1,9 @@
 **********************************************
   AzPainter for Linux
-  Copyright (C) 2013-2020 Azel
+  Copyright (C) 2013-2021 Azel
 
   http://azsky2.html.xdomain.jp/
+  https://gitlab.com/azelpg/azpainter
   <azelpg@gmail.com>
 **********************************************
 
@@ -14,13 +15,9 @@
  * 概要
 =====================================
 
-主にイラスト描画用のフルカラーペイントソフトです。
-レタッチとしても使えますが、ドット編集や画像編集には向いていません。
+イラストや画像編集用のペイントソフトです。
 
-- 内部では、色は 16bit カラー (15bit 固定小数点数) で処理されます。
-  精度が高くなる代わりに、メモリを多く消費します。
-
-- 筆圧対応 (XInput2 使用)
+8bit/16bit(固定小数点15bit) のカラーに対応しています。
 
 
 =====================================
@@ -42,8 +39,9 @@
 - 各種ライブラリの開発用ファイル
 
 [必要なライブラリ]
-  x11 xext xinput
+  x11 xext xcursor xinput
   zlib libpng jpeglib(jpeg-turbo) fontconfig freetype2
+  tiff webp
 
 
 ＃ 各ディストリビューションごとの必要なパッケージ
@@ -53,31 +51,37 @@
 
 (Debian/Ubuntu 系)
 
-  gcc or clang, make libx11-dev libxext-dev libxi-dev libfreetype6-dev
-  libfontconfig1-dev zlib1g-dev libpng-dev libjpeg-dev
+  gcc or clang, make
+  libx11-dev libxext-dev libxcursor-dev libxi-dev
+  libfreetype6-dev libfontconfig1-dev
+  zlib1g-dev libpng-dev libjpeg-dev libtiff-dev libwebp-dev
 
 (RedHat 系)
 
-  gcc or clang, make libX11-devel libXext-devel libXi-devel libfreetype6-devel
-  libfontconfig-devel zlib-devel libpng-devel libjpeg-devel
+  gcc or clang, make
+  libX11-devel libXext-devel libXcursor-devel libXi-devel
+  libfreetype6-devel libfontconfig-devel
+  zlib-devel libpng-devel libjpeg-devel libtiff-devel libwebp-devel
 
 (Arch Linux)
 
-  gcc or clang, make libx11 libxext libxi freetype2 fontconfig zlib
-  libpng libjpeg-turbo
+  gcc or clang, make
+  libx11 libxext libxcursor libxi
+  freetype2 fontconfig
+  zlib libpng libjpeg-turbo libtiff libwebp
   
   [*] GUI 環境がインストールされていれば、ほぼインストールされています。
 
 (FreeBSD)
 
-  gmake png jpeg-turbo
+  gmake png jpeg-turbo tiff webp
 
   [*] xorg がインストールされていれば、ほぼインストールされています。
   [*] BSD make には対応していません。
 
 (macOS)
 
-  xcode libpng jpeg-turbo
+  xcode libpng jpeg-turbo libtiff webp
 
   [*] XQuartz がインストールされていることが前提です。
 
@@ -120,6 +124,18 @@ $ ./configure --prefix=/usr
 
 
 =====================================
+ * アンインストール
+=====================================
+
+make install 時に使った Makefile が残っている場合は、
+Makefile があるディレクトリ上で以下を実行すると、ファイルが削除されます。
+
+$ sudo make uninstall
+
+または、手動で各ファイルを削除してください。
+
+
+=====================================
  * 使い方
 =====================================
 
@@ -133,94 +149,53 @@ $ azpainter
 
 
 =====================================
- * 設定ファイル
+ * ファイル
 =====================================
 
-"~/.azpainter" に設定ファイルが保存されます。
+INSTDIR は、デフォルトで "/usr/local" です。
+
+<< インストールされるファイル >>
+
+<INSTDIR>/bin/azpainter : 実行ファイル
+<INSTDIR>/share
+  |- azpainter3/ : アプリで使用されるファイル
+  |- doc/azpainter/ : ドキュメントファイル
+  |- applications/
+     |- azpainter.desktop : デスクトップファイル
+  |- icons/hicolor/ : アイコンファイル
+     |- 48x48/apps/azpainter.png
+     |- scalable/apps/azpainter.svg
 
 
-=====================================
- * アンインストール
-=====================================
+<< 作成されるファイル >>
 
-＃ Makefile を使う
------------------------
-
-./configure で生成した Makefile が残っている場合は、
-Makefile があるディレクトリ上で、以下を実行します。
-
-$ sudo make uninstall
-
-※設定ファイルのディレクトリは削除されないため、手動で削除してください。
-
-
-＃ 手動でファイル削除
------------------------
-
-手動でアンインストールする場合は、以下のファイルを削除してください。
-
-<INSTALLDIR> は、インストール先のディレクトリです。
-(configure の --prefix で指定したディレクトリ。デフォルトで "/usr/local")
-
-** ディレクトリごと削除するもの
-
-<INSTALLDIR>/share/azpainter
-<INSTALLDIR>/doc
-~/.azpainter (設定ファイル)
-
-** ファイルを個別に削除するもの
-
-<INSTALLDIR>/share/applications
-  azpainter.desktop
-
-<INSTALLDIR>/share/mime/packages
-  azpainter.xml
-
-<INSTALLDIR>/share/icons/hicolor/48x48/apps
-  azpainter.png
-  application-x-azpainter-apd.png
-
-<INSTALLDIR>/share/icons/hicolor/scalable/apps
-  azpainter.svg
-  application-x-azpainter-apd.svg
+"~/.config/azpainter" ディレクトリが作成され、ここに各設定ファイルが保存されます。
 
 
 =====================================
- * 環境変数
+ * mlk について
 =====================================
 
-起動時に以下の環境変数が定義されていると、設定などを変更できます。
+GUI の構築には、自作のライブラリ mlk を使用しています。
 
-MLIB_APPDATADIR
-	アプリを動作させるのに必要なデータファイルのディレクトリの場所を指定します。
-	デフォルトでは、"<INSTALLDIR>/share/azpainterb" になっています。
+GUI のフォントや色は、"az-mlk-style.conf" の設定ファイルで指定することができます。
+
+詳しくは、"about-mlk.txt" をご覧ください。
 
 
 =====================================
- * ver.1 からの移行について
+ * ver 2.x との共存について
 =====================================
 
-ver.1 -> ver.2 は大幅な変更となっております。
+ver 3 のインストール時、
+旧バージョンの [実行ファイル、デスクトップファイル、アイコンファイル] は上書きされます。
 
-ver.2 の設定ファイルは、ver.1 と同じ場所に作成されます。
-ただし、各ファイル名はバージョンごとに異なるので、ver.1 のデータはそのまま残ります。
+旧バージョンの実行ファイルを、azpainter2 などのように名前変更してからインストールすると、
+旧バージョンは azpainter2 で実行、新バージョンは azpainter で実行、
+という形で共存させることができます。
 
-ver.1 の設定ファイルが必要ない場合は、削除して構いません。
-(main.conf, brush.dat, key.dat, palette.dat)
-
-[!] グラデーションデータ (grad.dat) は ver.1 と同じフォーマットのため、
-    そのまま同じファイル名で共有します。
-
-ブラシとテクスチャの画像は、そのまま ver.1 と同じ状態で、引き続き使うことが出来ます。
-
-
-＃ データ移行
----------------------
-
-ver.1 の設定ファイルが存在する場合、
-初回起動時に ver.1 のデータを ver.2 に移行するかどうかのメッセージが出るので、
-それに「はい」と答えれば、
-ver.1 のブラシデータとカラーパレットデータを ver.2 用に変換することが出来ます。
-
-ブラシとカラーパレット以外のデータは移行されません。
+設定ファイルのディレクトリは、それぞれ
+ ver 2: ~/.azpainter
+ ver 3: ~/.config/azpainter
+と異なっているため、設定ファイルは別々のまま動作させることができます。
 

@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,30 +18,28 @@
 $*/
 
 /*****************************************
- * DrawData
- *
- * 計算関連
+ * AppDraw: 計算関連
  *****************************************/
 
 #include <stdlib.h>
 #include <math.h>
 
-#include "mDef.h"
-#include "mRectBox.h"
+#include "mlk_gui.h"
+#include "mlk_rectbox.h"
 
-#include "defDraw.h"
-#include "defConfig.h"
-#include "defMacros.h"
+#include "def_macro.h"
+#include "def_config.h"
+#include "def_draw.h"
+
+#include "tileimage.h"
 
 #include "draw_calc.h"
-
-#include "TileImage.h"
 
 
 
 /** 現在の倍率&角度から、キャンバス用パラメータセット */
 
-void drawCalc_setCanvasViewParam(DrawData *p)
+void drawCalc_setCanvasViewParam(AppDraw *p)
 {
 	double d;
 
@@ -50,7 +48,7 @@ void drawCalc_setCanvasViewParam(DrawData *p)
 	p->viewparam.scale = d;
 	p->viewparam.scalediv = 1.0 / d;
 
-	d = p->canvas_angle * M_MATH_PI / 18000.0;
+	d = p->canvas_angle * MLK_MATH_PI / 18000.0;
 
 	p->viewparam.rd = d;
 	p->viewparam.cos = cos(d);
@@ -61,9 +59,10 @@ void drawCalc_setCanvasViewParam(DrawData *p)
 
 /** 指定位置がキャンバスの範囲内か */
 
-mBool drawCalc_isPointInCanvasArea(DrawData *p,mPoint *pt)
+mlkbool drawCalc_isPointInCanvasArea(AppDraw *p,mPoint *pt)
 {
-	return (pt->x >= 0 && pt->x < p->szCanvas.w && pt->y >= 0 && pt->y < p->szCanvas.h);
+	return (pt->x >= 0 && pt->x < p->canvas_size.w
+		&& pt->y >= 0 && pt->y < p->canvas_size.h);
 }
 
 
@@ -72,44 +71,44 @@ mBool drawCalc_isPointInCanvasArea(DrawData *p,mPoint *pt)
 //==============================
 
 
-/** 領域座標 (double) -> イメージ位置 (double) */
+/** キャンバス座標 (double) -> イメージ位置 (double) */
 
-void drawCalc_areaToimage_double(DrawData *p,double *dx,double *dy,double x,double y)
+void drawCalc_canvas_to_image_double(AppDraw *p,double *dx,double *dy,double x,double y)
 {
 	double xx,yy;
 
-	x += p->ptScroll.x - (p->szCanvas.w >> 1);
-	y += p->ptScroll.y - (p->szCanvas.h >> 1);
+	x += p->canvas_scroll.x - (p->canvas_size.w >> 1);
+	y += p->canvas_scroll.y - (p->canvas_size.h >> 1);
 
 	xx = x * p->viewparam.cosrev - y * p->viewparam.sinrev;
 	yy = x * p->viewparam.sinrev + y * p->viewparam.cosrev;
 
 	if(p->canvas_mirror) xx = -xx;
 
-	*dx = xx * p->viewparam.scalediv + p->imgoriginX;
-	*dy = yy * p->viewparam.scalediv + p->imgoriginY;
+	*dx = xx * p->viewparam.scalediv + p->imgorigin.x;
+	*dy = yy * p->viewparam.scalediv + p->imgorigin.y;
 }
 
-/** 領域座標 (mPoint) -> イメージ位置 (mDoublePoint) */
+/** キャンバス座標 (mPoint) -> イメージ位置 (mDoublePoint) */
 
-void drawCalc_areaToimage_double_pt(DrawData *p,mDoublePoint *dst,mPoint *src)
+void drawCalc_canvas_to_image_double_pt(AppDraw *p,mDoublePoint *dst,mPoint *src)
 {
-	drawCalc_areaToimage_double(p, &dst->x, &dst->y, src->x, src->y);
+	drawCalc_canvas_to_image_double(p, &dst->x, &dst->y, src->x, src->y);
 }
 
-/** 領域座標 (double) -> イメージ位置 (mPoint) */
+/** キャンバス座標 (double) -> イメージ位置 (mPoint) */
 
-void drawCalc_areaToimage_pt(DrawData *p,mPoint *pt,double x,double y)
+void drawCalc_canvas_to_image_pt(AppDraw *p,mPoint *pt,double x,double y)
 {
-	drawCalc_areaToimage_double(p, &x, &y, x, y);
+	drawCalc_canvas_to_image_double(p, &x, &y, x, y);
 
 	pt->x = floor(x);
 	pt->y = floor(y);
 }
 
-/** キャンバス座標における相対値をイメージ座標での相対値に変換 */
+/** キャンバス座標における相対値を、イメージ座標における相対値に変換 */
 
-void drawCalc_areaToimage_relative(DrawData *p,mPoint *dst,mPoint *src)
+void drawCalc_canvas_to_image_relative(AppDraw *p,mPoint *dst,mPoint *src)
 {
 	dst->x = (int)((src->x * p->viewparam.cosrev - src->y * p->viewparam.sinrev) * p->viewparam.scalediv);
 	dst->y = (int)((src->x * p->viewparam.sinrev + src->y * p->viewparam.cosrev) * p->viewparam.scalediv);
@@ -118,48 +117,55 @@ void drawCalc_areaToimage_relative(DrawData *p,mPoint *dst,mPoint *src)
 		dst->x = -(dst->x);
 }
 
-/** イメージ位置 (int) -> 領域座標 (mPoint) */
 
-void drawCalc_imageToarea_pt(DrawData *p,mPoint *dst,int x,int y)
+//---------------
+
+
+/** イメージ位置 (int) -> キャンバス座標 (mPoint) */
+
+void drawCalc_image_to_canvas_pt(AppDraw *p,mPoint *dst,int x,int y)
 {
 	double dx,dy;
 
-	dx = (x - p->imgoriginX) * p->viewparam.scale;
-	dy = (y - p->imgoriginY) * p->viewparam.scale;
+	dx = (x - p->imgorigin.x) * p->viewparam.scale;
+	dy = (y - p->imgorigin.y) * p->viewparam.scale;
 
 	if(p->canvas_mirror) dx = -dx;
 
-	dst->x = round((dx * p->viewparam.cos - dy * p->viewparam.sin) + (p->szCanvas.w >> 1) - p->ptScroll.x);
-	dst->y = round((dx * p->viewparam.sin + dy * p->viewparam.cos) + (p->szCanvas.h >> 1) - p->ptScroll.y);
+	dst->x = (int)(dx * p->viewparam.cos - dy * p->viewparam.sin + (p->canvas_size.w >> 1) - p->canvas_scroll.x);
+	dst->y = (int)(dx * p->viewparam.sin + dy * p->viewparam.cos + (p->canvas_size.h >> 1) - p->canvas_scroll.y);
 }
 
-/** イメージ位置 (double) -> 領域座標 (mPoint) */
+/** イメージ位置 (double) -> キャンバス座標 (mPoint) */
 
-void drawCalc_imageToarea_pt_double(DrawData *p,mPoint *dst,double x,double y)
+void drawCalc_image_to_canvas_pt_double(AppDraw *p,mPoint *dst,double x,double y)
 {
-	double dx,dy;
+	x = (x - p->imgorigin.x) * p->viewparam.scale;
+	y = (y - p->imgorigin.y) * p->viewparam.scale;
 
-	dx = (x - p->imgoriginX) * p->viewparam.scale;
-	dy = (y - p->imgoriginY) * p->viewparam.scale;
+	if(p->canvas_mirror) x = -x;
 
-	if(p->canvas_mirror) dx = -dx;
-
-	dst->x = round((dx * p->viewparam.cos - dy * p->viewparam.sin) + (p->szCanvas.w >> 1) - p->ptScroll.x);
-	dst->y = round((dx * p->viewparam.sin + dy * p->viewparam.cos) + (p->szCanvas.h >> 1) - p->ptScroll.y);
+	dst->x = (int)(x * p->viewparam.cos - y * p->viewparam.sin + (p->canvas_size.w >> 1) - p->canvas_scroll.x);
+	dst->y = (int)(x * p->viewparam.sin + y * p->viewparam.cos + (p->canvas_size.h >> 1) - p->canvas_scroll.y);
 }
+
+
+//------------
+
 
 /** キャンバス中央におけるイメージ位置取得 */
 
-void drawCalc_getImagePos_atCanvasCenter(DrawData *p,double *px,double *py)
+void drawCalc_getImagePos_atCanvasCenter(AppDraw *p,double *px,double *py)
 {
-	drawCalc_areaToimage_double(p, px, py, p->szCanvas.w * 0.5, p->szCanvas.h * 0.5);
+	drawCalc_canvas_to_image_double(p, px, py,
+		p->canvas_size.w * 0.5, p->canvas_size.h * 0.5);
 }
 
-/** イメージ座標 (mBox) -> 領域座標 (mBox)
+/** イメージ座標 (mBox) -> キャンバス座標 (mBox)
  *
- * @return FALSE で範囲外 */
+ * return: FALSE で範囲外 */
 
-mBool drawCalc_imageToarea_box(DrawData *p,mBox *dst,mBox *src)
+mlkbool drawCalc_image_to_canvas_box(AppDraw *p,mBox *dst,const mBox *src)
 {
 	mPoint pt[4];
 	int x1,y1,x2,y2,i;
@@ -174,8 +180,8 @@ mBool drawCalc_imageToarea_box(DrawData *p,mBox *dst,mBox *src)
 
 	if(p->canvas_angle == 0)
 	{
-		drawCalc_imageToarea_pt(p, pt, x1, y1);
-		drawCalc_imageToarea_pt(p, pt + 1, x2, y2);
+		drawCalc_image_to_canvas_pt(p, pt, x1, y1);
+		drawCalc_image_to_canvas_pt(p, pt + 1, x2, y2);
 
 		if(pt[0].x < pt[1].x)
 			x1 = pt[0].x, x2 = pt[1].x;
@@ -189,10 +195,10 @@ mBool drawCalc_imageToarea_box(DrawData *p,mBox *dst,mBox *src)
 	}
 	else
 	{
-		drawCalc_imageToarea_pt(p, pt    , x1, y1);
-		drawCalc_imageToarea_pt(p, pt + 1, x2, y1);
-		drawCalc_imageToarea_pt(p, pt + 2, x1, y2);
-		drawCalc_imageToarea_pt(p, pt + 3, x2, y2);
+		drawCalc_image_to_canvas_pt(p, pt    , x1, y1);
+		drawCalc_image_to_canvas_pt(p, pt + 1, x2, y1);
+		drawCalc_image_to_canvas_pt(p, pt + 2, x1, y2);
+		drawCalc_image_to_canvas_pt(p, pt + 3, x2, y2);
 
 		x1 = x2 = pt[0].x;
 		y1 = y2 = pt[0].y;
@@ -213,15 +219,15 @@ mBool drawCalc_imageToarea_box(DrawData *p,mBox *dst,mBox *src)
 
 	//範囲外判定
 
-	if(x2 < 0 || y2 < 0 || x1 >= p->szCanvas.w || y1 >= p->szCanvas.h)
+	if(x2 < 0 || y2 < 0 || x1 >= p->canvas_size.w || y1 >= p->canvas_size.h)
 		return FALSE;
 
 	//調整
 
 	if(x1 < 0) x1 = 0;
 	if(y1 < 0) y1 = 0;
-	if(x2 >= p->szCanvas.w) x2 = p->szCanvas.w - 1;
-	if(y2 >= p->szCanvas.h) y2 = p->szCanvas.h - 1;
+	if(x2 >= p->canvas_size.w) x2 = p->canvas_size.w - 1;
+	if(y2 >= p->canvas_size.h) y2 = p->canvas_size.h - 1;
 
 	//
 
@@ -232,11 +238,11 @@ mBool drawCalc_imageToarea_box(DrawData *p,mBox *dst,mBox *src)
 	return TRUE;
 }
 
-/** 領域座標 (mBox) -> イメージ座標 (mBox)
+/** キャンバス座標 (mBox) -> イメージ座標 (mBox)
  *
- * @return FALSE でイメージの範囲外 */
+ * return: FALSE でイメージの範囲外 */
 
-mBool drawCalc_areaToimage_box(DrawData *p,mBox *dst,mBox *src)
+mlkbool drawCalc_canvas_to_image_box(AppDraw *p,mBox *dst,const mBox *src)
 {
 	mPoint pt[4];
 	mRect rc;
@@ -244,10 +250,10 @@ mBool drawCalc_areaToimage_box(DrawData *p,mBox *dst,mBox *src)
 
 	//四隅をイメージ位置に変換
 
-	drawCalc_areaToimage_pt(p, pt    , src->x - 1, src->y - 1);
-	drawCalc_areaToimage_pt(p, pt + 1, src->x + src->w, src->y - 1);
-	drawCalc_areaToimage_pt(p, pt + 2, src->x - 1, src->y + src->h);
-	drawCalc_areaToimage_pt(p, pt + 3, src->x + src->w, src->y + src->h);
+	drawCalc_canvas_to_image_pt(p, pt    , src->x - 1, src->y - 1);
+	drawCalc_canvas_to_image_pt(p, pt + 1, src->x + src->w, src->y - 1);
+	drawCalc_canvas_to_image_pt(p, pt + 2, src->x - 1, src->y + src->h);
+	drawCalc_canvas_to_image_pt(p, pt + 3, src->x + src->w, src->y + src->h);
 
 	//範囲
 
@@ -264,7 +270,7 @@ mBool drawCalc_areaToimage_box(DrawData *p,mBox *dst,mBox *src)
 
 	//イメージ範囲調整
 
-	return drawCalc_getImageBox_rect(p, dst, &rc);
+	return drawCalc_image_rect_to_box(p, dst, &rc);
 }
 
 
@@ -273,18 +279,21 @@ mBool drawCalc_areaToimage_box(DrawData *p,mBox *dst,mBox *src)
 //==============================
 
 
-/** mRect を領域の範囲内にクリッピングして mBox へ
+/** mRect をキャンバスの範囲内にクリッピングして mBox へ
  *
- * @param dst 範囲がない場合、w = h = 0 */
+ * dst: 範囲がない場合、w = h = 0 となる。
+ * return: FALSE で範囲外 */
 
-mBool drawCalc_clipArea_toBox(DrawData *p,mBox *dst,mRect *src)
+mlkbool drawCalc_clipCanvas_toBox(AppDraw *p,mBox *dst,mRect *src)
 {
 	int x1,y1,x2,y2;
 
-	if(src->x1 > src->x2 || src->y1 > src->y2
+	if(src->x1 > src->x2
+		|| src->y1 > src->y2
 		|| src->x2 < 0 || src->y2 < 0
-		|| src->x1 >= p->szCanvas.w || src->y1 >= p->szCanvas.h)
+		|| src->x1 >= p->canvas_size.w || src->y1 >= p->canvas_size.h)
 	{
+		//範囲外
 		dst->w = dst->h = 0;
 		return FALSE;
 	}
@@ -292,8 +301,8 @@ mBool drawCalc_clipArea_toBox(DrawData *p,mBox *dst,mRect *src)
 	{
 		x1 = (src->x1 < 0)? 0: src->x1;
 		y1 = (src->y1 < 0)? 0: src->y1;
-		x2 = (src->x2 >= p->szCanvas.w)? p->szCanvas.w - 1: src->x2;
-		y2 = (src->y2 >= p->szCanvas.h)? p->szCanvas.h - 1: src->y2;
+		x2 = (src->x2 >= p->canvas_size.w)? p->canvas_size.w - 1: src->x2;
+		y2 = (src->y2 >= p->canvas_size.h)? p->canvas_size.h - 1: src->y2;
 
 		dst->x = x1, dst->y = y1;
 		dst->w = x2 - x1 + 1;
@@ -303,9 +312,11 @@ mBool drawCalc_clipArea_toBox(DrawData *p,mBox *dst,mRect *src)
 	}
 }
 
-/** mRect をイメージ範囲内にクリッピング */
+/** mRect をイメージ範囲内にクリッピング
+ *
+ * return: FALSE で範囲外 */
 
-mBool drawCalc_clipImageRect(DrawData *p,mRect *rc)
+mlkbool drawCalc_clipImageRect(AppDraw *p,mRect *rc)
 {
 	int x1,y1,x2,y2;
 
@@ -334,11 +345,11 @@ mBool drawCalc_clipImageRect(DrawData *p,mRect *rc)
 	return TRUE;
 }
 
-/** mRect をイメージの範囲内に収めて mBox へ
+/** mRect (イメージ範囲) を、範囲内に収めて mBox へ
  *
- * @return FALSE で範囲外、または範囲が空 */
+ * return: FALSE で範囲外、または範囲が空 */
 
-mBool drawCalc_getImageBox_rect(DrawData *p,mBox *dst,mRect *rc)
+mlkbool drawCalc_image_rect_to_box(AppDraw *p,mBox *dst,const mRect *rc)
 {
 	mRect rc2;
 
@@ -364,9 +375,9 @@ mBool drawCalc_getImageBox_rect(DrawData *p,mBox *dst,mRect *rc)
  *
  * x < 0 の場合は範囲なしとする。
  * 
- * @return FALSE で両方共範囲なし */
+ * return: FALSE で両方共範囲なし */
 
-mBool drawCalc_unionImageBox(mBox *dst,mBox *src)
+mlkbool drawCalc_unionImageBox(mBox *dst,mBox *src)
 {
 	if(dst->x < 0 && src->x < 0)
 		//両方共範囲なし
@@ -390,12 +401,12 @@ mBool drawCalc_unionImageBox(mBox *dst,mBox *src)
 	}
 }
 
-/** src と、src を mx,my 分相対移動した範囲を合成 */
+/** [src] + [src を mx,my 分相対移動した範囲] を合成して dst にセット */
 
 void drawCalc_unionRect_relmove(mRect *dst,mRect *src,int mx,int my)
 {
 	*dst = *src;
-	mRectRelMove(dst, mx, my);
+	mRectMove(dst, mx, my);
 
 	mRectUnion(dst, src);
 }
@@ -408,8 +419,8 @@ void drawCalc_unionRect_relmove(mRect *dst,mRect *src,int mx,int my)
 
 /** 直線を45度単位に調整
  *
- * @param pt  対象点。結果はここに入る。
- * @param ptstart 始点 */
+ * pt: 対象となる点。結果はここに入る。
+ * ptstart: 始点 */
 
 void drawCalc_fitLine45(mPoint *pt,mPoint *ptstart)
 {
@@ -440,48 +451,51 @@ void drawCalc_fitLine45(mPoint *pt,mPoint *ptstart)
 		pt->x = ptstart->x;
 }
 
-/** pttmp[0,1] から線の角度をラジアンで取得 (イメージ位置に対する角度。反時計回り) */
+/** pttmp[0,1] から、線の角度をラジアンで取得
+ *
+ * イメージ位置に対する角度。反時計回り */
 
-double drawCalc_getLineRadian_forImage(DrawData *p)
+double drawCalc_getLineRadian_forImage(AppDraw *p)
 {
 	double x1,y1,x2,y2;
 
-	drawCalc_areaToimage_double(p, &x1, &y1, p->w.pttmp[0].x, p->w.pttmp[0].y);
-	drawCalc_areaToimage_double(p, &x2, &y2, p->w.pttmp[1].x, p->w.pttmp[1].y);
+	drawCalc_canvas_to_image_double(p, &x1, &y1, p->w.pttmp[0].x, p->w.pttmp[0].y);
+	drawCalc_canvas_to_image_double(p, &x2, &y2, p->w.pttmp[1].x, p->w.pttmp[1].y);
 
 	return atan2(y2 - y1, x2 - x1);
 }
 
 /** イメージ移動時の計算
  *
- * @param img   相対移動数を計算するためのイメージ
- * @param ptret 相対移動数が入る
- * @return 1px でも移動するか */
+ * img: 相対移動数を計算するためのイメージ
+ * state: +Shift で X 移動、+Ctrl で Y 移動。
+ * ptret: 相対移動数が入る
+ * return: 1px でも移動するか */
 
-mBool drawCalc_moveImage_onMotion(DrawData *p,TileImage *img,uint32_t state,mPoint *ptret)
+mlkbool drawCalc_moveImage_onMotion(AppDraw *p,TileImage *img,uint32_t state,mPoint *ptret)
 {
 	mPoint pt,pt2;
 	double x,y;
 
 	//カーソル移動距離
 
-	x = p->w.dptAreaCur.x - p->w.dptAreaLast.x;
-	y = p->w.dptAreaCur.y - p->w.dptAreaLast.y;
+	x = p->w.dpt_canv_cur.x - p->w.dpt_canv_last.x;
+	y = p->w.dpt_canv_cur.y - p->w.dpt_canv_last.y;
 
-	if(state & M_MODS_CTRL)  x = 0;
-	if(state & M_MODS_SHIFT) y = 0;
+	if(state & MLK_STATE_CTRL)  x = 0;
+	if(state & MLK_STATE_SHIFT) y = 0;
 
-	//総移動数
+	//総移動数に加算
 
 	p->w.ptd_tmp[0].x += x;
 	p->w.ptd_tmp[0].y += y;
 
-	//総移動数を キャンバス -> イメージ 座標変換
+	//総移動数を キャンバス -> イメージ 変換
 
 	pt2.x = (int)p->w.ptd_tmp[0].x;
 	pt2.y = (int)p->w.ptd_tmp[0].y;
 
-	drawCalc_areaToimage_relative(p, &pt, &pt2);
+	drawCalc_canvas_to_image_relative(p, &pt, &pt2);
 
 	//移動開始時のオフセット位置を加算して絶対値に
 
@@ -515,55 +529,39 @@ mBool drawCalc_moveImage_onMotion(DrawData *p,TileImage *img,uint32_t state,mPoi
 //==============================
 
 
-/** 1段階上げ/下げした表示倍率取得 */
+/** 1段階上げ/下げした表示倍率を取得 */
 
-int drawCalc_getZoom_step(DrawData *p,mBool zoomup)
+int drawCalc_getZoom_step(AppDraw *p,mlkbool zoomup)
 {
-	int n,step;
+	int n,val,step;
 
 	n = p->canvas_zoom / 10;
 
 	if((!zoomup && n <= 100) || (zoomup && n < 100))
 	{
-		//100% 以下
+		//----- 100% 以下時
+		// 拡大時は現在値の 115%、縮小時は 85%
 
-		step = APP_CONF->canvasZoomStep_low;
-		if(step == 0) step = 1;
+		val = p->canvas_zoom;
 
-		if(step < 0)
+		if(zoomup)
 		{
-			//元の倍率*指定倍率を増減
-			
-			step = -step;
-			n = round(p->canvas_zoom * (step / 100.0));
+			n = (int)(val * 1.15 + 0.5);
+			if(n > 1000) n = 1000;
 
-			if(zoomup)
-			{
-				n += p->canvas_zoom;
-				if(n > 1000) n = 1000;
-			}
-			else
-				n = p->canvas_zoom - n;
+			if(n == val) n = val + 1;
 		}
 		else
 		{
-			//段階
-			if(zoomup)
-			{
-				n = 100 - (100 - n - 1) / step * step;
-				if(n > 100) n = 100;
-			}
-			else
-				n = 100 - (100 - n + step) / step * step;
-
-			n *= 10;
+			n = (int)(val * 0.85 + 0.5);
+			if(n == val) n = val - 1;
 		}
 	}
 	else
 	{
-		//100% 以上
+		//---- 100% 以上時
 
-		step = APP_CONF->canvasZoomStep_hi;
+		step = APPCONF->canvas_zoom_step_hi;
 
 		if(zoomup)
 			n = (n + step) / step * step;
@@ -590,19 +588,19 @@ int drawCalc_getZoom_step(DrawData *p,mBool zoomup)
  *
  * 最大で 100% */
 
-int drawCalc_getZoom_fitWindow(DrawData *p)
+int drawCalc_getZoom_fitWindow(AppDraw *p)
 {
 	mBox box;
 	int w,h;
 
 	//領域の余白 10px 分を引く
 
-	if(p->szCanvas.w < 20 || p->szCanvas.h < 20)
+	if(p->canvas_size.w < 20 || p->canvas_size.h < 20)
 		w = h = 21;
 	else
 	{
-		w = p->szCanvas.w - 20;
-		h = p->szCanvas.h - 20;
+		w = p->canvas_size.w - 20;
+		h = p->canvas_size.h - 20;
 	}
 
 	//
@@ -610,7 +608,7 @@ int drawCalc_getZoom_fitWindow(DrawData *p)
 	box.x = box.y = 0;
 	box.w = p->imgw, box.h = p->imgh;
 
-	mBoxScaleKeepAspect(&box, w, h, TRUE);
+	mBoxResize_keepaspect(&box, w, h, TRUE);
 
 	//倍率
 
@@ -619,28 +617,28 @@ int drawCalc_getZoom_fitWindow(DrawData *p)
 
 /** キャンバスのスクロールバーの最大値取得
  *
- * 四隅をイメージ座標 -> 領域座標変換し、一番大きい半径の値+余白 */
+ * 四隅を[イメージ座標 -> キャンバス座標]変換し、一番大きい半径の値+余白 */
 
-void drawCalc_getCanvasScrollMax(DrawData *p,mSize *size)
+void drawCalc_getCanvasScrollMax(AppDraw *p,mSize *size)
 {
 	mPoint pt[4];
 	int i,r,rmax = 0;
 	double x,y;
 
-	//イメージの四隅を領域座標に変換。
+	//イメージの四隅をキャンバス座標に変換。
 	//キャンバス中央からの距離の最大値を取得。
 
-	mMemzero(pt, sizeof(mPoint) * 4);
+	mMemset0(pt, sizeof(mPoint) * 4);
 
 	pt[1].x = pt[3].x = p->imgw;
 	pt[2].y = pt[3].y = p->imgh;
 
 	for(i = 0; i < 4; i++)
 	{
-		drawCalc_imageToarea_pt(p, pt + i, pt[i].x, pt[i].y);
+		drawCalc_image_to_canvas_pt(p, pt + i, pt[i].x, pt[i].y);
 
-		x = pt[i].x - (p->szCanvas.w >> 1);
-		y = pt[i].y - (p->szCanvas.h >> 1);
+		x = pt[i].x - (p->canvas_size.w >> 1);
+		y = pt[i].y - (p->canvas_size.h >> 1);
 
 		r = (int)(sqrt(x * x + y * y) + 0.5);
 		if(rmax < r) rmax = r;
@@ -648,19 +646,19 @@ void drawCalc_getCanvasScrollMax(DrawData *p,mSize *size)
 
 	//
 
-	size->w = rmax * 2 + p->szCanvas.w;
-	size->h = rmax * 2 + p->szCanvas.h;
+	size->w = rmax * 2 + p->canvas_size.w;
+	size->h = rmax * 2 + p->canvas_size.h;
 }
 
 
 //===============================
-// defCanvasInfo.h
+// CanvasDrawInfo
 //===============================
 
 
 /** イメージ座標からキャンバス座標に変換 */
 
-void CanvasDrawInfo_imageToarea(CanvasDrawInfo *p,double x,double y,double *px,double *py)
+void CanvasDrawInfo_image_to_canvas(CanvasDrawInfo *p,double x,double y,double *px,double *py)
 {
 	x = (x - p->originx) * p->param->scale;
 	y = (y - p->originy) * p->param->scale;
@@ -672,7 +670,7 @@ void CanvasDrawInfo_imageToarea(CanvasDrawInfo *p,double x,double y,double *px,d
 
 /** イメージ座標からキャンバス座標に変換 (=> mPoint) */
 
-void CanvasDrawInfo_imageToarea_pt(CanvasDrawInfo *p,double x,double y,mPoint *pt)
+void CanvasDrawInfo_image_to_canvas_pt(CanvasDrawInfo *p,double x,double y,mPoint *pt)
 {
 	x = (x - p->originx) * p->param->scale;
 	y = (y - p->originy) * p->param->scale;
@@ -684,7 +682,7 @@ void CanvasDrawInfo_imageToarea_pt(CanvasDrawInfo *p,double x,double y,mPoint *p
 
 /** イメージ座標を +1 した時のキャンバス座標の増加幅を取得
  *
- * @param dst 0:x-x 1:x-y 2:y-x 3:y-y */
+ * dst: [0]x-x, [1]x-y, [2]y-x, [3]y-y */
 
 void CanvasDrawInfo_getImageIncParam(CanvasDrawInfo *p,double *dst)
 {

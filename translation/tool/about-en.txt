@@ -1,0 +1,119 @@
+=============================================
+  About translation file (*.mtr)
+=============================================
+
+If you want to display the character string displayed on the software
+using your own library mlk as a character string in any language,
+create an mtr file using the tool from the text file that describes
+the character string, and then create an mtr file.
+You need to put it in the appropriate directory.
+
+Here, as an example,
+the procedure for creating a translation file for English is explained.
+
+
+1. Copy the source text file for the language you want to translate
+---------------------------------------------------------------------
+
+# copy the English file from the Japanese file
+$ cp ja en_US
+
+  - The text file name should be a two-letter language name
+    or a five-letter "<language name>_<country name>".
+    Do not add an extension.
+
+  - In your environment, the part before the "."
+    In the environment variable LANG is the file name.
+    
+    $ echo $LANG
+    en_US.UTF-8
+
+  - When the app runs, the first 5 characters are extracted from
+    the environment variable LANG, and if there is an mtr file (??_??.mtr)
+    that matches its name, it is read.
+
+    If no file matches the five-letter name, the file (??.mtr)
+    that matches the first two letters is searched, and if found, it is read.
+
+    If none match, the default language data (usually English) embedded
+    in the app will be used.
+
+
+2. Edit the copied text file
+---------------------------------------
+
+Translate each character string and edit it.
+
+The following are escape characters.
+
+\n = line break
+\t = tab
+\\ = '\'
+At the end of the line'\' = newline + continue to the next line
+
+
+3. Compile the conversion tool
+------------------------------------------
+
+To actually use it on the app,
+you need to convert the text to binary data (*.mtr).
+
+Compile "mlktrconv.c" to generate the executable file "mlktrconv".
+
+$ cc -O2 -o mlktrconv mlktrconv.c
+
+It can also be generated using a "Makefile" located in the same directory.
+
+$ make
+
+
+4. Using tools, generate the binary data
+------------------------------------------
+
+$ ./mlktrconv en_US [-d <OUTPUT_DIR>]
+
+Specify the edited text file as the input file.
+You can specify multiple input files.
+
+The file name with ".mtr" added to the end of each input file
+is output to the current directory or the specified directory.
+
+Use the -d option to specify the output directory.
+
+
+5. Check on the app
+-------------------------
+
+Run the app and see if the string is displayed correctly.
+
+$ <EXE> --trfile en_US.mtr
+
+In apps using mlk, you can directly specify and load
+the translation file by launching it with the --trfile option.
+
+
+6. Location of *.mtr file
+-------------------------------
+
+If there is no problem with the generated file,
+copy the file to the directory where the translation file of each application
+is located so that it will be automatically loaded at startup.
+
+Usually it is "<INSTALL_DIR>/share/<APPNAME>/tr".
+
+* INSTALL_DIR is "/usr/local" by default.
+
+That's it.
+
+
+* Send translation file
+----------------------------
+
+If you have created a translation file,
+please send the original text file by email or email form on the site
+and we will add it to the package.
+
+In that case, I will need the "creator name (handle name)" and
+"email address (if you do not want to post it, you can omit it)"
+in order to list the creator, so please show it.
+

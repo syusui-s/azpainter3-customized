@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,40 +18,39 @@
 $*/
 
 /**************************************
- * DrawData
+ * AppDraw
  * 
  * 選択範囲関連
  **************************************/
-/*
- * tileimgSel : 選択範囲がない時は NULL または空の状態。
- * sel.rcsel  : 選択範囲全体を含む矩形 (おおよその範囲)
- */
 
-#include "mDef.h"
-#include "mRectBox.h"
-#include "mStr.h"
-#include "mUtilFile.h"
+#include "mlk_gui.h"
+#include "mlk_rectbox.h"
+#include "mlk_str.h"
+#include "mlk_file.h"
 
-#include "defDraw.h"
+#include "def_draw.h"
 
 #include "draw_main.h"
-#include "draw_select.h"
 #include "draw_layer.h"
 #include "draw_op_sub.h"
 
-#include "TileImage.h"
-#include "TileImageDrawInfo.h"
-#include "LayerItem.h"
-#include "ConfigData.h"
+#include "tileimage.h"
+#include "tileimage_drawinfo.h"
+#include "layeritem.h"
+#include "appconfig.h"
 
-#include "MainWinCanvas.h"
-#include "PopupThread.h"
+#include "popup_thread.h"
 
+
+/*
+  tileimg_sel : 選択範囲がない時は NULL または空の状態。
+  sel.rcsel   : 選択範囲全体を含む矩形 (おおよその範囲)
+*/
 
 //---------------
 
-#define _CURSOR_WAIT    MainWinCanvasArea_setCursor_wait();
-#define _CURSOR_RESTORE MainWinCanvasArea_restoreCursor();
+#define _CURSOR_WAIT    drawCursor_wait()
+#define _CURSOR_RESTORE drawCursor_restore()
 
 #define _FILENAME_SELCOPY  "selcopy.dat"
 
@@ -64,25 +63,38 @@ $*/
 //======================
 
 
-/** キャンバスイメージ全体の範囲を取得 */
+/* イメージ全体の範囲を取得 */
 
-static void _get_canvimage_rect(DrawData *p,mRect *rc)
+static void _get_image_rect(AppDraw *p,mRect *rc)
 {
 	rc->x1 = rc->y1 = 0;
 	rc->x2 = p->imgw - 1;
 	rc->y2 = p->imgh - 1;
 }
 
-/** 現在のレイヤにおける選択範囲の描画範囲を取得 */
+/* 現在のレイヤにおける選択範囲の描画範囲を取得 */
 
-static void _get_cur_drawrect(DrawData *p,mRect *rc)
+static void _get_curlayer_drawrect(AppDraw *p,mRect *rc)
 {
-	if(drawOpSub_isFolder_curlayer())
+	if(drawOpSub_isCurLayer_folder())
 		//フォルダの場合はイメージ全体
-		_get_canvimage_rect(p, rc);
+		_get_image_rect(p, rc);
 	else
 		//カレントレイヤの描画可能範囲
 		TileImage_getCanDrawRect_pixel(p->curlayer->img, rc);
+}
+
+/* 選択範囲イメージを、指定範囲で再作成 */
+
+static mlkbool _selimg_recreate(AppDraw *p,const mRect *rc)
+{
+	TileImage_free(p->tileimg_sel);
+
+	p->tileimg_sel = TileImage_newFromRect(TILEIMAGE_COLTYPE_ALPHA1BIT, rc);
+
+	mRectEmpty(&p->sel.rcsel);
+
+	return (p->tileimg_sel != NULL);
 }
 
 
@@ -93,27 +105,39 @@ static void _get_cur_drawrect(DrawData *p,mRect *rc)
 
 /** 選択範囲があるか */
 
-mBool drawSel_isHave()
+mlkbool drawSel_isHave(void)
 {
-	return (APP_DRAW->tileimgSel && !mRectIsEmpty(&APP_DRAW->sel.rcsel));
+	return (APPDRAW->tileimg_sel && !mRectIsEmpty(&APPDRAW->sel.rcsel));
 }
 
-/** 選択範囲解除 */
+/** コピー/切り取りが可能な状態か */
 
-void drawSel_release(DrawData *p,mBool update)
+mlkbool drawSel_isEnable_copy_cut(mlkbool cut)
 {
-	if(p->tileimgSel)
-	{
-		//イメージ削除
+	int ret;
 
-		TileImage_free(p->tileimgSel);
-		p->tileimgSel = NULL;
+	//選択範囲なし
 
-		//更新
+	if(!drawSel_isHave()) return FALSE;
 
-		if(update)
-			drawUpdate_rect_canvas_forSelect(p, &p->sel.rcsel);
-	}
+	if(cut)
+		//切り取り
+		// :フォルダ/テキスト/ロック時無効
+		ret = drawOpSub_canDrawLayer(APPDRAW, CANDRAWLAYER_F_NO_HIDE);
+	else
+		//コピー
+		// :ロック/テキスト時も有効
+		ret = drawOpSub_canDrawLayer(APPDRAW, CANDRAWLAYER_F_ENABLE_READ | CANDRAWLAYER_F_ENABLE_TEXT);
+
+	return (ret == 0);
+}
+
+/** 範囲内イメージをファイルに出力が有効か */
+
+mlkbool drawSel_isEnable_outputFile(void)
+{
+	return (drawSel_isHave()
+		&& !drawOpSub_isCurLayer_folder());
 }
 
 
@@ -122,34 +146,52 @@ void drawSel_release(DrawData *p,mBool update)
 //======================
 
 
-/** 選択範囲反転 */
+/** 選択範囲解除 */
 
-void drawSel_inverse(DrawData *p)
+void drawSel_release(AppDraw *p,mlkbool update)
 {
-	if(!drawSel_createImage(p)) return;
+	if(p->tileimg_sel)
+	{
+		//イメージ削除
 
-	_CURSOR_WAIT
+		TileImage_free(p->tileimg_sel);
+		p->tileimg_sel = NULL;
+
+		//更新
+
+		if(update)
+			drawUpdateRect_canvaswg_forSelect(p, &p->sel.rcsel);
+	}
+}
+
+/** 選択範囲を反転 */
+
+void drawSel_inverse(AppDraw *p)
+{
+	if(!drawSel_selImage_create(p)) return;
+
+	_CURSOR_WAIT;
 
 	//描画
 
 	TileImageDrawInfo_clearDrawRect();
 
-	TileImage_inverseSelect(p->tileimgSel);
+	TileImage_inverseSelect(p->tileimg_sel);
 
 	//透明部分を解放
 
-	drawSel_freeEmpty(p);
+	drawSel_selImage_freeEmpty(p);
 
 	//更新
 
-	drawUpdate_rect_canvas_forSelect(p, &g_tileimage_dinfo.rcdraw);
+	drawUpdateRect_canvaswg_forSelect(p, &g_tileimage_dinfo.rcdraw);
 
-	_CURSOR_RESTORE
+	_CURSOR_RESTORE;
 }
 
 /** すべて選択 */
 
-void drawSel_all(DrawData *p)
+void drawSel_all(AppDraw *p)
 {
 	mRect rc;
 
@@ -157,20 +199,20 @@ void drawSel_all(DrawData *p)
 
 	drawSel_release(p, FALSE);
 
-	if(!drawSel_createImage(p)) return;
+	if(!drawSel_selImage_create(p)) return;
 
-	//描画 (キャンバスイメージの範囲)
+	//描画 (キャンバス範囲)
 
-	_CURSOR_WAIT
+	_get_image_rect(p, &rc);
 
-	_get_canvimage_rect(p, &rc);
+	g_tileimage_dinfo.func_setpixel = TileImage_setPixel_new;
 
-	g_tileimage_dinfo.funcDrawPixel = TileImage_setPixel_new;
+	p->w.drawcol = (uint64_t)-1;
 
-	p->w.rgbaDraw.a = 0x8000;
+	_CURSOR_WAIT;
 
-	TileImage_drawFillBox(p->tileimgSel, rc.x1, rc.y1,
-		rc.x2 - rc.x1 + 1, rc.y2 - rc.y1 + 1, &p->w.rgbaDraw);
+	TileImage_drawFillBox(p->tileimg_sel, rc.x1, rc.y1,
+		rc.x2 - rc.x1 + 1, rc.y2 - rc.y1 + 1, &p->w.drawcol);
 
 	//範囲セット
 
@@ -178,64 +220,84 @@ void drawSel_all(DrawData *p)
 
 	//更新
 
-	drawUpdate_rect_canvas_forSelect(p, &rc);
+	drawUpdateRect_canvaswg_forSelect(p, &rc);
 
-	_CURSOR_RESTORE
+	_CURSOR_RESTORE;
+}
+
+/** 範囲の拡張/縮小 */
+
+static int _thread_expand(mPopupProgress *prog,void *data)
+{
+	TileImage_expandSelect(APPDRAW->tileimg_sel, *((int *)data), prog);
+
+	return 1;
+}
+
+void drawSel_expand(AppDraw *p,int cnt)
+{
+	TileImageDrawInfo_clearDrawRect();
+
+	//スレッド
+
+	PopupThread_run(&cnt, _thread_expand);
+
+	//
+
+	if(cnt > 0)
+		//拡張
+		p->sel.rcsel = g_tileimage_dinfo.rcdraw;
+	else
+		//縮小
+		drawSel_selImage_freeEmpty(p);
+
+	//更新
+
+	drawUpdateRect_canvaswg_forSelect(p, &g_tileimage_dinfo.rcdraw);
 }
 
 /** 塗りつぶし/消去 */
 
-void drawSel_fill_erase(DrawData *p,mBool erase)
+void drawSel_fill_erase(AppDraw *p,mlkbool erase)
 {
 	mRect rc;
 
-	if(drawOpSub_canDrawLayer_mes(p)) return;
-
-	/* [!] beginDraw/endDraw でカーソルは変更される */
+	if(drawOpSub_canDrawLayer_mes(p, 0)) return;
 
 	//範囲
 
 	drawSel_getFullDrawRect(p, &rc);
 
 	//描画
+	//[!] beginDraw/endDraw でカーソルは変更される
 
 	drawOpSub_setDrawInfo_fillerase(erase);
 	drawOpSub_beginDraw_single(p);
 
 	TileImage_drawFillBox(p->w.dstimg, rc.x1, rc.y1,
-		rc.x2 - rc.x1 + 1, rc.y2 - rc.y1 + 1, &p->w.rgbaDraw);
+		rc.x2 - rc.x1 + 1, rc.y2 - rc.y1 + 1, &p->w.drawcol);
 
 	drawOpSub_endDraw_single(p);
 }
 
 /** コピー/切り取り */
 
-void drawSel_copy_cut(DrawData *p,mBool cut)
+void drawSel_copy_cut(AppDraw *p,mlkbool cut)
 {
-	int ret;
 	TileImage *img;
 	mStr str = MSTR_INIT;
 
-	//選択範囲なし
-
-	if(!drawSel_isHave()) return;
-
-	//カレントがフォルダの場合は除く。ロック時はコピーのみ
-
-	ret = drawOpSub_canDrawLayer(p);
-
-	if(ret == CANDRAWLAYER_FOLDER) return;
-
-	if(ret == CANDRAWLAYER_LOCK) cut = FALSE;
+	if(!drawSel_isEnable_copy_cut(cut))
+		return;
 
 	//現在のコピーイメージを削除
 
-	TileImage_free(p->sel.tileimgCopy);
-	p->sel.tileimgCopy = NULL;
+	TileImage_free(p->sel.tileimg_copy);
+	p->sel.tileimg_copy = NULL;
 
 	//---------
 
-	_CURSOR_WAIT
+	_CURSOR_WAIT;
 
 	//----- コピー/切り取り
 
@@ -249,8 +311,8 @@ void drawSel_copy_cut(DrawData *p,mBool cut)
 
 	//コピー/切り取り
 
-	img = TileImage_createSelCopyImage(p->curlayer->img, p->tileimgSel,
-		&p->sel.rcsel, cut, FALSE);
+	img = TileImage_createSelCopyImage(p->curlayer->img, p->tileimg_sel,
+		&p->sel.rcsel, cut);
 
 	//切り取り後
 
@@ -258,13 +320,15 @@ void drawSel_copy_cut(DrawData *p,mBool cut)
 		drawOpSub_finishDraw_single(p);
 
 	//---- イメージ保持
-	/* デフォルトで、作業用ディレクトリにファイル保存。
-	 * 作業用ディレクトリがない or 保存に失敗した場合は sel.tileimgCopy に保持。 */
+	// 一度コピーしたら終了時まで保持されるため、作業用ディレクトリにファイルを保存する。
+	// 作業用ディレクトリがない or 保存に失敗した場合は、sel.tileimg_copy に保持。
 
 	if(img)
 	{
-		if(ConfigData_getTempPath(&str, _FILENAME_SELCOPY)
-			&& TileImage_saveTileImageFile(img, str.buf, p->curlayer->col))
+		p->sel.copyimg_bits = APPDRAW->imgbits;
+		
+		if(AppConfig_getTempPath(&str, _FILENAME_SELCOPY)
+			&& TileImage_saveTmpImageFile(img, str.buf))
 		{
 			//ファイル出力に成功した場合、イメージ削除
 
@@ -274,8 +338,7 @@ void drawSel_copy_cut(DrawData *p,mBool cut)
 		{
 			//ファイル出力できない場合、メモリ上に保持
 
-			p->sel.tileimgCopy = img;
-			p->sel.col_copyimg = p->curlayer->col;
+			p->sel.tileimg_copy = img;
 		}
 
 		mStrFree(&str);
@@ -283,80 +346,96 @@ void drawSel_copy_cut(DrawData *p,mBool cut)
 
 	//
 
-	_CURSOR_RESTORE
+	_CURSOR_RESTORE;
 }
 
 /** 新規レイヤに貼り付け */
 
-void drawSel_paste_newlayer(DrawData *p)
+void drawSel_paste_newlayer(AppDraw *p)
 {
 	mStr str = MSTR_INIT;
 	TileImage *img;
-	uint32_t col;
 
 	//コピーイメージが存在しない
 
-	if(!p->sel.tileimgCopy
-		&& !(ConfigData_getTempPath(&str, _FILENAME_SELCOPY) && mIsFileExist(str.buf, FALSE)))
+	if(!p->sel.tileimg_copy
+		&& !(AppConfig_getTempPath(&str, _FILENAME_SELCOPY) && mIsExistFile(str.buf)) )
 	{
 		mStrFree(&str);
 		return;
 	}
 
-	//レイヤのイメージ用意 (ファイルの場合、読み込み)
+	//イメージを複製 (ファイルの場合、読み込み)
+	// :コピーした時のビット数と、現在のビット数が異なる場合がある。
+	// :その場合は、タイルを変換する。
 
-	if(p->sel.tileimgCopy)
-	{
-		img = TileImage_newClone(p->sel.tileimgCopy);
-		col = p->sel.col_copyimg;
-	}
+	if(p->sel.tileimg_copy)
+		img = TileImage_newClone_bits(p->sel.tileimg_copy, p->sel.copyimg_bits, APPDRAW->imgbits);
 	else
-		img = TileImage_loadTileImageFile(str.buf, &col);
+		img = TileImage_loadTmpImageFile(str.buf, p->sel.copyimg_bits, APPDRAW->imgbits);
 
 	mStrFree(&str);
 
 	if(!img) return;
 
-	//新規レイヤ
+	//新規レイヤ作成して、img をセット
 
-	if(!drawLayer_newLayer_fromImage(p, img, col))
+	if(!drawLayer_newLayer_image(p, img))
 		TileImage_free(img);
 }
 
+/** レイヤ上の色から選択 */
 
-/** [スレッド] 拡張/縮小 */
-
-static int _thread_expand(mPopupProgress *prog,void *data)
+void drawSel_fromLayer(AppDraw *p,int type)
 {
-	TileImage_expandSelect(APP_DRAW->tileimgSel, *((int *)data), prog);
+	mRect rc;
 
-	return 1;
-}
+	if(drawOpSub_canDrawLayer_mes(p,
+		CANDRAWLAYER_F_ENABLE_READ | CANDRAWLAYER_F_ENABLE_TEXT))
+		return;
 
-/** 範囲の拡張/縮小 */
+	//選択解除
 
-void drawSel_expand(DrawData *p,int cnt)
-{
-	//準備
+	drawSel_release(p, TRUE);
 
-	g_tileimage_dinfo.funcColor = TileImage_colfunc_overwrite;
+	//点がある範囲
+
+	if(!TileImage_getHaveImageRect_pixel(p->curlayer->img, &rc, NULL))
+		return;
+
+	//イメージ再作成
+
+	if(!_selimg_recreate(p, &rc)) return;
+
+	//描画
+
+	g_tileimage_dinfo.func_setpixel = TileImage_setPixel_new_drawrect;
 
 	TileImageDrawInfo_clearDrawRect();
 
-	//スレッド
+	_CURSOR_WAIT;
 
-	PopupThread_run(&cnt, _thread_expand);
-
-	//範囲
-
-	if(cnt > 0)
-		p->sel.rcsel = g_tileimage_dinfo.rcdraw;
+	if(type == 0)
+		//不透明部分
+		TileImage_drawPixels_fromImage_opacity(p->tileimg_sel, p->curlayer->img, &rc);
 	else
-		drawSel_freeEmpty(p);
+		//描画色部分
+		TileImage_drawPixels_fromImage_color(p->tileimg_sel, p->curlayer->img, &p->col.drawcol, &rc);
 
-	//更新
+	//セット
 
-	drawUpdate_rect_canvas_forSelect(p, &g_tileimage_dinfo.rcdraw);
+	rc = g_tileimage_dinfo.rcdraw;
+
+	if(mRectIsEmpty(&rc))
+		drawSel_release(p, FALSE);
+	else
+	{
+		p->sel.rcsel = rc;
+
+		drawUpdateRect_canvaswg_forSelect(p, &rc);
+	}
+
+	_CURSOR_RESTORE;
 }
 
 
@@ -365,59 +444,67 @@ void drawSel_expand(DrawData *p,int cnt)
 //======================
 
 
-/** イメージ全体に対して描画する際の範囲取得 */
+/** イメージ全体に対して描画する際の、描画範囲を取得
+ *
+ * 選択範囲があれば、その範囲のみ。 */
 
-void drawSel_getFullDrawRect(DrawData *p,mRect *rc)
+void drawSel_getFullDrawRect(AppDraw *p,mRect *rc)
 {
 	if(drawSel_isHave())
 		*rc = p->sel.rcsel;
 	else
-		_get_cur_drawrect(p, rc);
+		_get_curlayer_drawrect(p, rc);
 }
 
-/** 選択範囲イメージを確保 (範囲セット前に行う)
+/** 選択範囲イメージを作成
  *
- * @return FALSE で失敗 */
+ * 選択範囲の図形描画前に行う。
+ *
+ * return: FALSE で失敗 */
 
-mBool drawSel_createImage(DrawData *p)
+mlkbool drawSel_selImage_create(AppDraw *p)
 {
 	mRect rc;
 
-	if(p->tileimgSel)
+	if(p->tileimg_sel)
 		return TRUE;
 	else
 	{
-		//描画可能範囲から作成
+		//作成
 		
-		_get_cur_drawrect(p, &rc);
+		_get_image_rect(p, &rc);
 
-		p->tileimgSel = TileImage_newFromRect(TILEIMAGE_COLTYPE_ALPHA1, &rc);
+		p->tileimg_sel = TileImage_newFromRect(TILEIMAGE_COLTYPE_ALPHA1BIT, &rc);
 
 		mRectEmpty(&p->sel.rcsel);
 
-		return (p->tileimgSel != NULL);
+		return (p->tileimg_sel != NULL);
 	}
 }
 
-/** 範囲削除後の処理
+/** 選択範囲の一部範囲削除後の処理
  *
- * 透明タイルを解放して範囲を再計算。
- * すべて透明ならイメージ削除。 */
+ * 透明タイルを解放して、範囲を再計算。
+ * すべて透明なら、イメージを削除。 */
 
-void drawSel_freeEmpty(DrawData *p)
+void drawSel_selImage_freeEmpty(AppDraw *p)
 {
-	if(p->tileimgSel)
+	if(p->tileimg_sel)
 	{
-		if(TileImage_freeEmptyTiles(p->tileimgSel))
+		if(TileImage_freeEmptyTiles(p->tileimg_sel))
 		{
 			//すべて透明なら削除
 			
-			TileImage_free(p->tileimgSel);
-			p->tileimgSel = NULL;
+			TileImage_free(p->tileimg_sel);
+			p->tileimg_sel = NULL;
 		}
 		else
+		{
 			//点が残っていれば、範囲を再計算
-			TileImage_getHaveImageRect_pixel(p->tileimgSel, &p->sel.rcsel, NULL);
+			// :タイル単位での範囲となる。
+
+			TileImage_getHaveImageRect_pixel(p->tileimg_sel, &p->sel.rcsel, NULL);
+		}
 	}
 }
 

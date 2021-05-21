@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,42 +18,73 @@
 $*/
 
 /*****************************************
- * DrawData
- *
- * 初期化など
+ * AppDraw : 初期化など
  *****************************************/
 
-#include <time.h>
+#include "mlk_gui.h"
+#include "mlk_window.h"
+#include "mlk_list.h"
+#include "mlk_str.h"
+#include "mlk_buf.h"
 
-#include "mDef.h"
-#include "mStr.h"
-#include "mGui.h"
-#include "mRandXorShift.h"
+#include "def_macro.h"
+#include "def_draw.h"
+#include "def_draw_toollist.h"
+#include "def_config.h"
+#include "def_widget.h"
+#include "def_brushdraw.h"
 
-#include "defMacros.h"
-#include "defDraw.h"
-#include "defConfig.h"
+#include "palettelist.h"
+#include "imagecanvas.h"
+#include "tileimage.h"
+#include "imagematerial.h"
+#include "image32.h"
+#include "layerlist.h"
+#include "materiallist.h"
+#include "gradation_list.h"
+#include "toollist.h"
+#include "dotshape.h"
+#include "pointbuf.h"
+#include "brushsize_list.h"
+#include "font.h"
+#include "appcursor.h"
+#include "fileformat.h"
+
+#include "panel_func.h"
+#include "maincanvas.h"
+#include "statusbar.h"
 
 #include "draw_main.h"
 #include "draw_calc.h"
-#include "draw_select.h"
-#include "draw_boxedit.h"
+#include "draw_rule.h"
 
-#include "ImageBufRGB16.h"
-#include "ImageBuf8.h"
-#include "ImageBuf24.h"
-#include "TileImage.h"
-#include "LayerList.h"
 
-#include "DrawFont.h"
-#include "blendcol.h"
-#include "SinTable.h"
-#include "AppCursor.h"
+//=============================
+// DrawTextData
+//=============================
 
-#include "MainWinCanvas.h"
-#include "StatusBar.h"
-#include "Docks_external.h"
 
+/** DrawTextData 解放 */
+
+void DrawTextData_free(DrawTextData *p)
+{
+	mStrFree(&p->str_text);
+	mStrFree(&p->str_font);
+	mStrFree(&p->str_style);
+}
+
+/** コピー */
+
+void DrawTextData_copy(DrawTextData *dst,const DrawTextData *src)
+{
+	DrawTextData_free(dst);
+
+	*dst = *src;
+
+	mStrCopy_init(&dst->str_text, &src->str_text);
+	mStrCopy_init(&dst->str_font, &src->str_font);
+	mStrCopy_init(&dst->str_style, &src->str_style);
+}
 
 
 //=============================
@@ -61,64 +92,126 @@ $*/
 //=============================
 
 
-/** 解放 */
+/* AppDrawToolList 解放 */
 
-void DrawData_free()
+static void _free_toollist(AppDrawToolList *p)
 {
-	DrawData *p = APP_DRAW;
-
 	if(p)
 	{
-		//テキスト描画
-		
-		DrawFont_free(p->drawtext.font);
+		mListDeleteAll(&p->list_group);
 
-		mStrFree(&p->drawtext.strText);
-		mStrFree(&p->drawtext.strName);
-		mStrFree(&p->drawtext.strStyle);
+		BrushEditData_free(p->brush);
 
-		//
+		ToolListItem_free(p->copyitem);
 
-		mStrFree(&p->strOptTexPath);
-		
-		ImageBufRGB16_free(p->blendimg);
+		mBufFree(&p->buf_sizelist);
 
-		ImageBuf8_free(p->img8OptTex);
-
-		TileImage_free(p->sel.tileimgCopy);
-
-		TileImage_free(p->tileimgSel);
-		TileImage_free(p->tileimgDraw);
-		TileImage_free(p->tileimgDraw2);
-		TileImage_free(p->tileimgTmp);
-
-		TileImage_free(p->stamp.img);
-
-		LayerList_free(p->layerlist);
-
-		mFree(p);
+		mFree(p->dp_cur);
+		mFree(p->dp_reg);
 	}
 
-	TileImage_finish();
+	mFree(p);
 }
 
-/** DrawData 作成
- *
- * [!] 設定ファイルの読み込み前に行う */
+/* AppDrawToolList 確保 */
 
-mBool DrawData_new()
+static AppDrawToolList *_alloc_toollist(void)
 {
-	DrawData *p;
+	AppDrawToolList *p;
 
-	p = (DrawData *)mMalloc(sizeof(DrawData), TRUE);
-	if(!p) return FALSE;
+	p = (AppDrawToolList *)mMalloc0(sizeof(AppDrawToolList));
+	if(!p) return NULL;
 
-	APP_DRAW = p;
+	p->brush = (BrushEditData *)mMalloc0(sizeof(BrushEditData));
+
+	p->dp_cur = (BrushDrawParam *)mMalloc0(sizeof(BrushDrawParam));
+	p->dp_reg = (BrushDrawParam *)mMalloc0(sizeof(BrushDrawParam));
+
+	//筆圧カーブ:共通設定
+
+	p->pt_press_comm[1] = CURVE_SPLINE_VAL_MAXPOS;
+
+	//筆圧カーブ:コピー
+
+	p->pt_press_copy[1] = CURVE_SPLINE_VAL_MAXPOS;
+
+	//リスト
+
+	ToolList_init(&p->list_group);
+
+	return p;
+}
+
+
+/** 解放 */
+
+void AppDraw_free(void)
+{
+	AppDraw *p = APPDRAW;
+
+	if(!p) return;
+
+	TileImage_finish();
+
+	DotShape_free();
+
+	DrawFontFinish();
+
+	//mList
+
+	mListDeleteAll(&p->col.list_pal);
+	mListDeleteAll(&p->list_material[0]);
+	mListDeleteAll(&p->list_material[1]);
+	mListDeleteAll(&p->list_grad_custom);
+
+	//
+
+	_free_toollist(p->tlist);
+
+	DrawTextData_free(&p->text.dt);
+	DrawTextData_free(&p->text.dt_copy);
+
+	mStrFree(&p->strOptTexturePath);
+
+	ImageCanvas_free(p->imgcanvas);
+
+	ImageMaterial_free(p->imgmat_opttex);
+
+	TileImage_free(p->sel.tileimg_copy);
+
+	TileImage_free(p->tileimg_sel);
+	TileImage_free(p->tileimg_tmp_save);
+	TileImage_free(p->tileimg_tmp_brush);
+	TileImage_free(p->tileimg_tmp);
+
+	TileImage_free(p->boxsel.img);
+	TileImage_free(p->stamp.img);
+
+	LayerList_free(p->layerlist);
+
+	mFree(p->pointbuf);
+
+	mFree(p);
+}
+
+/** AppDraw 作成
+ *
+ * [!] 設定ファイルの読み込み前に行う
+ * return: 0 で成功 */
+
+int AppDraw_new(void)
+{
+	AppDraw *p;
+
+	p = (AppDraw *)mMalloc0(sizeof(AppDraw));
+	if(!p) return 1;
+
+	APPDRAW = p;
 
 	//値初期化
 
 	p->canvas_zoom = 1000;
-	p->szCanvas.w = p->szCanvas.h = 100;
+	p->canvas_size.w = p->canvas_size.h = 100;
 
 	drawCalc_setCanvasViewParam(p);
 
@@ -126,177 +219,105 @@ mBool DrawData_new()
 
 	//初期化
 
-	if(!TileImage_init()) return FALSE;
+	if(!TileImage_init()) return 1;
 
-	BlendColor_setFuncTable();
+	if(DotShape_init()) return 1;
 
-	SinTable_init();
+	DrawFontInit();
 
-	//作成
+	PaletteList_init(&p->col.list_pal);
+	MaterialList_init(p->list_material);
+	GradationList_init(&p->list_grad_custom);
+
+	//レイヤリスト
 
 	p->layerlist = LayerList_new();
 
-	//乱数初期化
+	//PointBuf
 
-	mRandXorShift_init(time(NULL));
+	p->pointbuf = PointBuf_new();
 
-	return TRUE;
+	//AppDrawToolList
+
+	p->tlist = _alloc_toollist();
+
+	return 0;
 }
 
-/** 設定ファイル読み込み後でウィジェット作成前の初期化 */
+/** 設定ファイル (main.conf) の読み込み前に、各設定ファイルを読み込む */
 
-void drawInit_beforeCreateWidget()
+void drawInit_loadConfig_before(void)
+{
+	AppDraw *p = APPDRAW;
+
+	//カラーパレット (選択リストは main.conf から読み込む)
+
+	PaletteList_loadConfig(&p->col.list_pal);
+
+	//グラデーション
+
+	GradationList_loadConfig(&p->list_grad_custom);
+
+	//
+
+	BrushSizeList_loadConfigFile(&p->tlist->buf_sizelist);
+
+	ToolList_loadConfigFile();
+}
+
+/** 設定ファイル読み込み後、ウィジェット作成前の初期化 */
+
+void drawInit_createWidget_before(void)
 {
 	//オプションテクスチャ画像読み込み
-	drawTexture_loadOptionTextureImage(APP_DRAW);
+
+	drawTexture_loadOptionTextureImage(APPDRAW);
 }
 
-/** ウィンドウ表示前の初期化 */
+/** ウィンドウ表示前の初期化 (ウィンドウ作成後) */
 
-void drawInit_beforeShow()
+void drawInit_beforeShow(void)
 {
-	DrawData *p = APP_DRAW;
-
-	//8bit色値を 15bit 値に変換
-	
-	RGBtoRGBFix15(&APP_DRAW->col.rgb15DrawCol, p->col.drawcol);
-	RGBtoRGBFix15(&APP_DRAW->col.rgb15BkgndCol, p->col.bkgndcol);
-
-	drawColorMask_changeColor(p);
-
-	drawConfig_changeCanvasColor(p);
+	AppDraw *p = APPDRAW;
 
 	//新規イメージ
 
-	drawImage_new(p, APP_CONF->init_imgw, APP_CONF->init_imgh,
-		APP_CONF->init_dpi, TILEIMAGE_COLTYPE_RGBA);
+	drawImage_newCanvas(p, NULL);
 
 	//合成
 
-	drawUpdate_blendImage_full(p);
+	drawUpdate_blendImage_full(p, NULL);
 
 	//キャンバス状態
 
-	drawCanvas_setScrollDefault(p);
-	drawCanvas_setZoomAndAngle(p, 0, 0, 0, FALSE);
+	drawCanvas_scroll_default(p);
+	drawCanvas_update(p, 0, 0, DRAWCANVAS_UPDATE_DEFAULT);
 }
 
-/** キャンバス関連の色が変更された時 */
+/** 終了時、設定ファイル保存 */
 
-void drawConfig_changeCanvasColor(DrawData *p)
+void drawEnd_saveConfig(void)
 {
-	//イメージ背景色
+	AppDraw *p = APPDRAW;
 
-	RGBtoRGBFix15(&p->rgb15ImgBkgnd, 0xffffff);
+	//カラーパレット (変更時のみ)
 
-	//背景チェック柄
+	if(p->col.pal_fmodify)
+		PaletteList_saveConfig(&p->col.list_pal);
 
-	RGBtoRGBFix15(p->rgb15BkgndPlaid, APP_CONF->colBkgndPlaid[0]);
-	RGBtoRGBFix15(p->rgb15BkgndPlaid + 1, APP_CONF->colBkgndPlaid[1]);
-}
+	//グラデーション
 
+	if(p->fmodify_grad_list)
+		GradationList_saveConfig(&p->list_grad_custom);
 
-//=============================
-// ほか
-//=============================
+	//ブラシサイズリスト
 
+	if(p->fmodify_brushsize)
+		BrushSizeList_saveConfigFile(&p->tlist->buf_sizelist);
 
-/** オプションのテクスチャイメージの読み込み
- *
- * DrawData::strOptTexPath に画像パスをセットしておく。
- *
- * @return イメージが読み込まれたか */
+	//ツールリスト
 
-mBool drawTexture_loadOptionTextureImage(DrawData *p)
-{
-	mStr str = MSTR_INIT,*path;
-	ImageBuf24 *img;
-	mBool ret = FALSE;
-
-	//イメージ解放
-	
-	ImageBuf8_free(p->img8OptTex);
-	p->img8OptTex = NULL;
-
-	//パスが空ならイメージ無し
-
-	path = &p->strOptTexPath;
-
-	if(mStrIsEmpty(path)) return FALSE;
-
-	//絶対パス取得
-	/* 先頭が '/' でデフォルトディレクトリ。
-	 * そうでなければ、ユーザーディレクトリ。 */
-
-	if(path->buf[0] == '/')
-	{
-		mAppGetDataPath(&str, APP_TEXTURE_PATH);
-		mStrPathAdd(&str, path->buf + 1);
-	}
-	else
-	{
-		mStrCopy(&str, &APP_CONF->strUserTextureDir);
-		mStrPathAdd(&str, path->buf);
-	}
-
-	//読み込み (24bit)
-
-	img = ImageBuf24_loadFile(str.buf);
-	if(!img) goto ERR;
-
-	//8bit イメージ
-
-	p->img8OptTex = ImageBuf8_createFromImageBuf24(img);
-	if(!p->img8OptTex) goto ERR;
-
-	ret = TRUE;
-
-ERR:
-	ImageBuf24_free(img);
-	mStrFree(&str);
-
-	return ret;
-}
-
-/** ツールのカーソル番号を取得 */
-
-int drawCursor_getToolCursor(int toolno)
-{
-	int no;
-
-	switch(toolno)
-	{
-		case TOOL_TEXT:
-			no = APP_CURSOR_TEXT;
-			break;
-		case TOOL_MOVE:
-			no = APP_CURSOR_MOVE;
-			break;
-		case TOOL_SELECT:
-		case TOOL_BOXEDIT:
-			no = APP_CURSOR_SELECT;
-			break;
-		case TOOL_STAMP:
-			if(APP_DRAW->stamp.img)
-				no = APP_CURSOR_STAMP;
-			else
-				no = APP_CURSOR_SELECT;
-			break;
-		case TOOL_CANVAS_ROTATE:
-			no = APP_CURSOR_ROTATE;
-			break;
-		case TOOL_CANVAS_MOVE:
-			no = APP_CURSOR_HAND;
-			break;
-		case TOOL_SPOIT:
-			no = APP_CURSOR_SPOIT;
-			break;
-		default:
-			no = APP_CURSOR_DRAW;
-			break;
-	}
-
-	return no;
+	ToolList_saveConfigFile();
 }
 
 
@@ -305,91 +326,74 @@ int drawCursor_getToolCursor(int toolno)
 //=============================
 
 
-/** 描画色の RGB 値 (8bit) を取得 */
+/** 描画色を RGB 32bit で取得 */
 
-void drawColor_getDrawColor_rgb(int *dst)
+uint32_t drawColor_getDrawColor(void)
 {
-	uint32_t col = APP_DRAW->col.drawcol;
+	return RGBcombo_to_32bit(&APPDRAW->col.drawcol);
+}
+
+/** 描画色セット
+ *
+ * return: 現在の色と異なる色がセットされたら TRUE */
+
+mlkbool drawColor_setDrawColor(uint32_t col)
+{
+	mlkbool ret = !RGB8_compare_32bit(&APPDRAW->col.drawcol.c8, col);
 	
-	dst[0] = M_GET_R(col);
-	dst[1] = M_GET_G(col);
-	dst[2] = M_GET_B(col);
+	RGB32bit_to_RGBcombo(&APPDRAW->col.drawcol, col);
+
+	return ret;
 }
 
-/** 描画色を RGBAFix15 で取得 */
+/** 描画色をセットして、パネルを更新 */
 
-void drawColor_getDrawColor_rgbafix(RGBAFix15 *dst)
+void drawColor_setDrawColor_update(uint32_t col)
 {
-	RGBFix15 *ps = &APP_DRAW->col.rgb15DrawCol;
+	RGB32bit_to_RGBcombo(&APPDRAW->col.drawcol, col);
 
-	dst->r = ps->r;
-	dst->g = ps->g;
-	dst->b = ps->b;
-	dst->a = 0x8000;
-}
-
-/** 描画色セット */
-
-void drawColor_setDrawColor(uint32_t col)
-{
-	APP_DRAW->col.drawcol = col & 0xffffff;
-
-	RGBtoRGBFix15(&APP_DRAW->col.rgb15DrawCol, col);
+	//カラーホイールも同時更新
+	PanelColor_changeDrawColor();
 }
 
 /** 背景色セット */
 
 void drawColor_setBkgndColor(uint32_t col)
 {
-	APP_DRAW->col.bkgndcol = col & 0xffffff;
-
-	RGBtoRGBFix15(&APP_DRAW->col.rgb15BkgndCol, col);
+	RGB32bit_to_RGBcombo(&APPDRAW->col.bkgndcol, col);
 }
 
-/** 描画色/背景色入れ替え*/
+/** 描画色/背景色を入れ替え*/
 
-void drawColor_toggleDrawCol(DrawData *p)
+void drawColor_toggleDrawCol(AppDraw *p)
 {
-	uint32_t tmpc;
-	RGBFix15 tmprgb;
+	RGBcombo tmp;
 
-	tmpc = p->col.drawcol;
+	tmp = p->col.drawcol;
 	p->col.drawcol = p->col.bkgndcol;
-	p->col.bkgndcol = tmpc;
-
-	tmprgb = p->col.rgb15DrawCol;
-	p->col.rgb15DrawCol = p->col.rgb15BkgndCol;
-	p->col.rgb15BkgndCol = tmprgb;
+	p->col.bkgndcol = tmp;
 }
 
+/** 描画色 8bit のRGB値が変わった時 */
 
-//=============================
-// 色マスク関連
-//=============================
-
-
-/** 色マスクの色変更時 */
-
-void drawColorMask_changeColor(DrawData *p)
+void drawColor_changeDrawColor8(void)
 {
-	int i;
-
-	for(i = 0; i < p->col.colmask_num; i++)
-		RGBtoRGBFix15(p->col.rgb15Colmask + i, p->col.colmask_col[i]);
-
-	p->col.rgb15Colmask[i].r = 0xffff;
+	RGBcombo_set16_from8(&APPDRAW->col.drawcol);
 }
 
 /** 色マスクのタイプを変更
  *
- * @param type 0..2:off,mask,rev -1:マスク反転  -2:逆マスク反転 */
+ * type: 0-2 = off/mask/rev, -1 = マスク反転, -2 = 逆マスク反転 */
 
-void drawColorMask_setType(DrawData *p,int type)
+void drawColorMask_setType(AppDraw *p,int type)
 {
 	if(type >= 0)
+		//指定タイプ
 		p->col.colmask_type = type;
 	else
 	{
+		//反転
+		
 		type = -type;
 	
 		if(p->col.colmask_type == type)
@@ -399,90 +403,6 @@ void drawColorMask_setType(DrawData *p,int type)
 	}
 }
 
-/** 色マスクに色をセット (1色)
- *
- * @param col  -1 で描画色 */
-
-void drawColorMask_setColor(DrawData *p,int col)
-{
-	p->col.colmask_num = 1;
-	p->col.colmask_col[0] = (col == -1)? p->col.drawcol: col;
-	p->col.colmask_col[1] = -1;
-
-	drawColorMask_changeColor(p);
-}
-
-/** 色マスクに色を追加
- *
- * @param col  -1 で描画色 */
-
-mBool drawColorMask_addColor(DrawData *p,int col)
-{
-	int i;
-
-	if(p->col.colmask_num < COLORMASK_MAXNUM)
-	{
-		if(col == -1) col = p->col.drawcol;
-	
-		//同じ色が存在するか
-
-		for(i = 0; i < p->col.colmask_num; i++)
-		{
-			if(p->col.colmask_col[i] == col)
-				return FALSE;
-		}
-		
-		//追加
-	
-		p->col.colmask_col[p->col.colmask_num] = col;
-		p->col.colmask_col[p->col.colmask_num + 1] = -1;
-
-		p->col.colmask_num++;
-
-		drawColorMask_changeColor(p);
-	}
-
-	return TRUE;
-}
-
-/** 色マスクの色を削除
- *
- * @param no  負の値で最後の色 */
-
-mBool drawColorMask_delColor(DrawData *p,int no)
-{
-	int i;
-	int *pcol = p->col.colmask_col;
-
-	//1色しかないならそのまま
-
-	if(p->col.colmask_num == 1) return FALSE;
-
-	if(no < 0) no = p->col.colmask_num - 1;
-
-	//終端の -1 も含め詰める
-	
-	for(i = no; i < p->col.colmask_num; i++)
-		pcol[i] = pcol[i + 1];
-
-	p->col.colmask_num--;
-
-	drawColorMask_changeColor(p);
-
-	return TRUE;
-}
-
-/** 色マスクの色を最初の１色のみにする */
-
-void drawColorMask_clear(DrawData *p)
-{
-	p->col.colmask_col[1] = -1;
-	p->col.colmask_num = 1;
-
-	drawColorMask_changeColor(p);
-}
-
-
 
 //=============================
 // ツール
@@ -491,46 +411,224 @@ void drawColorMask_clear(DrawData *p)
 
 /** ツール変更 */
 
-void drawTool_setTool(DrawData *p,int no)
+void drawTool_setTool(AppDraw *p,int no)
 {
-	//変更
+	int frule;
 
-	if(p->tool.no != no)
-	{
-		//矩形編集から変更する場合、枠を消す
+	if(p->tool.no == no) return;
 
-		if(p->tool.no == TOOL_BOXEDIT)
-			drawBoxEdit_setBox(p, NULL);
+	//矩形選択から変更する時
 
-		//
+	if(p->tool.no == TOOL_CUTPASTE || p->tool.no == TOOL_BOXEDIT)
+		drawBoxSel_onChangeState(p, 2);
 
-		p->tool.no = no;
+	frule = drawRule_isVisibleGuide(p);
 
-		//各ウィジェット
+	//
 
-		DockTool_changeTool();
-		DockOption_changeTool();
+	p->tool.no = no;
 
-		StatusBar_setHelp_tool();
+	//各ウィジェット
 
-		//カーソル
+	PanelTool_changeTool();
+	PanelOption_changeTool();
 
-		MainWinCanvasArea_setCursor_forTool();
-	}
+	StatusBar_setHelp_tool();
+
+	//カーソル
+
+	MainCanvasPage_setCursor_forTool();
+
+	//定規ガイドの表示状態が変わる時
+
+	if(frule != drawRule_isVisibleGuide(p))
+		drawUpdate_canvas();
 }
 
-/** ツールサブ変更 */
+/** ツールサブタイプ変更 */
 
-void drawTool_setToolSubtype(DrawData *p,int subno)
+void drawTool_setTool_subtype(AppDraw *p,int subno)
 {
-	if(subno != p->tool.subno[p->tool.no])
+	int frule;
+
+	if(subno == p->tool.subno[p->tool.no])
+		return;
+
+	frule = drawRule_isVisibleGuide(p);
+
+	//
+	
+	p->tool.subno[p->tool.no] = subno;
+
+	PanelTool_changeToolSub();
+
+	StatusBar_setHelp_tool();
+
+	//定規ガイドの表示状態が変わる時
+
+	if(frule != drawRule_isVisibleGuide(p))
+		drawUpdate_canvas();
+}
+
+/** 指定ツールが、描画などを行わないタイプか */
+
+mlkbool drawTool_isType_notDraw(int no)
+{
+	return (no == TOOL_CANVAS_MOVE || no == TOOL_CANVAS_ROTATE);
+}
+
+/** 指定ツールが、描画タイプ(フリーハンドなど)を持つタイプか */
+
+mlkbool drawTool_isType_haveDrawType(int no)
+{
+	return (no == TOOL_TOOLLIST || no == TOOL_DOTPEN
+		|| no == TOOL_DOTPEN_ERASE || no == TOOL_FINGER);
+}
+
+
+//==========================
+// カーソル
+//==========================
+
+
+/** カーソルを砂時計にセット */
+
+void drawCursor_wait(void)
+{
+	mWindowSetCursor(MLK_WINDOW(APPWIDGET->mainwin), AppCursor_getWaitCursor());
+}
+
+/** カーソルを(砂時計から)元に戻す */
+
+void drawCursor_restore(void)
+{
+	mWindowResetCursor(MLK_WINDOW(APPWIDGET->mainwin));
+}
+
+/** ツール番号から、カーソル番号を取得 */
+
+int drawCursor_getToolCursor(int toolno)
+{
+	int no;
+
+	switch(toolno)
 	{
-		p->tool.subno[p->tool.no] = subno;
-
-		DockTool_changeToolSub();
-
-		StatusBar_setHelp_tool();
+		case TOOL_MOVE:
+			no = APPCURSOR_MOVE;
+			break;
+		case TOOL_SELECT:
+		case TOOL_CUTPASTE:
+		case TOOL_BOXEDIT:
+			no = APPCURSOR_SELECT;
+			break;
+		case TOOL_STAMP:
+			if(APPDRAW->stamp.img)
+				no = APPCURSOR_STAMP;
+			else
+				no = APPCURSOR_SELECT;
+			break;
+		case TOOL_CANVAS_MOVE:
+			no = APPCURSOR_HAND;
+			break;
+		case TOOL_CANVAS_ROTATE:
+			no = APPCURSOR_ROTATE;
+			break;
+		case TOOL_SPOIT:
+			no = APPCURSOR_SPOIT;
+			break;
+		
+		default:
+			no = APPCURSOR_DRAW;
+			break;
 	}
+
+	return no;
+}
+
+
+//=============================
+// テクスチャなど
+//=============================
+
+
+/** オプションのテクスチャイメージの読み込み
+ *
+ * strOptTexturePath に画像パスをセットしておく。
+ *
+ * return: イメージが読み込まれたか */
+
+mlkbool drawTexture_loadOptionTextureImage(AppDraw *p)
+{
+	mStr str = MSTR_INIT,*strpath;
+
+	//イメージ解放
+	
+	ImageMaterial_free(p->imgmat_opttex);
+	p->imgmat_opttex = NULL;
+
+	//パスが空なら、イメージ無し
+
+	strpath = &p->strOptTexturePath;
+
+	if(mStrIsEmpty(strpath))
+		return FALSE;
+
+	//絶対パス取得
+	// :先頭が '/' でシステムディレクトリ。
+	// :でなければ、ユーザーディレクトリ。
+
+	if(strpath->buf[0] == '/')
+	{
+		mGuiGetPath_data(&str, APP_DIRNAME_TEXTURE);
+		mStrPathJoin(&str, strpath->buf + 1);
+	}
+	else
+	{
+		mStrCopy(&str, &APPCONF->strUserTextureDir);
+		mStrPathJoin(&str, strpath->buf);
+	}
+
+	//読み込み
+
+	p->imgmat_opttex = ImageMaterial_loadTexture(&str);
+
+	mStrFree(&str);
+
+	return (p->imgmat_opttex != NULL);
+}
+
+/** 画像ファイルから TileImage を読み込み
+ * (切り貼り/スタンプツール時)
+ *
+ * ppdst: 読み込み前に解放される
+ * psize: 画像のサイズが入る */
+
+mlkerr drawSub_loadTileImage(TileImage **ppdst,const char *filename,mSize *psize)
+{
+	uint32_t format;
+	mSize size;
+	mlkerr ret;
+
+	//ファイルフォーマット
+
+	format = FileFormat_getFromFile(filename);
+
+	if(!(format & FILEFORMAT_NORMAL_IMAGE))
+		return MLKERR_UNSUPPORTED;
+
+	//読み込み
+
+	TileImage_free(*ppdst);
+
+	ret = TileImage_loadFile(ppdst, filename, format, &size, NULL);
+
+	if(!ret)
+	{
+		psize->w = size.w;
+		psize->h = size.h;
+	}
+
+	return ret;
 }
 
 
@@ -541,7 +639,7 @@ void drawTool_setToolSubtype(DrawData *p,int subno)
 
 /** スタンプイメージをクリア */
 
-void drawStamp_clearImage(DrawData *p)
+void drawStamp_clearImage(AppDraw *p)
 {
 	if(p->stamp.img)
 	{
@@ -550,32 +648,32 @@ void drawStamp_clearImage(DrawData *p)
 
 		//オプションのプレビュー更新
 
-		DockOption_changeStampImage();
+		PanelOption_changeStampImage();
 
-		//スタンプ画像がない時、カーソル変更
+		//カーソル変更
 
-		MainWinCanvasArea_setCursor_forTool();
+		MainCanvasPage_setCursor_forTool();
 	}
 }
 
 /** 画像ファイルからスタンプイメージ読み込み */
 
-void drawStamp_loadImage(DrawData *p,const char *filename,mBool ignore_alpha)
+mlkerr drawStamp_loadImage(AppDraw *p,const char *filename)
 {
-	TileImageLoadFileInfo info;
+	mSize size;
+	mlkerr ret;
 
-	TileImage_free(p->stamp.img);
+	ret = drawSub_loadTileImage(&p->stamp.img, filename, &size);
+	if(ret) return ret;
 
-	p->stamp.img = TileImage_loadFile(filename, 0, ignore_alpha,
-		10000, &info, NULL, NULL);
+	p->stamp.size.w = size.w;
+	p->stamp.size.h = size.h;
+	p->stamp.bits = p->imgbits;
 
-	if(p->stamp.img)
-	{
-		p->stamp.size.w = info.width;
-		p->stamp.size.h = info.height;
+	//カーソル変更
+	
+	MainCanvasPage_setCursor_forTool();
 
-		//カーソル変更
-		
-		MainWinCanvasArea_setCursor_forTool();
-	}
+	return MLKERR_OK;
 }
+

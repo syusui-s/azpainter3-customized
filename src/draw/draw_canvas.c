@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,154 +18,176 @@
 $*/
 
 /*****************************************
- * DrawData
- *
- * キャンバス関連
+ * AppDraw: キャンバス関連
  *****************************************/
 
-#include "mDef.h"
-#include "mWidgetDef.h"
+#include "mlk_gui.h"
 
-#include "defMacros.h"
-#include "defConfig.h"
+#include "def_macro.h"
+#include "def_config.h"
+#include "def_draw.h"
 
-#include "defDraw.h"
+#include "maincanvas.h"
+#include "panel_func.h"
+
 #include "draw_main.h"
 #include "draw_calc.h"
-
-#include "MainWinCanvas.h"
-#include "Docks_external.h"
 
 
 
 /** キャンバスの描画を低品質に */
 
-void drawCanvas_lowQuality()
+void drawCanvas_lowQuality(void)
 {
-	APP_DRAW->bCanvasLowQuality = 1;
+	APPDRAW->canvas_lowquality = 1;
 }
 
 /** キャンバスの描画品質を元に戻す */
 
-void drawCanvas_normalQuality()
+void drawCanvas_normalQuality(void)
 {
-	APP_DRAW->bCanvasLowQuality = 0;
+	APPDRAW->canvas_lowquality = 0;
 }
 
-/** スクロールリセット (値のみ)
+/** スクロール位置をリセット (値のみ)
  *
  * イメージ原点位置をセットして、スクロール位置を (0,0) にする。
  *
- * @param origin イメージ原点位置。NULL で現在のキャンバス中央。 */
+ * origin: イメージ原点位置。NULL で、現在のキャンバス中央。 */
 
-void drawCanvas_setScrollReset(DrawData *p,mDoublePoint *origin)
+void drawCanvas_scroll_reset(AppDraw *p,const mDoublePoint *origin)
 {
 	if(origin)
-	{
-		p->imgoriginX = origin->x;
-		p->imgoriginY = origin->y;
-	}
+		p->imgorigin = *origin;
 	else
-		drawCalc_getImagePos_atCanvasCenter(p, &p->imgoriginX, &p->imgoriginY);
+		drawCalc_getImagePos_atCanvasCenter(p, &p->imgorigin.x, &p->imgorigin.y);
 
-	p->ptScroll.x = p->ptScroll.y = 0;
+	p->canvas_scroll.x = p->canvas_scroll.y = 0;
 }
 
-/** スクロールリセット (更新も行う) */
+/** 指定イメージ位置がキャンバスの中心に来るようにスクロール */
 
-void drawCanvas_setScrollReset_update(DrawData *p,mDoublePoint *origin)
+void drawCanvas_scroll_at_imagecenter(AppDraw *p,const mDoublePoint *dpt)
 {
-	drawCanvas_setScrollReset(p, origin);
-	drawCanvas_setZoomAndAngle(p, 0, 0, 0, FALSE);
+	mPoint pt;
+
+	drawCalc_image_to_canvas_pt_double(p, &pt, dpt->x, dpt->y);
+
+	p->canvas_scroll.x = pt.x + p->canvas_scroll.x - p->canvas_size.w / 2;
+	p->canvas_scroll.y = pt.y + p->canvas_scroll.y - p->canvas_size.h / 2;
+
+	MainCanvas_setScrollPos();
+
+	drawCanvas_update_scrollpos(p, TRUE);
 }
 
 /** スクロール位置をデフォルトに (画像の中央を原点位置とする) */
 
-void drawCanvas_setScrollDefault(DrawData *p)
+void drawCanvas_scroll_default(AppDraw *p)
 {
-	p->imgoriginX = p->imgw * 0.5;
-	p->imgoriginY = p->imgh * 0.5;
-	p->ptScroll.x = p->ptScroll.y = 0;
+	p->imgorigin.x = p->imgw * 0.5;
+	p->imgorigin.y = p->imgh * 0.5;
+	p->canvas_scroll.x = p->canvas_scroll.y = 0;
 }
 
 /** 表示倍率を一段階上げ下げ */
 
-void drawCanvas_zoomStep(DrawData *p,mBool zoomup)
+void drawCanvas_zoomStep(AppDraw *p,mlkbool zoomup)
 {
-	drawCanvas_setZoomAndAngle(p,
-		drawCalc_getZoom_step(p, zoomup), 0, 1, TRUE);
+	drawCanvas_update(p, drawCalc_getZoom_step(p, zoomup), 0,
+		DRAWCANVAS_UPDATE_ZOOM | DRAWCANVAS_UPDATE_RESET_SCROLL);
 }
 
 /** 一段階左右に回転 */
 
-void drawCanvas_rotateStep(DrawData *p,mBool left)
+void drawCanvas_rotateStep(AppDraw *p,mlkbool left)
 {
 	int step;
 
-	step = APP_CONF->canvasAngleStep;
+	step = APPCONF->canvas_angle_step;
 	if(left) step = -step;
 
-	drawCanvas_setZoomAndAngle(p, 0, p->canvas_angle + step * 100, 2, TRUE);
+	drawCanvas_update(p, 0, p->canvas_angle + step * 100,
+		DRAWCANVAS_UPDATE_ANGLE | DRAWCANVAS_UPDATE_RESET_SCROLL);
 }
 
 /** キャンバスをウィンドウに合わせる
  *
  * イメージ全体がキャンバス内に収まるように倍率セット。 */
 
-void drawCanvas_fitWindow(DrawData *p)
+void drawCanvas_fitWindow(AppDraw *p)
 {
-	drawCanvas_setScrollDefault(p);
+	drawCanvas_scroll_default(p);
 
-	drawCanvas_setZoomAndAngle(p,
-		drawCalc_getZoom_fitWindow(p), 0, 3, FALSE);
+	drawCanvas_update(p,
+		drawCalc_getZoom_fitWindow(p), 0,
+		DRAWCANVAS_UPDATE_ZOOM | DRAWCANVAS_UPDATE_ANGLE);
 }
 
 /** キャンバス左右反転表示切り替え */
 
-void drawCanvas_mirror(DrawData *p)
+void drawCanvas_mirror(AppDraw *p)
 {
 	mDoublePoint pt;
 
 	drawCalc_getImagePos_atCanvasCenter(p, &pt.x, &pt.y);
 
-	p->canvas_mirror ^= 1;
+	p->canvas_mirror = !p->canvas_mirror;
 
-	drawCanvas_setScrollReset(p, &pt);
+	//切り替え前の位置でリセット
+	drawCanvas_scroll_reset(p, &pt);
 
-	drawCanvas_setZoomAndAngle(p, 0, -(p->canvas_angle), 2, FALSE);
+	drawCanvas_update(p, 0, -(p->canvas_angle), DRAWCANVAS_UPDATE_ANGLE);
 }
 
 /** キャンバスの領域サイズ変更時 */
 
-void drawCanvas_setAreaSize(DrawData *p,int w,int h)
+void drawCanvas_setCanvasSize(AppDraw *p,int w,int h)
 {
-	p->szCanvas.w = w;
-	p->szCanvas.h = h;
+	p->canvas_size.w = w;
+	p->canvas_size.h = h;
 
-	//メインウィンドウ、スクロール情報変更
+	//スクロール情報変更
 
-	MainWinCanvas_setScrollInfo();
+	MainCanvas_setScrollInfo();
+
+	//定規ガイド再計算
+
+	if(p->rule.func_set_guide)
+		(p->rule.func_set_guide)(p);
 }
 
-/** キャンバス表示倍率と回転角度をセット
- *
- * 値を変更せずに更新のみを行う場合にも使う。
- * [!] キャンバスのスクロールバー範囲が変更される。
- *
- * @param flags [0bit] 倍率変更 [1bit] 角度変更 [2bit]キャンバス更新しない
- * @param reset_scroll スクロールを現在のキャンバス中央位置にリセット */
+/** スクロール位置のみが変更された時の更新 */
 
-void drawCanvas_setZoomAndAngle(DrawData *p,int zoom,int angle,int flags,mBool reset_scroll)
+void drawCanvas_update_scrollpos(AppDraw *p,mlkbool update)
+{
+	//定規ガイド再計算
+
+	if(p->rule.func_set_guide)
+		(p->rule.func_set_guide)(p);
+
+	//
+
+	if(update)
+		drawUpdate_canvas();
+}
+
+/** キャンバスの更新
+ *
+ * [!] キャンバスのスクロールバー範囲が変更される。 */
+
+void drawCanvas_update(AppDraw *p,int zoom,int angle,int flags)
 {
 	//スクロールリセット
 	//[!] すでにスクロール位置が (0,0) ならそのまま
 
-	if(reset_scroll && (p->ptScroll.x || p->ptScroll.y))
-		drawCanvas_setScrollReset(p, NULL);
+	if((flags & DRAWCANVAS_UPDATE_RESET_SCROLL)
+		&& (p->canvas_scroll.x || p->canvas_scroll.y))
+		drawCanvas_scroll_reset(p, NULL);
 
-	//倍率
+	//表示倍率
 
-	if(flags & 1)
+	if(flags & DRAWCANVAS_UPDATE_ZOOM)
 	{
 		if(zoom < CANVAS_ZOOM_MIN)
 			zoom = CANVAS_ZOOM_MIN;
@@ -177,7 +199,7 @@ void drawCanvas_setZoomAndAngle(DrawData *p,int zoom,int angle,int flags,mBool r
 
 	//角度
 
-	if(flags & 2)
+	if(flags & DRAWCANVAS_UPDATE_ANGLE)
 	{
 		if(angle < -18000)
 			angle += 36000;
@@ -191,16 +213,21 @@ void drawCanvas_setZoomAndAngle(DrawData *p,int zoom,int angle,int flags,mBool r
 
 	drawCalc_setCanvasViewParam(p);
 
-	//メインウィンドウのスクロール
+	//定規ガイド再計算
 
-	MainWinCanvas_setScrollInfo();
+	if(p->rule.func_set_guide)
+		(p->rule.func_set_guide)(p);
+
+	//キャンバススクロール情報
+
+	MainCanvas_setScrollInfo();
 
 	//ほか、関連するウィジェット
 
-	DockCanvasCtrl_setPos();
+	PanelCanvasCtrl_setValue();
 
-	//更新
+	//キャンバス更新
 
-	if(!(flags & DRAW_SETZOOMANDANGLE_F_NO_UPDATE))
-		drawUpdate_canvasArea();
+	if(!(flags & DRAWCANVAS_UPDATE_NO_CANVAS_UPDATE))
+		drawUpdate_canvas();
 }

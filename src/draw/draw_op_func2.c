@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,42 +18,38 @@
 $*/
 
 /*****************************************
- * DrawData
- *
+ * AppDraw
  * 操作 - いろいろ2
  *****************************************/
 /*
- * 選択範囲、矩形範囲
+ * 選択範囲/切り貼り/矩形編集
  */
 
 #include <stdlib.h>	//abs
 #include <math.h>
 
-#include "mDef.h"
-#include "mRectBox.h"
+#include "mlk_gui.h"
+#include "mlk_rectbox.h"
 
-#include "defDraw.h"
+#include "def_draw.h"
+#include "def_tool_option.h"
 
 #include "draw_main.h"
 #include "draw_calc.h"
-#include "draw_select.h"
-#include "draw_boxedit.h"
 #include "draw_op_def.h"
 #include "draw_op_sub.h"
 #include "draw_op_func.h"
 
-#include "macroToolOpt.h"
+#include "tileimage.h"
+#include "tileimage_drawinfo.h"
+#include "layeritem.h"
+#include "layerlist.h"
 
-#include "TileImage.h"
-#include "TileImageDrawInfo.h"
-#include "LayerItem.h"
-#include "LayerList.h"
+#include "fillpolygon.h"
+#include "drawfill.h"
 
-#include "FillPolygon.h"
-#include "DrawFill.h"
-
-#include "AppCursor.h"
-#include "MainWinCanvas.h"
+#include "appcursor.h"
+#include "maincanvas.h"
 
 
 
@@ -61,18 +57,20 @@ $*/
 // 選択範囲 : 図形選択
 //==================================
 /*
- * - 選択範囲イメージは tileimgSel (1bit)
- */
+  - 選択範囲イメージは tileimg_sel (1bit)
+*/
 
 
-/** 四角形の場合 多角形の点セット */
+/* 四角形塗りつぶし(回転あり): 多角形の点セット
+ *
+ * return: FALSE で失敗 */
 
-static mBool _set_drawbox_polygon(DrawData *p)
+static mlkbool _set_drawbox_polygon(AppDraw *p)
 {
 	mDoublePoint pt[4];
 	int i;
 
-	drawOpSub_getDrawBoxPoints(p, pt);
+	drawOpSub_getDrawRectPoints(p, pt);
 
 	p->w.fillpolygon = FillPolygon_new();
 	if(!p->w.fillpolygon) return FALSE;
@@ -85,23 +83,24 @@ static mBool _set_drawbox_polygon(DrawData *p)
 
 /** 選択範囲を図形からセット
  *
- * @param type 0:四角形 1:多角形またはフリーハンド */
+ * type: [0] 四角形 [1] 多角形またはフリーハンド */
 
-void drawOp_setSelect(DrawData *p,int type)
+void drawOp_setSelect(AppDraw *p,int type)
 {
-	mBool del;
+	mBox box;
+	mlkbool del,fdraw;
 
-	if(!drawSel_createImage(p)) return;
+	if(!drawSel_selImage_create(p)) return;
 
-	MainWinCanvasArea_setCursor_wait();
+	drawCursor_wait();
 
 	drawOpSub_setDrawInfo_select();
 
-	//範囲削除か (+Ctrl)
+	//+Ctrl = 範囲削除
 
-	del = (p->w.press_state & M_MODS_CTRL);
+	del = ((p->w.press_state & MLK_STATE_CTRL) != 0);
 
-	if(del) p->w.rgbaDraw.a = 0;
+	if(del) p->w.drawcol = 0;
 
 	//描画
 
@@ -109,50 +108,48 @@ void drawOp_setSelect(DrawData *p,int type)
 
 	if(type == 0 && p->canvas_angle == 0)
 	{
-		//------ 四角形、キャンバス回転なしの場合
-
-		mBox box;
+		//------ 四角形 & キャンバス回転なしの場合
 		
-		drawOpSub_getDrawBox_noangle(p, &box);
+		drawOpSub_getDrawRectBox_angle0(p, &box);
 
-		TileImage_drawFillBox(p->tileimgSel, box.x, box.y, box.w, box.h, &p->w.rgbaDraw);
+		TileImage_drawFillBox(p->tileimg_sel, box.x, box.y, box.w, box.h, &p->w.drawcol);
 	}
 	else
 	{
 		//----- 多角形
 
-		mBool draw = TRUE;
+		fdraw = TRUE;
 
 		//四角形 (回転あり) の場合
 
 		if(type == 0)
-			draw = _set_drawbox_polygon(p);
+			fdraw = _set_drawbox_polygon(p);
 
-		//描画
+		//描画 (非アンチエイリアス)
 
-		if(draw)
+		if(fdraw)
 		{
-			TileImage_drawFillPolygon(p->tileimgSel, p->w.fillpolygon,
-				&p->w.rgbaDraw, FALSE);
+			TileImage_drawFillPolygon(p->tileimg_sel, p->w.fillpolygon,
+				&p->w.drawcol, FALSE);
 		}
 
 		drawOpSub_freeFillPolygon(p);
 	}
 
-	//
+	//-----
 
 	if(del)
-		//範囲削除
-		drawSel_freeEmpty(p);
+		//範囲削除時
+		drawSel_selImage_freeEmpty(p);
 	else
 		//範囲追加
 		mRectUnion(&p->sel.rcsel, &g_tileimage_dinfo.rcdraw);
 
 	//描画部分を更新
 
-	drawUpdate_rect_canvas_forSelect(p, &g_tileimage_dinfo.rcdraw);
+	drawUpdateRect_canvaswg_forSelect(p, &g_tileimage_dinfo.rcdraw);
 
-	MainWinCanvasArea_restoreCursor();
+	drawCursor_restore();
 }
 
 
@@ -161,53 +158,48 @@ void drawOp_setSelect(DrawData *p,int type)
 //=================================
 
 
-/** 離し */
+/* 離し */
 
-static mBool _magicwand_release(DrawData *p)
+static mlkbool _selfill_release(AppDraw *p)
 {
 	DrawFill *draw;
 	LayerItem *item;
 	mPoint pt;
-	int type,diff;
+	int type,diff,layer;
 	uint32_t val;
-	mBool disable_ref;
 
 	//設定値
 
-	val = p->tool.opt_magicwand;
-
-	type = MAGICWAND_GET_TYPE(val);
-	diff = MAGICWAND_GET_COLOR_DIFF(val);
-
-	if(p->w.press_state & M_MODS_CTRL)	//+Ctrl : 透明で判定
-		type = DRAWFILL_TYPE_AUTO_ANTIALIAS;
-
-	if(p->w.press_state & M_MODS_SHIFT) //+Shift : 判定元無効
-		disable_ref = TRUE;
+	if(p->w.is_toollist_toolopt)
+		val = p->w.toollist_toolopt;
 	else
-		disable_ref = MAGICWAND_IS_DISABLE_REF(val);
+		val = p->tool.opt_selfill;
 
-	//判定元イメージリンクセット & 先頭を取得
-	/* 判定元指定がなく、カレントがフォルダの場合は item == NULL */
+	type = TOOLOPT_FILL_GET_TYPE(val);
+	diff = TOOLOPT_FILL_GET_DIFF(val);
+	layer = TOOLOPT_FILL_GET_LAYER(val);
 
-	item = LayerList_setLink_filltool(p->layerlist, p->curlayer, disable_ref);
+	//参照レイヤのリンクセット 
+	// :カレントが対象になった場合、フォルダであれば無効
+
+	item = LayerList_setLink_filltool(p->layerlist, p->curlayer, layer);
 
 	if(!item) return TRUE;
 
-	//イメージ作成
+	//選択範囲イメージ作成
 
-	if(!drawSel_createImage(p)) return TRUE;
+	if(!drawSel_selImage_create(p)) return TRUE;
 	
 	//塗りつぶし初期化
 
 	drawOpSub_getImagePoint_int(p, &pt);
 
-	draw = DrawFill_new(p->tileimgSel, item->img, &pt, type, diff, 100);
+	draw = DrawFill_new(p->tileimg_sel, item->img, &pt, type, diff, 100);
 	if(!draw) return TRUE;
 
 	//準備
 
-	MainWinCanvasArea_setCursor_wait();
+	drawCursor_wait();
 
 	drawOpSub_setDrawInfo_select();
 
@@ -215,29 +207,29 @@ static mBool _magicwand_release(DrawData *p)
 
 	//塗りつぶし実行
 
-	DrawFill_run(draw, &p->w.rgbaDraw);
+	DrawFill_run(draw, &p->w.drawcol);
 	DrawFill_free(draw);
 
-	//範囲追加
+	//範囲を追加
 
 	mRectUnion(&p->sel.rcsel, &g_tileimage_dinfo.rcdraw);
 
 	//更新
 
-	drawUpdate_rect_canvas_forSelect(p, &g_tileimage_dinfo.rcdraw);
+	drawUpdateRect_canvaswg_forSelect(p, &g_tileimage_dinfo.rcdraw);
 
 	//
 
-	MainWinCanvasArea_restoreCursor();
+	drawCursor_restore();
 
 	return TRUE;
 }
 
 /** 押し */
 
-mBool drawOp_magicwand_press(DrawData *p)
+mlkbool drawOp_selectFill_press(AppDraw *p)
 {
-	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL, NULL, _magicwand_release, 0);
+	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL, NULL, _selfill_release, 0);
 
 	return TRUE;
 }
@@ -248,24 +240,26 @@ mBool drawOp_magicwand_press(DrawData *p)
 //==================================
 /*
 	pttmp[0] : 開始時のオフセット位置
-	pttmp[1]  : オフセット位置の総相対移動数
+	pttmp[1] : オフセット位置の総相対移動数
 	ptd_tmp[0] : 総相対移動 px 数 (キャンバス座標)
-	rcdraw    : 更新範囲 (タイマー用)
+	rcdraw   : 更新範囲 (タイマー用)
 */
 
 
-/** 移動 */
+/* 移動 */
 
-static void _selmove_motion(DrawData *p,uint32_t state)
+static void _selmove_motion(AppDraw *p,uint32_t state)
 {
 	mPoint pt;
 	mRect rc;
 
-	if(drawCalc_moveImage_onMotion(p, p->tileimgSel, state, &pt))
+	//pt = オフセットの相対移動px数
+
+	if(drawCalc_moveImage_onMotion(p, p->tileimg_sel, state, &pt))
 	{
 		//オフセット位置移動
 
-		TileImage_moveOffset_rel(p->tileimgSel, pt.x, pt.y);
+		TileImage_moveOffset_rel(p->tileimg_sel, pt.x, pt.y);
 
 		//更新範囲 (移動前+移動後)
 
@@ -273,43 +267,39 @@ static void _selmove_motion(DrawData *p,uint32_t state)
 
 		//rcsel 移動
 
-		mRectRelMove(&p->sel.rcsel, pt.x, pt.y);
+		mRectMove(&p->sel.rcsel, pt.x, pt.y);
 
 		//更新
 
 		mRectUnion(&p->w.rcdraw, &rc);
 
-		MainWinCanvasArea_setTimer_updateSelectMove();
+		MainCanvasPage_setTimer_updateSelectMove();
 	}
 }
 
-/** 離し */
+/* 離し */
 
-static mBool _selmove_release(DrawData *p)
+static mlkbool _selmove_release(AppDraw *p)
 {
 	//タイマークリア&更新
 
-	MainWinCanvasArea_clearTimer_updateSelectMove();
-
-	//カーソル
-
-	MainWinCanvasArea_setCursor_forTool();
+	MainCanvasPage_clearTimer_updateSelectMove();
 
 	return TRUE;
 }
 
 /** 押し時 */
 
-mBool drawOp_selmove_press(DrawData *p)
+mlkbool drawOp_selectMove_press(AppDraw *p)
 {
 	if(!drawSel_isHave()) return FALSE;
 
 	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL,
 		_selmove_motion, _selmove_release, 0);
 
-	drawOpSub_startMoveImage(p, p->tileimgSel);
+	drawOpSub_startMoveImage(p, p->tileimg_sel);
 
-	MainWinCanvasArea_setCursor(APP_CURSOR_SEL_MOVE);
+	p->w.drag_cursor_type = APPCURSOR_SEL_MOVE;
 
 	return TRUE;
 }
@@ -320,25 +310,28 @@ mBool drawOp_selmove_press(DrawData *p)
 //=========================================
 /*
 	pttmp[0] : 開始時のオフセット位置
-	pttmp[1]  : オフセット位置の総相対移動数
+	pttmp[1] : オフセット位置の総相対移動数
 	ptd_tmp[0] : 総相対移動 px 数 (キャンバス座標)
-	rcdraw    : 更新範囲 (タイマー用)
+	rcdraw   : 更新範囲 (タイマー用)
+
+	ドラッグ中は、レイヤ合成時に、tileimg_tmp がカレントの上に挟み込まれて表示される。
 */
 
 
-/** 移動 */
+/* 移動 */
 
-static void _selimgmove_motion(DrawData *p,uint32_t state)
+static void _selimgmove_motion(AppDraw *p,uint32_t state)
 {
 	mPoint pt;
 	mRect rc;
 
-	if(drawCalc_moveImage_onMotion(p, p->tileimgSel, 0, &pt))
+	if(drawCalc_moveImage_onMotion(p, p->tileimg_sel, 0, &pt))
 	{
 		//オフセット位置移動
+		// :コピーイメージと選択範囲を同時に移動する。
 
-		TileImage_moveOffset_rel(p->tileimgSel, pt.x, pt.y);
-		TileImage_moveOffset_rel(p->tileimgTmp, pt.x, pt.y);
+		TileImage_moveOffset_rel(p->tileimg_sel, pt.x, pt.y);
+		TileImage_moveOffset_rel(p->tileimg_tmp, pt.x, pt.y);
 		
 		//更新範囲 (移動前+移動後)
 
@@ -346,152 +339,307 @@ static void _selimgmove_motion(DrawData *p,uint32_t state)
 
 		//rcsel 移動
 
-		mRectRelMove(&p->sel.rcsel, pt.x, pt.y);
+		mRectMove(&p->sel.rcsel, pt.x, pt.y);
 
 		//更新
 
 		mRectUnion(&p->w.rcdraw, &rc);
 
-		MainWinCanvasArea_setTimer_updateSelectImageMove();
+		MainCanvasPage_setTimer_updateSelectImageMove();
 	}
 }
 
-/** 離し */
+/* 離し */
 
-static mBool _selimgmove_release(DrawData *p)
+static mlkbool _selimgmove_release(AppDraw *p)
 {
-	mBool update,hidesel;
+	mlkbool update,is_hide;
 
 	//枠非表示戻す
 
-	hidesel = p->w.hide_canvas_select;
+	is_hide = p->sel.is_hide;
 
-	p->w.hide_canvas_select = FALSE;
+	p->sel.is_hide = FALSE;
 
-	//タイマークリア&更新
+	//タイマークリア & 更新
 
-	update = MainWinCanvasArea_clearTimer_updateSelectImageMove();
+	update = MainCanvasPage_clearTimer_updateSelectImageMove();
 
-	//枠非表示で、タイマークリア時に更新されていない場合、枠が表示されるよう再描画
+	//ドラッグ中に枠非表示で、タイマークリア時に更新されていない場合、
+	//枠が非表示の状態のため、枠を更新。
+	// :最終的な更新時にも更新は行われるが、
+	// :選択範囲枠と実際のイメージの更新範囲は一致しない場合がある。
 
-	if(hidesel && !update)
-		drawUpdate_rect_imgcanvas_fromRect(p, &p->sel.rcsel);
+	if(is_hide && !update)
+		drawUpdateRect_canvaswg_forSelect(p, &p->sel.rcsel);
 
-	//貼り付け (+Shift で上書き)
+	//貼り付け (重ね塗り)
 
 	drawOpSub_setDrawInfo_select_paste();
 
-	if(p->w.press_state & M_MODS_SHIFT)
-		g_tileimage_dinfo.funcColor = TileImage_colfunc_overwrite;
-
-	TileImage_pasteSelImage(p->w.dstimg, p->tileimgTmp, &p->sel.rcsel);
+	TileImage_pasteSelImage(p->w.dstimg, p->tileimg_tmp, &p->sel.rcsel);
 
 	//作業用イメージ解放
-	/* 更新時、tileimgTmp == NULL で通常更新となるので、
-	 * 更新を行う前に解放すること。 */
+	// :以下の更新時、tileimg_tmp == NULL にすると通常更新となるので、
+	// :更新を行う前に解放すること。
 
 	drawOpSub_freeTmpImage(p);
 
 	//更新
-	/* g_tileimg_dinfo.rcdraw の範囲で更新。
-	 * 切り取り時は、切り取られた範囲+貼り付け範囲 になっている。 */
+	// :g_tileimg_dinfo.rcdraw の範囲で更新。
+	// :切り取り時は、[切り取られた範囲+貼り付け範囲] になっている。
+	// :ドラッグ中は tileimg_tmp を挟む形で更新されているが、
+	// :最終的な貼り付け後のイメージで再度更新する必要あり。
 
 	drawOpSub_finishDraw_single(p);
-
-	//カーソル
-
-	MainWinCanvasArea_setCursor_forTool();
 
 	return TRUE;
 }
 
 /** 押し時 */
 
-mBool drawOp_selimgmove_press(DrawData *p,mBool cut)
+mlkbool drawOp_selimgmove_press(AppDraw *p,mlkbool cut)
 {
 	if(!drawSel_isHave()
-		|| drawOpSub_canDrawLayer_mes(p)
-		|| !drawOpSub_isPressInSelect(p))
+		|| drawOpSub_canDrawLayer_mes(p, 0)
+		|| !drawOpSub_isPress_inSelect(p))
 		return FALSE;
 
-	//描画準備 (切り取り、貼り付け用)
+	//描画準備
+	// :この時点では、切り取り用。
 
 	drawOpSub_setDrawInfo(p, -1, 0);
-	drawOpSub_clearDrawMasks();
+	drawOpSub_setDrawInfo_clearMasks();
 
-	g_tileimage_dinfo.funcColor = TileImage_colfunc_overwrite;
+	g_tileimage_dinfo.func_pixelcol = TileImage_global_getPixelColorFunc(TILEIMAGE_PIXELCOL_OVERWRITE);
 
 	drawOpSub_beginDraw(p);
 
-	//範囲内イメージ作成
+	//範囲内イメージ作成 (切り取りも実行)
 
-	p->tileimgTmp = TileImage_createSelCopyImage(p->curlayer->img,
-		p->tileimgSel, &p->sel.rcsel, cut, TRUE);
+	p->tileimg_tmp = TileImage_createSelCopyImage(p->curlayer->img,
+		p->tileimg_sel, &p->sel.rcsel, cut);
 
-	if(!p->tileimgTmp) return FALSE;
+	if(!p->tileimg_tmp) return FALSE;
 
 	//
 
 	drawOpSub_setOpInfo(p, DRAW_OPTYPE_SELIMGMOVE,
 		_selimgmove_motion, _selimgmove_release, 0);
 
-	drawOpSub_startMoveImage(p, p->tileimgSel);
+	drawOpSub_startMoveImage(p, p->tileimg_sel);
 
-	MainWinCanvasArea_setCursor(APP_CURSOR_SEL_MOVE);
+	p->w.drag_cursor_type = APPCURSOR_SEL_MOVE;
 
 	//+Ctrl で枠非表示
 
-	if(p->w.press_state & M_MODS_CTRL)
-		p->w.hide_canvas_select = TRUE;
+	if(TOOLOPT_SELECT_IS_HIDE(p->tool.opt_select)
+		|| (p->w.press_state & MLK_STATE_CTRL))
+	{
+		p->sel.is_hide = TRUE;
+	}
+
+	return TRUE;
+}
+
+
+//===========================================
+// 貼り付けイメージの移動
+//===========================================
+/*
+  (イメージ移動の作業値と共通)
+  rctmp[0] : 前回の範囲
+  rcdraw   : 更新用 (タイマーで更新されたらクリアされる)
+*/
+
+
+/* 移動 */
+
+static void _pastemove_motion(AppDraw *p,uint32_t state)
+{
+	mPoint pt;
+	mRect rc;
+
+	if(drawCalc_moveImage_onMotion(p, p->boxsel.img, state, &pt))
+	{
+		//範囲を相対移動
+		
+		TileImage_moveOffset_rel(p->boxsel.img, pt.x, pt.y);
+
+		p->boxsel.box.x += pt.x;
+		p->boxsel.box.y += pt.y;
+
+		//更新範囲 (移動前+移動後)
+
+		drawCalc_unionRect_relmove(&rc, &p->w.rctmp[0], pt.x, pt.y);
+
+		//現在の範囲
+
+		mRectMove(&p->w.rctmp[0], pt.x, pt.y);
+
+		//更新
+
+		mRectUnion(&p->w.rcdraw, &rc);
+
+		MainCanvasPage_setTimer_updatePasteMove();
+	}
+}
+
+/* 離し */
+
+static mlkbool _pastemove_release(AppDraw *p)
+{
+	MainCanvasPage_clearTimer_updatePasteMove();
+
+	return TRUE;
+}
+
+/* 押し */
+
+static mlkbool _pastemove_press(AppDraw *p)
+{
+	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL,
+		_pastemove_motion, _pastemove_release, 0);
+
+	drawOpSub_startMoveImage(p, p->boxsel.img);
+
+	mRectSetBox(&p->w.rctmp[0], &p->boxsel.box);
+
+	p->w.drag_cursor_type = APPCURSOR_SEL_MOVE;
 
 	return TRUE;
 }
 
 
 //=============================
-// 矩形編集 : 範囲リサイズ
+// 切り貼りツール
+//=============================
+
+
+/* 貼り付け確定 */
+
+static mlkbool _cutpaste_draw_paste(AppDraw *p)
+{
+	//描画不可
+
+	if(drawOpSub_canDrawLayer_mes(p, CANDRAWLAYER_F_NO_PASTE))
+	{
+		drawBoxSel_cancelPaste(p);
+		return FALSE;
+	}
+
+	//
+
+	drawOpSub_setDrawInfo(p, TOOL_CUTPASTE, 0);
+
+	if(TOOLOPT_CUTPASTE_IS_OVERWRITE(p->tool.opt_cutpaste))
+		drawOpSub_setDrawInfo_pixelcol(TILEIMAGE_PIXELCOL_OVERWRITE);
+
+	if(!TOOLOPT_CUTPASTE_IS_ENABLE_MASK(p->tool.opt_cutpaste))
+		drawOpSub_setDrawInfo_clearMasks();
+
+	//貼り付け
+
+	drawOpSub_beginDraw(p);
+
+	TileImage_pasteBoxSelImage(p->w.dstimg, p->boxsel.img, &p->boxsel.box);
+
+	drawOpSub_finishDraw_single(p);
+
+	//貼り付けモード解除
+	// :貼り付け後の更新範囲と、クリアする範囲は一致しない場合があるため、
+	// :更新は常に実行。
+
+	drawBoxSel_cancelPaste(p);
+
+	//離されるまでグラブ
+
+	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL, NULL, NULL, 0);
+
+	return TRUE;
+}
+
+/** 押し時 */
+
+mlkbool drawOp_cutpaste_press(AppDraw *p)
+{
+	mPoint pt;
+
+	drawOpSub_getImagePoint_int(p, &pt);
+
+	//貼り付けモード時
+
+	if(p->boxsel.is_paste_mode)
+	{
+		if(!mBoxIsPointIn(&p->boxsel.box, pt.x, pt.y))
+			return _cutpaste_draw_paste(p);
+		else
+			return _pastemove_press(p);
+	}
+
+	//選択内が押された時、コピー/切り取りして貼り付け
+
+	if(p->boxsel.box.w
+		&& mBoxIsPointIn(&p->boxsel.box, pt.x, pt.y))
+	{
+		pt.x = p->boxsel.box.x;
+		pt.y = p->boxsel.box.y;
+	
+		if(drawBoxSel_copy_cut(p, FALSE)
+			&& drawBoxSel_paste(p, &pt))
+			return _pastemove_press(p);
+		else
+			return FALSE;
+	}
+
+	//範囲選択 or リサイズ
+
+	return drawOp_boxsel_press(p);
+}
+
+
+//=============================
+// 矩形選択 : 範囲リサイズ
 //=============================
 /*
- * pttmp[0] : 左上位置
- * pttmp[1] : 右下位置
- * pttmp[2] : 前回のイメージ位置
- */
+	pttmp[0] : 左上位置
+	pttmp[1] : 右下位置
+	pttmp[2] : 前回のイメージ位置
+*/
 
 
 enum
 {
-	_BOXEDIT_EDGE_LEFT   = 1<<0,
-	_BOXEDIT_EDGE_TOP    = 1<<1,
-	_BOXEDIT_EDGE_RIGHT  = 1<<2,
-	_BOXEDIT_EDGE_BOTTOM = 1<<3
+	_BOXSEL_EDGE_LEFT   = 1<<0,
+	_BOXSEL_EDGE_TOP    = 1<<1,
+	_BOXSEL_EDGE_RIGHT  = 1<<2,
+	_BOXSEL_EDGE_BOTTOM = 1<<3
 };
 
 
-/** 非操作時の移動時 : カーソル変更 */
+/** 非操作時の移動時: カーソル変更 */
 
-void drawOp_boxedit_nograb_motion(DrawData *p)
+void drawOp_boxsel_nograb_motion(AppDraw *p)
 {
 	mPoint pt;
 	mRect rc,rcsel;
 	int w,pos,no;
 
-	//カーソル下のイメージ位置
+	//イメージ位置
 
 	drawOpSub_getImagePoint_int(p, &pt);
 
-	//現在の選択範囲
-	/* 表示枠は外側にはみ出している形なので、
-	 * そのままの範囲だと、少し枠の内側で判定される感じになる。
-	 * なので、範囲の座標を少し大きめにしておく。 */
+	//rcsel = 判定用の選択範囲
+	// :枠は外側に3pxとして表示されているので、それに合わせる
 
-	mRectSetByBox(&rcsel, &p->boxedit.box);
+	mRectSetBox(&rcsel, &p->boxsel.box);
 
 	rcsel.x1--;
 	rcsel.y1--;
-	rcsel.x2 += 2;
-	rcsel.y2 += 2;
+	rcsel.x2++;
+	rcsel.y2++;
 
-	//カーソルと範囲の各辺との距離
+	//rc = カーソルと各辺との距離
 
 	rc.x1 = abs(rcsel.x1 - pt.x);
 	rc.y1 = abs(rcsel.y1 - pt.y);
@@ -500,58 +648,70 @@ void drawOp_boxedit_nograb_motion(DrawData *p)
 
 	//判定の半径幅 (イメージの px 単位)
 
-	if(p->canvas_zoom >= 2000)
+	if(p->canvas_zoom >= 5000)
+		w = 1;
+	else if(p->canvas_zoom >= 2000)
 		w = 2;
 	else
+		//縮小時はより大きい幅で
 		w = (int)(p->viewparam.scalediv * 5 + 0.5);
 
 	//カーソルに近い辺と四隅を判定
 
 	if(rc.x1 < w && rc.y1 < w)
-		pos = _BOXEDIT_EDGE_LEFT | _BOXEDIT_EDGE_TOP; //左上
+		pos = _BOXSEL_EDGE_LEFT | _BOXSEL_EDGE_TOP; //左上
 	else if(rc.x1 < w && rc.y2 < w)
-		pos = _BOXEDIT_EDGE_LEFT | _BOXEDIT_EDGE_BOTTOM; //左下
+		pos = _BOXSEL_EDGE_LEFT | _BOXSEL_EDGE_BOTTOM; //左下
 	else if(rc.x2 < w && rc.y1 < w)
-		pos = _BOXEDIT_EDGE_RIGHT | _BOXEDIT_EDGE_TOP; //右上
+		pos = _BOXSEL_EDGE_RIGHT | _BOXSEL_EDGE_TOP; //右上
 	else if(rc.x2 < w && rc.y2 < w)
-		pos = _BOXEDIT_EDGE_RIGHT | _BOXEDIT_EDGE_BOTTOM; //右下
+		pos = _BOXSEL_EDGE_RIGHT | _BOXSEL_EDGE_BOTTOM; //右下
 	else if(rc.x1 < w && rcsel.y1 <= pt.y && pt.y <= rcsel.y2)
-		pos = _BOXEDIT_EDGE_LEFT;	//左
+		pos = _BOXSEL_EDGE_LEFT;	//左
 	else if(rc.x2 < w && rcsel.y1 <= pt.y && pt.y <= rcsel.y2)
-		pos = _BOXEDIT_EDGE_RIGHT;	//右
+		pos = _BOXSEL_EDGE_RIGHT;	//右
 	else if(rc.y1 < w && rcsel.x1 <= pt.x && pt.x <= rcsel.x2)
-		pos = _BOXEDIT_EDGE_TOP;	//上
+		pos = _BOXSEL_EDGE_TOP;	//上
 	else if(rc.y2 < w && rcsel.x1 <= pt.x && pt.x <= rcsel.x2)
-		pos = _BOXEDIT_EDGE_BOTTOM;	//下
+		pos = _BOXSEL_EDGE_BOTTOM;	//下
 	else
 		pos = 0;
 
 	//カーソル変更
 
-	if(pos != p->boxedit.cursor_resize)
+	if(pos != p->boxsel.flag_resize_cursor)
 	{
-		p->boxedit.cursor_resize = pos;
+		p->boxsel.flag_resize_cursor = pos;
 
 		if(pos == 0)
-			no = APP_CURSOR_SELECT;
-		else if(pos == (_BOXEDIT_EDGE_LEFT | _BOXEDIT_EDGE_TOP)
-			|| pos == (_BOXEDIT_EDGE_RIGHT | _BOXEDIT_EDGE_BOTTOM))
-			no = APP_CURSOR_LEFT_TOP;
-		else if(pos == (_BOXEDIT_EDGE_LEFT | _BOXEDIT_EDGE_BOTTOM)
-			|| pos == (_BOXEDIT_EDGE_RIGHT | _BOXEDIT_EDGE_TOP))
-			no = APP_CURSOR_RIGHT_TOP;
-		else if(pos == _BOXEDIT_EDGE_LEFT || pos == _BOXEDIT_EDGE_RIGHT)
-			no = APP_CURSOR_RESIZE_HORZ;
+			//なし
+			no = APPCURSOR_SELECT;
+		else if(pos == (_BOXSEL_EDGE_LEFT | _BOXSEL_EDGE_TOP)
+			|| pos == (_BOXSEL_EDGE_RIGHT | _BOXSEL_EDGE_BOTTOM))
+		{
+			//左上/右下
+			no = APPCURSOR_LEFT_TOP;
+		}
+		else if(pos == (_BOXSEL_EDGE_LEFT | _BOXSEL_EDGE_BOTTOM)
+			|| pos == (_BOXSEL_EDGE_RIGHT | _BOXSEL_EDGE_TOP))
+		{
+			//右上/左下
+			no = APPCURSOR_RIGHT_TOP;
+		}
+		else if(pos == _BOXSEL_EDGE_LEFT || pos == _BOXSEL_EDGE_RIGHT)
+			//水平
+			no = APPCURSOR_RESIZE_HORZ;
 		else
-			no = APP_CURSOR_RESIZE_VERT;
+			//垂直
+			no = APPCURSOR_RESIZE_VERT;
 
-		MainWinCanvasArea_setCursor(no);
+		MainCanvasPage_setCursor(no);
 	}
 }
 
-/** 移動 */
+/* (リサイズ中) 移動 */
 
-static void _boxedit_resize_motion(DrawData *p,uint32_t state)
+static void _boxsel_resize_motion(AppDraw *p,uint32_t state)
 {
 	mPoint pt;
 	int flags,n,mx,my;
@@ -567,11 +727,11 @@ static void _boxedit_resize_motion(DrawData *p,uint32_t state)
 
 	//移動
 
-	drawOpXor_drawBox_image(p);
+	drawOpXor_drawRect_image(p);
 
-	flags = p->boxedit.cursor_resize;
+	flags = p->boxsel.flag_resize_cursor;
 
-	if(flags & _BOXEDIT_EDGE_LEFT)
+	if(flags & _BOXSEL_EDGE_LEFT)
 	{
 		//左
 
@@ -582,7 +742,7 @@ static void _boxedit_resize_motion(DrawData *p,uint32_t state)
 
 		p->w.pttmp[0].x = n;
 	}
-	else if(flags & _BOXEDIT_EDGE_RIGHT)
+	else if(flags & _BOXSEL_EDGE_RIGHT)
 	{
 		//右
 
@@ -594,7 +754,7 @@ static void _boxedit_resize_motion(DrawData *p,uint32_t state)
 		p->w.pttmp[1].x = n;
 	}
 
-	if(flags & _BOXEDIT_EDGE_TOP)
+	if(flags & _BOXSEL_EDGE_TOP)
 	{
 		//上
 
@@ -605,7 +765,7 @@ static void _boxedit_resize_motion(DrawData *p,uint32_t state)
 
 		p->w.pttmp[0].y = n;
 	}
-	else if(flags & _BOXEDIT_EDGE_BOTTOM)
+	else if(flags & _BOXSEL_EDGE_BOTTOM)
 	{
 		//下
 
@@ -617,20 +777,20 @@ static void _boxedit_resize_motion(DrawData *p,uint32_t state)
 		p->w.pttmp[1].y = n;
 	}
 
-	drawOpXor_drawBox_image(p);
+	drawOpXor_drawRect_image(p);
 
 	//
 
 	p->w.pttmp[2] = pt;
 }
 
-/** 離し */
+/* (リサイズ中) 離し */
 
-static mBool _boxedit_resize_release(DrawData *p)
+static mlkbool _boxsel_resize_release(AppDraw *p)
 {
-	mBox *boxdst = &p->boxedit.box;
+	mBox *boxdst = &p->boxsel.box;
 
-	drawOpXor_drawBox_image(p);
+	drawOpXor_drawRect_image(p);
 
 	//範囲セット
 
@@ -641,27 +801,27 @@ static mBool _boxedit_resize_release(DrawData *p)
 
 	//更新
 
-	drawUpdate_rect_canvas_forBoxEdit(p, boxdst);
+	drawUpdateBox_canvaswg_forBoxSel(p, boxdst, TRUE);
 
-	//リサイズカーソル再判定
+	//離された位置で、リサイズカーソル再判定
 
-	drawOp_boxedit_nograb_motion(p);
+	drawOp_boxsel_nograb_motion(p);
 
 	return TRUE;
 }
 
-/** 矩形範囲リサイズ、押し時 */
+/* 矩形範囲リサイズ: 押し時 */
 
-static mBool _boxedit_resize_press(DrawData *p)
+static mlkbool _boxsel_resize_press(AppDraw *p)
 {
 	mBox box;
 
 	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL,
-		_boxedit_resize_motion, _boxedit_resize_release, 0);
+		_boxsel_resize_motion, _boxsel_resize_release, 0);
 
 	//
 
-	box = p->boxedit.box;
+	box = p->boxsel.box;
 
 	p->w.pttmp[0].x = box.x;
 	p->w.pttmp[0].y = box.y;
@@ -672,34 +832,36 @@ static mBool _boxedit_resize_press(DrawData *p)
 
 	//枠を消して、XOR 描画
 
-	p->boxedit.box.w = 0;
+	p->boxsel.box.w = 0;
 
-	drawUpdate_rect_canvas_forBoxEdit(p, &box);
+	drawUpdateBox_canvaswg_forBoxSel(p, &box, TRUE);
 	
-	drawOpXor_drawBox_image(p);
+	drawOpXor_drawRect_image(p);
 
 	return TRUE;
 }
 
 
 //=========================================
-// 矩形範囲
+// 矩形範囲の選択
 //=========================================
 
 
 /** 押し */
 
-mBool drawOp_boxedit_press(DrawData *p)
+mlkbool drawOp_boxsel_press(AppDraw *p)
 {
-	if(p->boxedit.cursor_resize)
+	if(p->boxsel.flag_resize_cursor)
 		//リサイズ開始
-		return _boxedit_resize_press(p);
+		return _boxsel_resize_press(p);
 	else
 	{
-		//範囲選択
+		//矩形選択開始
+		// [!] XOR を行う前はキャンバスを直接更新する
 		
-		drawBoxEdit_setBox(p, NULL);
+		drawBoxSel_release(p, TRUE);
 
-		return drawOpXor_boximage_press(p, DRAW_OPSUB_SET_BOXEDIT);
+		return drawOpXor_rect_image_press(p, DRAW_OPSUB_SET_BOXSEL);
 	}
 }
+

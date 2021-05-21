@@ -1,0 +1,164 @@
+=================================
+  About mlk
+=================================
+
+mlk is a homebrew GUI building library.
+
+
+ # Options
+---------------------------
+
+  You can view the options common to mlk with the --help-mlk option at run time.
+
+
+ # About data files
+---------------------------
+
+  External files used by the app (such as translation files) are installed
+  in "<INSTALL_DIR>/share/<APPNAME>".
+
+  In the app, these files are loaded relative to the executable file,
+  so if the files are in the same state as the directory structure at the time of installation,
+  you can run them without installing them under /usr.
+
+
+ # MLK_APPDATADIR Environment variable
+-----------------------------------------
+
+  You can specify the data file directory in any location
+  by setting the environment variable MLK_APPDATADIR,
+  such as $ MLK_APPDATADIR=<DIR> <EXE>, when running the app.
+
+
+=================================
+  About GUI style settings
+=================================
+
+If you create the configuration file "az-mlk-style.conf"
+in the specified directory, you can specify the font and icon theme.
+
+Since you need to create this configuration file yourself,
+create a file in the specified directory and write it directly,
+or edit it with "mlk style editor" and save it.
+
+
+ # Configuration file directory
+--------------------------------
+
+  When the app starts, az-mlk-style.conf will be searched in the following order.
+  
+  ~/.config/<APPNAME>/az-mlk-style.conf
+  ~/.config/az-mlk-style.conf
+
+  Common settings are set in the ~/.config/az-mlk-style.conf file,
+  and if you want to change the settings for each app,
+  create a file in the directory where the settings file for each app is saved.
+
+
+ # Contents of the configuration file
+---------------------------------------
+
+  To write the value directly to the configuration file, write as follows.
+
+~~~~~~~~~~~~~~~~~~
+[style]
+font=<FONT VALUE>
+icon_theme=<NAME>
+
+[color]
+..COLORS..
+~~~~~~~~~~~~~~~~~~
+
+
+=================================
+  Specifying an icon theme
+=================================
+
+* If the icon is not displayed, you need to explicitly specify the icon theme.
+
+In icon_theme=<NAME>,
+specify the name (directory name) of the icon theme placed in the following directory.
+
+  /usr/share/icons
+  /usr/local/share/icons
+  ~/.icons
+  ~/.local/share/icons
+
+If you want to use the icon theme in /usr/share/icons/Faenza,
+specify "icon_theme=Faenza", where the directory name "Faenza" is the theme name.
+
+If no icon theme is specified, the icon theme will be searched from the above directory
+and the first one found will be used.
+
+
+=================================
+  Font specification
+=================================
+
+(Exsample)
+~~~~~~~~~~~~
+font=family=DejaVu Sans;style=Book;size=10;
+~~~~~~~~~~~~
+
+After "font=" is the value that specifies the font.
+Describe multiple values in the format NAME=value, separating each with a ';'.
+
+- Half-width spaces as characters can be described as they are.
+  It is not necessary to enclose it with "" etc.
+  If enclosed, " itself is treated as part of the string.
+
+- If it contains ';' as a character, write '\;'.
+
+- Do not write extra spaces before or after the delimiter ';'.
+
+- Font family names and style names can be listed with
+  $ fc-list (fontconfig tool).
+
+
+## Values
+
+  family=[name]
+    The family name of the font.
+    Please describe the half-width space as it is.
+
+  style=[style]
+    Font style name.
+    If omitted, the search will be performed with the normal weight.
+
+  size=[size]
+    Font size.
+    Positive values in pt units, negative values in px units.
+
+  file=[filename]
+    File path when directly specifying the font file.
+
+  index=[n]
+    If you specify a font file with file and it is ttc/otc,
+    the index number of the font to use.
+    0 by default.
+
+  dpi=[n]
+    DPI value when font size is in pt.
+
+  [!] Below, when the font is specified in family,
+      the default value is the value set in fontconfig.
+
+  embeddedbitmap=[0 or 1]
+    0 = Do not use embedded bitmaps (always use outline data).
+    Non-zero = use.
+
+  hinting=[n]
+    Hinting type.
+    0=none, 1=slight, 2=medium, 3=full
+
+  rendering=[n]
+    Rendering type.
+    0=mono, 1=grayscale, 2=LCD(RGB), 3=LCD(BGR), 4=LCD(RGB-V), 5=LCD(BGR-V)
+
+  lcdfilter=[n]
+    LCD filter type when drawing LCD.
+    1 is the default.
+    0=none, 1=default, 2=light
+
+  autohint=[0 or 1]
+    At 0, do not use automatic hinting with FreeType.

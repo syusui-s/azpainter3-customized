@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -17,218 +17,256 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 $*/
 
-/*****************************************
+/********************************
  * アンドゥ用圧縮/展開
- *****************************************/
+ ********************************/
 
+#include <stdint.h>
 #include <string.h>
 
-#include "mDef.h"
 
+/** 圧縮 (8bit)
+ *
+ * return: 圧縮後のサイズ (-1 で、元サイズより大きくなった) */
 
-
-//=========================
-// 1byte 単位
-//=========================
-
-
-/** 圧縮 (1byte) */
-
-int UndoByteEncode(uint8_t *dst,uint8_t *src,int srcsize)
+int undo_encode8(uint8_t *dst,uint8_t *src,int size)
 {
-	uint8_t *ps,*psend,*ptop,val;
-	int encsize = 0,num;
+	uint8_t *p1,*pend;
+	int mode = 0,len,n,dstsize = 0;
 
-	ps = src;
-	psend = src + srcsize;
+	pend = src + size;
 
-	while(ps < psend)
+	while(src != pend)
 	{
-		if(ps == psend - 1 || *ps != ps[1])
+		if(mode == 0)
 		{
 			//非連続
 
-			for(ptop = ps; ps < psend - 1 && *ps != ps[1] && ps - ptop < 128; ps++);
+			for(p1 = src + 1; p1 != pend && *p1 != p1[-1]; p1++);
 
-			if(ps == psend - 1 && ps - ptop < 128)
-				ps++;
+			len = p1 - src;
 
-			num = ps - ptop;
+			while(len >= 255)
+			{
+				dstsize += 256;
+				if(dstsize >= size) return -1;
+			
+				*(dst++) = 255;
+				memcpy(dst, src, 255);
 
-			if(encsize + 1 + num >= srcsize) return srcsize;
+				len -= 255;
+				src += 255;
+				dst += 255;
+			}
 
-			*dst = num - 1;
-			memcpy(dst + 1, ptop, num);
+			dstsize += 1 + len;
+			if(dstsize >= size) return -1;
 
-			dst += 1 + num;
-			encsize += 1 + num;
+			*(dst++) = len;
+			memcpy(dst, src, len);
+			dst += len;
 		}
 		else
 		{
 			//連続
 
-			val = *ps;
-			ptop = ps;
+			for(p1 = src + 1; p1 != pend && *p1 == p1[-1]; p1++);
 
-			for(ps += 2; ps < psend && *ps == val && ps - ptop < 128; ps++);
+			len = p1 - src;
 
-			if(encsize + 2 >= srcsize) return srcsize;
+			if(len < 255)
+			{
+				dstsize++;
+				if(dstsize >= size) return -1;
+			
+				*(dst++) = len;
+			}
+			else
+			{
+				//255 以上の場合
+				
+				n = len / 255;
 
-			*dst = (uint8_t)(-(ps - ptop) + 1);
-			dst[1] = val;
+				dstsize += n + 1;
+				if(dstsize >= size) return -1;
+				
+				memset(dst, 255, n);
+				dst += n;
 
-			dst += 2;
-			encsize += 2;
+				*(dst++) = len - n * 255;
+			}
 		}
+
+		src = p1;
+		mode = !mode;
 	}
 
-	return encsize;
+	return dstsize;
 }
 
-/** 展開 (1byte) */
+/** 展開 (8bit) */
 
-void UndoByteDecode(uint8_t *dst,uint8_t *src,int srcsize)
+void undo_decode8(uint8_t *dst,uint8_t *src,int size)
 {
-	uint8_t *ps,*psend;
-	int len,lenb;
+	uint8_t *pend,last = 0;
+	int mode = 0,len;
 
-	ps = src;
-	psend = src + srcsize;
+	pend = src + size;
 
-	while(ps < psend)
+	while(src != pend)
 	{
-		lenb = *((int8_t *)ps);
-		ps++;
+		len = *(src++);
 
-		if(lenb >= 0)
+		if(len)
 		{
-			//非連続
+			if(mode == 0)
+			{
+				//非連続
 
-			len = lenb + 1;
+				memcpy(dst, src, len);
+				src += len;
+				dst += len;
 
-			memcpy(dst, ps, len);
+				last = src[-1];
+			}
+			else
+			{
+				//連続
 
-			ps += len;
+				memset(dst, last, len);
+				dst += len;
+			}
 		}
-		else
-		{
-			//連続
 
-			len = -lenb + 1;
-
-			memset(dst, *ps, len);
-
-			ps++;
-		}
-
-		dst += len;
+		if(len != 255)
+			mode = !mode;
 	}
 }
 
 
-//=========================
-// 2byte 単位
-//=========================
+//====================
 
 
-/** 圧縮 (2byte) */
+/** 圧縮 (16bit)
+ *
+ * return: 圧縮後のサイズ (-1 で、元サイズより大きくなった) */
 
-int UndoWordEncode(uint8_t *dst,uint8_t *src,int srcsize)
+int undo_encode16(uint8_t *dst,uint8_t *src,int size)
 {
-	uint16_t *ps,*psend,*ptop,val;
-	int encsize = 0,num,addsize;
+	uint16_t *ps,*p1,*pend;
+	int mode = 0,len,n,dstsize = 0;
 
 	ps = (uint16_t *)src;
-	psend = (uint16_t *)(src + srcsize);
+	pend = (uint16_t *)(src + size);
 
-	while(ps < psend)
+	while(ps != pend)
 	{
-		if(ps == psend - 1 || *ps != ps[1])
+		if(mode == 0)
 		{
 			//非連続
 
-			for(ptop = ps; ps < psend - 1 && *ps != ps[1] && ps - ptop < 128; ps++);
+			for(p1 = ps + 1; p1 != pend && *p1 != p1[-1]; p1++);
 
-			if(ps == psend - 1 && ps - ptop < 128)
-				ps++;
+			len = p1 - ps;
 
-			num = ps - ptop;
-			addsize = 1 + (num << 1);
+			while(len >= 255)
+			{
+				dstsize += 1 + 255 * 2;
+				if(dstsize >= size) return -1;
+			
+				*(dst++) = 255;
+				memcpy(dst, ps, 255 * 2);
 
-			if(encsize + addsize >= srcsize) return srcsize;
+				len -= 255;
+				ps += 255;
+				dst += 255 * 2;
+			}
 
-			*dst = num - 1;
-			memcpy(dst + 1, ptop, num << 1);
+			//
 
-			dst += addsize;
-			encsize += addsize;
+			dstsize += 1 + len * 2;
+			if(dstsize >= size) return -1;
+
+			*(dst++) = len;
+			memcpy(dst, ps, len * 2);
+			dst += len * 2;
 		}
 		else
 		{
 			//連続
 
-			val = *ps;
-			ptop = ps;
+			for(p1 = ps + 1; p1 != pend && *p1 == p1[-1]; p1++);
 
-			for(ps += 2; ps < psend && *ps == val && ps - ptop < 128; ps++);
+			len = p1 - ps;
 
-			if(encsize + 3 >= srcsize) return srcsize;
+			if(len < 255)
+			{
+				dstsize++;
+				if(dstsize >= size) return -1;
+			
+				*(dst++) = len;
+			}
+			else
+			{
+				//255 以上の場合
+				
+				n = len / 255;
 
-			*dst = (uint8_t)(-(ps - ptop) + 1);
-			*((uint16_t *)(dst + 1)) = val;
+				dstsize += n + 1;
+				if(dstsize >= size) return -1;
+				
+				memset(dst, 255, n);
+				dst += n;
 
-			dst += 3;
-			encsize += 3;
+				*(dst++) = len - n * 255;
+			}
 		}
+
+		ps = p1;
+		mode = !mode;
 	}
 
-	return encsize;
+	return dstsize;
 }
 
-/** 展開 (2byte) */
+/** 展開 (16bit) */
 
-int UndoWordDecode(uint8_t *dst,uint8_t *src,int srcsize)
+void undo_decode16(uint8_t *dst,uint8_t *src,int size)
 {
-	uint8_t *ps,*psend;
-	uint16_t *pd,val;
-	int len,size,lenb;
+	uint8_t *pend;
+	uint16_t *pd,last = 0;
+	int mode = 0,len,i;
 
 	pd = (uint16_t *)dst;
-	ps = src;
-	psend = src + srcsize;
+	pend = src + size;
 
-	while(ps < psend)
+	while(src != pend)
 	{
-		lenb = *((int8_t *)ps);
-		ps++;
+		len = *(src++);
 
-		if(lenb >= 0)
+		if(len)
 		{
-			//非連続
+			if(mode == 0)
+			{
+				//非連続
 
-			len = lenb + 1;
-			size = len << 1;
+				memcpy(pd, src, len * 2);
+				src += len * 2;
+				pd += len;
 
-			memcpy(pd, ps, size);
+				last = pd[-1];
+			}
+			else
+			{
+				//連続
 
-			ps += size;
-			pd += len;
+				for(i = len; i; i--)
+					*(pd++) = last;
+			}
 		}
-		else
-		{
-			//連続
 
-			len = -lenb + 1;
-
-			val = *((uint16_t *)ps);
-
-			for(; len > 0; len--)
-				*(pd++) = val;
-
-			ps += 2;
-		}
+		if(len != 255)
+			mode = !mode;
 	}
-
-	return (uint8_t *)pd - dst;
 }
 

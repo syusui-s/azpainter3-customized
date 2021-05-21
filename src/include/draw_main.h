@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,128 +18,191 @@
 $*/
 
 /***************************
- * DrawData メイン関数
+ * AppDraw メイン関数
  ***************************/
 
-#ifndef DRAW_MAIN_H
-#define DRAW_MAIN_H
-
-typedef struct _DrawData  DrawData;
+typedef struct _AppDraw AppDraw;
+typedef struct _NewCanvasValue NewCanvasValue;
+typedef struct _LoadImageOption LoadImageOption;
 typedef struct _LayerItem LayerItem;
-typedef struct _ImageBuf8 ImageBuf8;
-typedef union _RGBFix15  RGBFix15;
-typedef union _RGBAFix15 RGBAFix15;
-
+typedef struct _LayerTextItem LayerTextItem;
+typedef struct _TileImage TileImage;
 typedef struct _mPopupProgress mPopupProgress;
-
-
-#define DRAW_SETZOOMANDANGLE_F_NO_UPDATE  4
+typedef struct _TileImageBlendSrcInfo TileImageBlendSrcInfo;
 
 
 /* init */
 
-mBool DrawData_new();
-void DrawData_free();
+int AppDraw_new(void);
+void AppDraw_free(void);
 
-void drawInit_beforeCreateWidget();
-void drawInit_beforeShow();
-
-void drawConfig_changeCanvasColor(DrawData *p);
-
-/* image */
-
-void drawImage_afterChange(DrawData *p,mBool change_file);
-mBool drawImage_changeImageSize(DrawData *p,int w,int h);
-
-mBool drawImage_new(DrawData *p,int w,int h,int dpi,int coltype);
-mBool drawImage_onLoadError(DrawData *p);
-int drawImage_loadFile(DrawData *p,const char *filename,
-	uint32_t format,mBool ignore_alpha,mPopupProgress *prog,char **errmes);
-
-mBool drawImage_resizeCanvas(DrawData *p,int w,int h,int movx,int movy,mBool crop);
-mBool drawImage_scaleCanvas(DrawData *p,int w,int h,int dpi,int type);
-
-void drawImage_blendImage_real(DrawData *p);
-mBool drawImage_blendImage_RGB8(DrawData *p);
-void drawImage_blendImage_RGBA8(DrawData *p);
-void drawImage_getBlendColor_atPoint(DrawData *p,int x,int y,RGBAFix15 *dst);
-
-/* etc */
-
-mBool drawTexture_loadOptionTextureImage(DrawData *p);
-int drawCursor_getToolCursor(int toolno);
+void drawInit_loadConfig_before(void);
+void drawInit_createWidget_before(void);
+void drawInit_beforeShow(void);
+void drawEnd_saveConfig(void);
 
 /* color */
 
-void drawColor_getDrawColor_rgb(int *dst);
-void drawColor_getDrawColor_rgbafix(RGBAFix15 *dst);
-
-void drawColor_setDrawColor(uint32_t col);
+uint32_t drawColor_getDrawColor(void);
+mlkbool drawColor_setDrawColor(uint32_t col);
+void drawColor_setDrawColor_update(uint32_t col);
 void drawColor_setBkgndColor(uint32_t col);
-void drawColor_toggleDrawCol(DrawData *p);
+void drawColor_toggleDrawCol(AppDraw *p);
+void drawColor_changeDrawColor8(void);
 
-void drawColorMask_changeColor(DrawData *p);
-void drawColorMask_setType(DrawData *p,int type);
-void drawColorMask_setColor(DrawData *p,int col);
-mBool drawColorMask_addColor(DrawData *p,int col);
-mBool drawColorMask_delColor(DrawData *p,int no);
-void drawColorMask_clear(DrawData *p);
+void drawColorMask_setType(AppDraw *p,int type);
 
 /* tool */
 
-void drawTool_setTool(DrawData *p,int no);
-void drawTool_setToolSubtype(DrawData *p,int subno);
+void drawTool_setTool(AppDraw *p,int no);
+void drawTool_setTool_subtype(AppDraw *p,int subno);
+mlkbool drawTool_isType_notDraw(int no);
+mlkbool drawTool_isType_haveDrawType(int no);
 
-/* stamp */
+/* cursor */
 
-void drawStamp_clearImage(DrawData *p);
-void drawStamp_loadImage(DrawData *p,const char *filename,mBool ignore_alpha);
+void drawCursor_wait(void);
+void drawCursor_restore(void);
+int drawCursor_getToolCursor(int toolno);
+
+/* etc */
+
+mlkbool drawTexture_loadOptionTextureImage(AppDraw *p);
+
+mlkerr drawSub_loadTileImage(TileImage **ppdst,const char *filename,mSize *psize);
+
+void drawStamp_clearImage(AppDraw *p);
+mlkerr drawStamp_loadImage(AppDraw *p,const char *filename);
+
+/* image */
+
+void drawImage_afterNewCanvas(AppDraw *p,mlkbool change_file);
+mlkbool drawImage_changeImageSize(AppDraw *p,int w,int h);
+void drawImage_changeDPI(AppDraw *p,int dpi);
+
+mlkbool drawImage_newCanvas(AppDraw *p,NewCanvasValue *val);
+mlkbool drawImage_newCanvas_openFile(AppDraw *p,int w,int h,int bits,int dpi);
+mlkbool drawImage_newCanvas_openFile_bkcol(AppDraw *p,int w,int h,int bits,int dpi,uint32_t bkcol);
+
+void drawImage_changeImageBits(AppDraw *p);
+void drawImage_update_imageBits(void);
+mlkerr drawImage_changeImageBits_proc(AppDraw *p,mPopupProgress *prog);
+
+mlkbool drawImage_resizeCanvas(AppDraw *p,int w,int h,int movx,int movy,int fcrop);
+mlkbool drawImage_scaleCanvas(AppDraw *p,int w,int h,int dpi,int method);
+
+void drawImage_blendImageReal_curbits(AppDraw *p,mPopupProgress *prog,int stepnum);
+mlkerr drawImage_blendImageReal_normal(AppDraw *p,int dstbits,mPopupProgress *prog,int stepnum);
+mlkerr drawImage_blendImageReal_alpha(AppDraw *p,int dstbits,mPopupProgress *prog,int stepnum);
+
+/* loadfile */
+
+mlkerr drawImage_loadFile(AppDraw *p,const char *filename,
+	uint32_t format,LoadImageOption *opt,mPopupProgress *prog,char **errmes);
+mlkbool drawImage_loadError(AppDraw *p);
 
 /* canvas */
 
-void drawCanvas_lowQuality();
-void drawCanvas_normalQuality();
+enum
+{
+	DRAWCANVAS_UPDATE_ZOOM = 1<<0,
+	DRAWCANVAS_UPDATE_ANGLE = 1<<1,
+	DRAWCANVAS_UPDATE_RESET_SCROLL = 1<<2,		//スクロール位置をリセット (現在の状態から)
+	DRAWCANVAS_UPDATE_NO_CANVAS_UPDATE = 1<<3,	//キャンバスを更新しない
 
-void drawCanvas_setScrollReset(DrawData *p,mDoublePoint *origin);
-void drawCanvas_setScrollReset_update(DrawData *p,mDoublePoint *origin);
-void drawCanvas_setScrollDefault(DrawData *p);
-void drawCanvas_zoomStep(DrawData *p,mBool zoomup);
-void drawCanvas_rotateStep(DrawData *p,mBool left);
-void drawCanvas_fitWindow(DrawData *p);
-void drawCanvas_mirror(DrawData *p);
-void drawCanvas_setAreaSize(DrawData *p,int w,int h);
+	DRAWCANVAS_UPDATE_DEFAULT = 0	//値の変更なし & キャンバス更新
+};
 
-void drawCanvas_setZoomAndAngle(DrawData *p,int zoom,int angle,int flags,mBool reset_scroll);
+void drawCanvas_lowQuality(void);
+void drawCanvas_normalQuality(void);
+
+void drawCanvas_scroll_reset(AppDraw *p,const mDoublePoint *origin);
+void drawCanvas_scroll_at_imagecenter(AppDraw *p,const mDoublePoint *dpt);
+void drawCanvas_scroll_default(AppDraw *p);
+void drawCanvas_zoomStep(AppDraw *p,mlkbool zoomup);
+void drawCanvas_rotateStep(AppDraw *p,mlkbool left);
+void drawCanvas_fitWindow(AppDraw *p);
+void drawCanvas_mirror(AppDraw *p);
+void drawCanvas_setCanvasSize(AppDraw *p,int w,int h);
+
+void drawCanvas_update_scrollpos(AppDraw *p,mlkbool update);
+void drawCanvas_update(AppDraw *p,int zoom,int angle,int flags);
 
 /* update */
 
-void drawUpdate_canvasArea();
+void drawUpdate_setCanvasBlendInfo(LayerItem *pi,TileImageBlendSrcInfo *info);
 
-void drawUpdate_all();
-void drawUpdate_all_layer();
+void drawUpdate_canvas(void);
 
-void drawUpdate_blendImage_full(DrawData *p);
-void drawUpdate_blendImage_box(DrawData *p,mBox *box);
-void drawUpdate_blendImage_layer(DrawData *p,mBox *box);
+void drawUpdate_all(void);
+void drawUpdate_all_layer(void);
 
-void drawUpdate_drawCanvas(DrawData *p,mPixbuf *pixbuf,mBox *box);
+void drawUpdate_blendImage_full(AppDraw *p,const mBox *box);
+void drawUpdate_blendImage_layer(AppDraw *p,const mBox *box);
 
-void drawUpdate_rect_canvas(DrawData *p,mBox *boximg);
-void drawUpdate_rect_canvas_forSelect(DrawData *p,mRect *rc);
-void drawUpdate_rect_canvas_forBoxEdit(DrawData *p,mBox *box);
+void drawUpdate_drawCanvas(AppDraw *p,mPixbuf *pixbuf,const mBox *box);
 
-void drawUpdate_rect_blendimg(DrawData *p,mBox *boximg);
+void drawUpdateBox_canvaswg(AppDraw *p,const mBox *boximg);
+void drawUpdateBox_canvaswg_direct(AppDraw *p,const mBox *boximg);
 
-void drawUpdate_rect_imgcanvas(DrawData *p,mBox *boximg);
-void drawUpdate_rect_imgcanvas_fromRect(DrawData *p,mRect *rc);
-void drawUpdate_rect_imgcanvas_forSelect(DrawData *p,mRect *rc);
+void drawUpdateBox_canvas(AppDraw *p,const mBox *boximg);
+void drawUpdateBox_canvas_direct(AppDraw *p,const mBox *boximg);
 
-void drawUpdate_rect_imgcanvas_canvasview_fromRect(DrawData *p,mRect *rc);
-void drawUpdate_rect_imgcanvas_canvasview_inLayerHave(DrawData *p,LayerItem *item);
+void drawUpdateRect_canvas(AppDraw *p,const mRect *rc);
+void drawUpdateRect_canvasview(AppDraw *p,const mRect *rc);
 
-void drawUpdate_canvasview(DrawData *p,mRect *rc);
-void drawUpdate_canvasview_inLoupe();
+void drawUpdateRect_canvas_canvasview(AppDraw *p,const mRect *rc);
+void drawUpdateRect_canvas_canvasview_inLayerHave(AppDraw *p,LayerItem *item);
 
-void drawUpdate_endDraw_box(DrawData *p,mBox *boximg);
+void drawUpdateRect_canvaswg_forSelect(AppDraw *p,const mRect *rc);
+void drawUpdateRect_canvas_forSelect(AppDraw *p,const mRect *rc);
 
-#endif
+void drawUpdateBox_canvaswg_forBoxSel(AppDraw *p,const mBox *boxsel,mlkbool direct);
+void drawUpdateRect_canvas_forBoxSel(AppDraw *p,const mRect *rc);
+
+void drawUpdate_endDraw_box(AppDraw *p,const mBox *boximg);
+
+/* select */
+
+mlkbool drawSel_isHave(void);
+mlkbool drawSel_isEnable_copy_cut(mlkbool cut);
+mlkbool drawSel_isEnable_outputFile(void);
+
+void drawSel_release(AppDraw *p,mlkbool update);
+void drawSel_inverse(AppDraw *p);
+void drawSel_all(AppDraw *p);
+void drawSel_expand(AppDraw *p,int cnt);
+void drawSel_fill_erase(AppDraw *p,mlkbool erase);
+void drawSel_copy_cut(AppDraw *p,mlkbool cut);
+void drawSel_paste_newlayer(AppDraw *p);
+void drawSel_fromLayer(AppDraw *p,int type);
+
+void drawSel_getFullDrawRect(AppDraw *p,mRect *rc);
+mlkbool drawSel_selImage_create(AppDraw *p);
+void drawSel_selImage_freeEmpty(AppDraw *p);
+
+/* boxsel */
+
+void drawBoxSel_release(AppDraw *p,mlkbool direct);
+void drawBoxSel_setRect(AppDraw *p,const mRect *rc);
+void drawBoxSel_clearImage(AppDraw *p);
+void drawBoxSel_restoreCursor(AppDraw *p);
+void drawBoxSel_cancelPaste(AppDraw *p);
+void drawBoxSel_onChangeState(AppDraw *p,int type);
+
+mlkbool drawBoxSel_copy_cut(AppDraw *p,mlkbool cut);
+mlkbool drawBoxSel_paste(AppDraw *p,const mPoint *ptstart);
+
+void drawBoxSel_run_cutpaste(AppDraw *p,int no);
+void drawBoxSel_run_edit(AppDraw *p,int no);
+
+/* text */
+
+void drawText_createFont(AppDraw *p);
+void drawText_drawPreview(AppDraw *p);
+void drawText_changeFontSize(AppDraw *p);
+void drawText_changeInfo(AppDraw *p);
+void drawText_setPoint_inDialog(AppDraw *p,double x,double y);
+
+void drawText_clearItemRect(AppDraw *p,LayerItem *layer,LayerTextItem *item,mRect *rcupdate);
+void drawText_drawLayerText(AppDraw *p,LayerTextItem *pi,TileImage *imgdraw,mRect *rcdraw);

@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,98 +18,87 @@
 $*/
 
 /*****************************************
- * DrawData
- *
- * イメージ関連
+ * AppDraw: イメージ関連
  *****************************************/
 
-#include "mDef.h"
-#include "mPopupProgress.h"
+#include "mlk_gui.h"
+#include "mlk_widget_def.h"
+#include "mlk_popup_progress.h"
 
-#include "defMacros.h"
-#include "defDraw.h"
-#include "defScalingType.h"
-#include "AppErr.h"
+#include "def_macro.h"
+#include "def_config.h"
+#include "def_draw.h"
+#include "def_draw_sub.h"
 
-#include "ImageBufRGB16.h"
-#include "ImageBuf8.h"
+#include "imagecanvas.h"
+#include "imagematerial.h"
+#include "tileimage.h"
+#include "layerlist.h"
+#include "layeritem.h"
+#include "table_data.h"
+#include "undo.h"
 
-#include "defTileImage.h"
-#include "TileImage.h"
-#include "TileImageDrawInfo.h"
-#include "LayerList.h"
-#include "LayerItem.h"
-#include "Undo.h"
-
-#include "PopupThread.h"
-#include "Docks_external.h"
+#include "mainwindow.h"
+#include "statusbar.h"
+#include "panel_func.h"
+#include "popup_thread.h"
 
 #include "draw_main.h"
-#include "draw_select.h"
-#include "draw_boxedit.h"
 
 
+/* イメージサイズ変更時 */
 
-//===================
-// sub
-//===================
-
-
-/** イメージサイズ変更時 */
-
-static void _change_imagesize(DrawData *p)
+static void _change_imagesize(AppDraw *p)
 {
-	g_tileimage_dinfo.imgw = p->imgw;
-	g_tileimage_dinfo.imgh = p->imgh;
+	TileImage_global_setImageSize(p->imgw, p->imgh);
 }
 
-
-//=========================
-// サイズ変更
-//=========================
-
-
-/** イメージ変更時やイメージサイズ変更時
+/** キャンバスが新しくなった時の更新
  *
- * @param change_file 編集ファイルが変わった時 TRUE。イメージサイズのみの変更時は FALSE */
+ * change_file: TRUE=編集ファイルが変わった。FALSE=イメージサイズのみの変更。 */
 
-void drawImage_afterChange(DrawData *p,mBool change_file)
+void drawImage_afterNewCanvas(AppDraw *p,mlkbool change_file)
 {
 	//選択範囲解除
 
 	drawSel_release(p, FALSE);
 
-	//矩形編集の枠解除
+	//矩形選択の状態変更
 
-	drawBoxEdit_clear_noupdate(p);
+	drawBoxSel_onChangeState(p, 0);
+
+	//ビット数が変わった時、スタンプイメージクリア
+
+	if(p->imgbits != p->stamp.bits)
+		drawStamp_clearImage(p);
 
 	//
 
 	_change_imagesize(p);
 
-	if(change_file)
-		drawCanvas_fitWindow(p);
-	else
-		//リサイズ時はスクロールをリセットするだけ
-		drawCanvas_setScrollDefault(p);
+	//ウィンドウに合わせる
 
-	drawUpdate_all_layer(p);
+	drawCanvas_fitWindow(p);
 
-	DockCanvasView_changeImageSize();
+	//
+
+	drawUpdate_all_layer();
+
+	PanelCanvasView_changeImageSize();
 }
 
-/** 途中でキャンバスイメージを変更する時 */
+/** 途中でキャンバスサイズを変更する時の処理 */
 
-mBool drawImage_changeImageSize(DrawData *p,int w,int h)
+mlkbool drawImage_changeImageSize(AppDraw *p,int w,int h)
 {
-	//作業用イメージ再作成
+	//キャンバスイメージ
 
-	ImageBufRGB16_free(p->blendimg);
+	ImageCanvas_free(p->imgcanvas);
 
-	if(!(p->blendimg = ImageBufRGB16_new(w, h)))
+	if(!(p->imgcanvas = ImageCanvas_new(w, h, p->imgbits)))
 	{
 		//失敗した場合、元のサイズで
-		p->blendimg = ImageBufRGB16_new(p->imgw, p->imgh);
+		p->imgcanvas = ImageCanvas_new(p->imgw, p->imgh, p->imgbits);
 		return FALSE;
 	}
 
@@ -121,140 +110,255 @@ mBool drawImage_changeImageSize(DrawData *p,int w,int h)
 	return TRUE;
 }
 
+/** DPI の変更 */
 
-//=========================
-//
-//=========================
+void drawImage_changeDPI(AppDraw *p,int dpi)
+{
+	p->imgdpi = dpi;
 
+	TileImage_global_setDPI(dpi);
+}
+
+
+//===========================
+// 作成
+//===========================
+
+
+/** レイヤ付きファイルを開いた時のイメージ作成
+ *
+ * イメージ背景色は白。レイヤは作成しない。 */
+
+mlkbool drawImage_newCanvas_openFile(AppDraw *p,int w,int h,int bits,int dpi)
+{
+	NewCanvasValue cv;
+
+	cv.size.w = w;
+	cv.size.h = h;
+	cv.bit = bits;
+	cv.dpi = dpi;
+	cv.layertype = -1;
+	cv.imgbkcol = 0xffffff;
+
+	return drawImage_newCanvas(p, &cv);
+}
+
+/** レイヤ付きファイルを開いた時のイメージ作成 (背景色付き) */
+
+mlkbool drawImage_newCanvas_openFile_bkcol(AppDraw *p,int w,int h,int bits,int dpi,uint32_t bkcol)
+{
+	NewCanvasValue cv;
+
+	cv.size.w = w;
+	cv.size.h = h;
+	cv.bit = bits;
+	cv.dpi = dpi;
+	cv.layertype = -1;
+	cv.imgbkcol = bkcol;
+
+	return drawImage_newCanvas(p, &cv);
+}
 
 /** 新規イメージ作成
  *
- * @param dpi      0 以下でデフォルト値
- * @param coltype  レイヤ追加時のカラータイプ。負の値で作成しない */
+ * val: NULL で起動時サイズ
+ *  (layertype が負の値で、レイヤ作成しない) */
 
-mBool drawImage_new(DrawData *p,int w,int h,int dpi,int coltype)
+mlkbool drawImage_newCanvas(AppDraw *p,NewCanvasValue *val)
 {
+	ConfigNewCanvas *cf;
+	int w,h,dpi,bits,layertype;
+	uint32_t imgbkcol;
+
+	if(val)
+	{
+		w = val->size.w;
+		h = val->size.h;
+		dpi = val->dpi;
+		bits = val->bit;
+		layertype = val->layertype;
+		imgbkcol = val->imgbkcol;
+	}
+	else
+	{
+		cf = &APPCONF->newcanvas_init;
+		w = cf->w;
+		h = cf->h;
+		dpi = cf->dpi;
+		bits = cf->bit;
+		layertype = 0;
+		imgbkcol = 0xffffff;
+	}
+
 	if(w < 1) w = 1;
 	if(h < 1) h = 1;
+	if(dpi <= 0) dpi = 96;
 
-	//undo & レイヤをクリア
+	//UNDO クリア
 
 	Undo_deleteAll();
-	Undo_clearUpdateFlag();
+	Undo_setModifyFlag_off();
+
+	//レイヤリストをクリア
 
 	LayerList_clear(p->layerlist);
 
-	//情報
+	//イメージ情報
 
 	p->imgw = w;
 	p->imgh = h;
-	p->imgdpi = (dpi <= 0)? 96: dpi;
+	p->imgdpi = dpi;
+	p->imgbits = bits;
+
+	RGB32bit_to_RGBcombo(&p->imgbkcol, imgbkcol);
+
+	//
+	
 	p->curlayer = NULL;
 	p->masklayer = NULL;
 
 	_change_imagesize(p);
 
-	//作業用イメージ
+	//ビットなどのセット
 
-	ImageBufRGB16_free(p->blendimg);
+	TileImage_global_setDPI(dpi);
 
-	if(!(p->blendimg = ImageBufRGB16_new(w, h)))
+	TileImage_global_setImageBits(bits);
+
+	TableData_setToneTable(bits);
+
+	//読み込み時用のフラグ
+
+	p->fnewcanvas = TRUE;
+
+	//キャンバスイメージ
+
+	ImageCanvas_free(p->imgcanvas);
+
+	if(!(p->imgcanvas = ImageCanvas_new(w, h, bits)))
 		return FALSE;
 
-	//レイヤ追加
+	//空の新規レイヤ追加
 
-	if(coltype >= 0)
+	if(layertype >= 0)
 	{
-		if(!(p->curlayer = LayerList_addLayer_newimage(p->layerlist, coltype)))
+		if(!(p->curlayer = LayerList_addLayer_newimage(p->layerlist, layertype)))
 			return FALSE;
 	}
 
 	return TRUE;
 }
 
-/** 画像読み込みエラー時の処理
+
+//=============================
+// イメージビット数の変更
+//=============================
+
+
+/** イメージビット数の変更処理
  *
- * @return FALSE:現状のまま変更なし TRUE:更新 */
+ * エラー時も更新は行うこと。
+ *
+ * prog: NULL でアンドゥ処理時 */
 
-mBool drawImage_onLoadError(DrawData *p)
+mlkerr drawImage_changeImageBits_proc(AppDraw *p,mPopupProgress *prog)
 {
-	LayerItem *top;
+	int bits;
 
-	top = LayerList_getItem_top(p->layerlist);
+	bits = (p->imgbits == 8)? 16: 8;
 
-	if(top && p->curlayer)
+	//キャンバスイメージ
+	// :失敗時は元に戻す
+
+	ImageCanvas_free(p->imgcanvas);
+
+	if(!(p->imgcanvas = ImageCanvas_new(p->imgw, p->imgh, bits)))
 	{
-		//drawImage_new() が実行される前にエラーが出た場合は現状維持
+		p->imgcanvas = ImageCanvas_new(p->imgw, p->imgh, p->imgbits);
 
-		return FALSE;
+		return MLKERR_ALLOC;
 	}
-	else
+
+	//prog == NULL でアンドゥ処理時
+
+	if(prog)
 	{
-		/* レイヤが一つもない
-		 * (drawImage_new() が実行されたが、レイヤが作成される前にエラー)
-		 *
-		 * => 新規イメージ */
+		Undo_addChangeImageBits();
+
+		//レイヤイメージの変換
+
+		mPopupProgressThreadSetMax(prog, LayerList_getNormalLayerNum(p->layerlist) * 5);
+
+		LayerList_convertImageBits(p->layerlist, bits, prog);
+	}
+
+	//トーン化テーブル
 	
-		if(!top)
-			drawImage_new(p, 400, 400, -1, TILEIMAGE_COLTYPE_RGBA);
+	TableData_setToneTable(bits);
 
-		/* レイヤはあるがカレントレイヤが指定されていない
-		 * (レイヤ読み込み途中でエラー)
-		 *
-		 * => 読み込んだレイヤはそのままでカレントレイヤセット */
+	//変更
 
-		if(!p->curlayer)
-			p->curlayer = top;
+	p->imgbits = bits;
 
-		return TRUE;
-	}
+	TileImage_global_setImageBits(p->imgbits);
 
+	return MLKERR_OK;
 }
 
-/** 画像ファイルを読み込んで作成
- *
- * @return エラーコード */
+/* スレッド */
 
-int drawImage_loadFile(DrawData *p,const char *filename,
-	uint32_t format,mBool ignore_alpha,
-	mPopupProgress *prog,char **errmes)
+static int _thread_changeimgbits(mPopupProgress *prog,void *data)
 {
-	TileImage *img;
-	LayerItem *li;
-	TileImageLoadFileInfo info;
+	return drawImage_changeImageBits_proc(APPDRAW, prog);
+}
 
-	*errmes = NULL;
+/** イメージビット数変更 */
 
-	//TileImage に読み込み
+void drawImage_changeImageBits(AppDraw *p)
+{
+	int ret;
 
-	img = TileImage_loadFile(filename, format,
-		ignore_alpha, IMAGE_SIZE_MAX, &info, prog, errmes);
+	//実行
 
-	if(!img) return APPERR_LOAD;
+	APPDRAW->in_thread_imgcanvas = TRUE;
 
-	//新規キャンバス
+	ret = PopupThread_run(NULL, _thread_changeimgbits);
 
-	if(!drawImage_new(p, info.width, info.height, info.dpi, -1))
-		goto ERR;
+	APPDRAW->in_thread_imgcanvas = FALSE;
 
-	//レイヤ作成
+	//
 
-	li = LayerList_addLayer(p->layerlist, NULL);
-	if(!li) goto ERR;
+	if(ret)
+	{
+		MainWindow_errmes(ret, NULL);
 
-	LayerItem_replaceImage(li, img);
+		//imgcanvas の作成に失敗した場合
+		drawUpdate_all();
+		return;
+	}
 
-	LayerItem_setName_layerno(li, 0);
+	//更新
 
-	//カレントレイヤ
+	drawImage_update_imageBits();
+}
 
-	p->curlayer = li;
+/** ビット数変更時の更新 */
 
-	return APPERR_OK;
+void drawImage_update_imageBits(void)
+{
+	//矩形選択の状態変更
 
-ERR:
-	TileImage_free(img);
-	return APPERR_ALLOC;
+	drawBoxSel_onChangeState(APPDRAW, 1);
+
+	//スタンプイメージクリア
+
+	drawStamp_clearImage(APPDRAW);
+
+	//
+
+	drawUpdate_all();
+
+	StatusBar_setImageInfo();
 }
 
 
@@ -269,22 +373,33 @@ typedef struct
 }_thdata_resizecanvas;
 
 
+/* 切り取り時スレッド */
+
 static int _thread_resize_canvas(mPopupProgress *prog,void *data)
 {
 	_thdata_resizecanvas *p = (_thdata_resizecanvas *)data;
 	LayerItem *pi;
 	TileImage *img;
 
-	mPopupProgressThreadSetMax(prog, LayerList_getNum(APP_DRAW->layerlist));
+	mPopupProgressThreadSetMax(prog, LayerList_getNormalLayerNum(APPDRAW->layerlist));
 
-	for(pi = LayerList_getItem_top(APP_DRAW->layerlist); pi; pi = LayerItem_getNext(pi))
+	for(pi = LayerList_getTopItem(APPDRAW->layerlist); pi; pi = LayerItem_getNext(pi))
 	{
 		if(pi->img)
 		{
-			img = TileImage_createCropImage(pi->img, p->offx, p->offy, p->w, p->h);
+			if(LAYERITEM_IS_TEXT(pi))
+			{
+				//テキストレイヤ時は位置のみ移動
 
-			if(img)
-				LayerItem_replaceImage(pi, img);
+				LayerItem_moveImage(pi, p->offx, p->offy);
+			}
+			else
+			{
+				img = TileImage_createCropImage(pi->img, p->offx, p->offy, p->w, p->h);
+
+				if(img)
+					LayerItem_replaceImage(pi, img, -1);
+			}
 		}
 
 		mPopupProgressThreadIncPos(prog);
@@ -295,29 +410,30 @@ static int _thread_resize_canvas(mPopupProgress *prog,void *data)
 
 /** キャンバスサイズ変更 */
 
-mBool drawImage_resizeCanvas(DrawData *p,int w,int h,int movx,int movy,mBool crop)
+mlkbool drawImage_resizeCanvas(AppDraw *p,int w,int h,int movx,int movy,int fcrop)
 {
 	_thdata_resizecanvas dat;
-	int ret,bw,bh;
+	int ret,sw,sh;
 
-	bw = p->imgw, bh = p->imgh;
+	sw = p->imgw;
+	sh = p->imgh;
 
-	//作業用、サイズ変更
+	//サイズ変更
 
 	if(!drawImage_changeImageSize(p, w, h))
 		return FALSE;
 
 	//
 
-	if(!crop)
+	if(!fcrop)
 	{
 		//----- 切り取らない
 		
 		//undo
 
-		Undo_addResizeCanvas_moveOffset(movx, movy, bw, bh);
+		Undo_addResizeCanvas_moveOffset(movx, movy, sw, sh);
 
-		//各レイヤのオフセット位置を相対移動
+		//全レイヤのオフセット位置を相対移動
 
 		LayerList_moveOffset_rel_all(p->layerlist, movx, movy);
 
@@ -326,13 +442,12 @@ mBool drawImage_resizeCanvas(DrawData *p,int w,int h,int movx,int movy,mBool cro
 	else
 	{
 		//----- 範囲外を切り取り
-		/* 新しいサイズが元より大きくなる場合でも、
-		 * レイヤイメージ内には新しいサイズの範囲外にイメージが残る場合があるので、
-		 * 常に処理する。 */
+		//新しいサイズが元より大きくなる場合でも、
+		//レイヤイメージ内には新しいサイズの範囲外にイメージが残る場合があるので、常に処理する。
 
 		//undo
 
-		Undo_addResizeCanvas_crop(bw, bh);
+		Undo_addResizeCanvas_crop(movx, movy, sw, sh);
 
 		//
 
@@ -349,153 +464,295 @@ mBool drawImage_resizeCanvas(DrawData *p,int w,int h,int movx,int movy,mBool cro
 
 
 //============================
-// キャンバス拡大縮小
+// 画像を統合して拡大縮小
 //============================
 
 
 typedef struct
 {
-	int w,h,type;
+	TileImage *img;
+	int w,h,method;
 }_thdata_scalecanvas;
 
 
 static int _thread_scale_canvas(mPopupProgress *prog,void *data)
 {
 	_thdata_scalecanvas *p = (_thdata_scalecanvas *)data;
-	LayerItem *pi;
-	TileImage *img,*srcimg;
-	mSize sizeSrc,sizeDst;
 
-	sizeSrc.w = APP_DRAW->imgw;
-	sizeSrc.h = APP_DRAW->imgh;
-	sizeDst.w = p->w;
-	sizeDst.h = p->h;
+	mPopupProgressThreadSetMax(prog, 20 + 50 + 10);
 
-	mPopupProgressThreadSetMax(prog,
-		LayerList_getNormalLayerNum(APP_DRAW->layerlist) * 6);
+	//ImageCanvas に合成
 
-	for(pi = LayerList_getItem_top(APP_DRAW->layerlist); pi; pi = LayerItem_getNext(pi))
+	drawImage_blendImageReal_curbits(APPDRAW, prog, 20);
+
+	//リサイズ
+	// :imgcanvas はリサイズ後のサイズになる。
+
+	APPDRAW->imgcanvas = ImageCanvas_resize(APPDRAW->imgcanvas, p->w, p->h, p->method, prog, 50);
+
+	if(!APPDRAW->imgcanvas)
+		return 1;
+
+	//アルファ値を最大に
+
+	ImageCanvas_setAlphaMax(APPDRAW->imgcanvas);
+
+	//ImageCanvas から TileImage にセット (RGBA)
+
+	TileImage_convertFromCanvas(p->img, APPDRAW->imgcanvas, prog, 10);
+
+	return 0;
+}
+
+/** 画像を統合して拡大縮小 */
+
+mlkbool drawImage_scaleCanvas(AppDraw *p,int w,int h,int dpi,int method)
+{
+	_thdata_scalecanvas dat;
+	TileImage *img;
+	LayerItem *item;
+	int ret;
+
+	//統合後のイメージを作成
+
+	img = TileImage_new(TILEIMAGE_COLTYPE_RGBA, w, h);
+	if(!img) return FALSE;
+
+	//スレッド
+
+	dat.img = img;
+	dat.w = w;
+	dat.h = h;
+	dat.method = method;
+
+	APPDRAW->in_thread_imgcanvas = TRUE;
+
+	ret = PopupThread_run(&dat, _thread_scale_canvas);
+
+	APPDRAW->in_thread_imgcanvas = FALSE;
+
+	//
+
+	if(ret)
 	{
-		if(pi->img)
-		{
-			srcimg = pi->img;
+		//リサイズ時にバッファ確保失敗した時
+
+		if(!p->imgcanvas)
+			p->imgcanvas = ImageCanvas_new(p->imgw, p->imgh, p->imgbits);
+
+		TileImage_free(img);
 		
-			img = TileImage_new(srcimg->coltype, sizeDst.w, sizeDst.h);
-			if(!img) return FALSE;
+		return FALSE;
+	}
 
-			img->rgb = srcimg->rgb;
+	//undo
 
-			if(!TileImage_scaling(img, srcimg, p->type, &sizeSrc, &sizeDst, prog))
-			{
-				TileImage_free(img);
-				return FALSE;
-			}
+	Undo_addScaleCanvas();
 
-			LayerItem_replaceImage(pi, img);
+	//レイヤクリア
+
+	LayerList_clear(p->layerlist);
+
+	//レイヤ追加
+
+	item = LayerList_addLayer(p->layerlist, NULL);
+
+	LayerList_setItemName_curlayernum(p->layerlist, item);
+
+	LayerItem_replaceImage(item, img, LAYERTYPE_RGBA);
+
+	//
+
+	p->curlayer = item;
+
+	//サイズ変更
+
+	p->imgw = w;
+	p->imgh = h;
+
+	//DPI 変更
+
+	if(dpi != -1)
+		drawImage_changeDPI(p, dpi);
+
+	return TRUE;
+}
+
+
+
+//=============================
+// レイヤ合成イメージ
+//=============================
+
+
+/* 変換テーブルを作成 (16bit 時) */
+
+static mlkbool _create_colconv_table(int dstbits,uint8_t **ppdst8,uint16_t **ppdst16)
+{
+	*ppdst8 = NULL;
+	*ppdst16 = NULL;
+
+	if(APPDRAW->imgbits == 16)
+	{
+		if(dstbits == 8)
+		{
+			*ppdst8 = TileImage_create16fixto8_table();
+			if(!(*ppdst8)) return FALSE;
+		}
+		else
+		{
+			*ppdst16 = TileImage_create16fixto16_table();
+			if(!(*ppdst16)) return FALSE;
 		}
 	}
 
 	return TRUE;
 }
 
-/** キャンバス拡大縮小 */
+/** アルファなしでレイヤ合成 (現在のビット値で) */
 
-mBool drawImage_scaleCanvas(DrawData *p,int w,int h,int dpi,int type)
+void drawImage_blendImageReal_curbits(AppDraw *p,mPopupProgress *prog,int stepnum)
 {
-	_thdata_scalecanvas dat;
-	int ret;
-
-	dat.w = w;
-	dat.h = h;
-	dat.type = type;
-
-	//undo
-
-	Undo_addScaleCanvas();
-
-	//スレッド
-
-	ret = PopupThread_run(&dat, _thread_scale_canvas);
-	if(ret != 1) return FALSE;
-
-	//作業用変更
-
-	if(!drawImage_changeImageSize(p, w, h))
-		return FALSE;
-
-	//DPI 変更
-
-	if(dpi != -1)
-		p->imgdpi = dpi;
-
-	return TRUE;
-}
-
-
-//========================
-
-
-/** 表示用ではなく保存時など用にレイヤ合成 (p->blendimg に) */
-
-void drawImage_blendImage_real(DrawData *p)
-{
-	mBox box;
-	RGBFix15 col;
 	LayerItem *pi;
-
-	//白クリア
-
-	col.r = col.g = col.b = 0x8000;
-	ImageBufRGB16_fill(p->blendimg, &col);
-
-	//レイヤ合成
+	mBox box;
+	TileImageBlendSrcInfo info;
 
 	box.x = box.y = 0;
 	box.w = p->imgw, box.h = p->imgh;
+
+	//背景色でクリア
+
+	ImageCanvas_fill(p->imgcanvas, &p->imgbkcol);
+
+	//レイヤ合成
+
+	mPopupProgressThreadSubStep_begin(prog, stepnum, LayerList_getBlendLayerNum(p->layerlist));
 
 	pi = LayerList_getItem_bottomVisibleImage(p->layerlist);
 
 	for(; pi; pi = LayerItem_getPrevVisibleImage(pi))
 	{
-		TileImage_blendToImageRGB16(pi->img, p->blendimg,
-			&box, LayerItem_getOpacity_real(pi), pi->blendmode, pi->img8texture);
+		drawUpdate_setCanvasBlendInfo(pi, &info);
+
+		TileImage_blendToCanvas(pi->img, p->imgcanvas, &box, &info);
+
+		mPopupProgressThreadSubStep_inc(prog);
 	}
 }
 
-/** blendimg に RGB 8bit として合成 */
-
-mBool drawImage_blendImage_RGB8(DrawData *p)
-{
-	drawImage_blendImage_real(p);
-
-	if(!ImageBufRGB16_toRGB8(p->blendimg))
-	{
-		drawUpdate_blendImage_full(p);
-		return FALSE;
-	}
-
-	return TRUE;
-}
-
-/** blendimg に RGBA 8bit として合成
+/** アルファ無しで合成 (画像保存用)
  *
- * アルファ付き PNG 保存用。
- * 合成モードはすべて「通常」とする。 */
+ * R,G,B 順で、アルファ値はない。 */
 
-void drawImage_blendImage_RGBA8(DrawData *p)
+mlkerr drawImage_blendImageReal_normal(AppDraw *p,int dstbits,mPopupProgress *prog,int stepnum)
 {
-	LayerItem *pi;
-	uint8_t *pd;
-	RGBAFix15 pixres,pixsrc;
+	uint8_t **ppbuf,*pd,*ps,*table8;
+	uint16_t *table16,*ps16,*pd16;
 	int ix,iy,i;
 
-	pd = (uint8_t *)p->blendimg->buf;
+	//現在のビット値で合成
+	
+	drawImage_blendImageReal_curbits(p, prog, stepnum);
 
-	for(iy = 0; iy < p->imgh; iy++)
+	//変換
+
+	ppbuf = p->imgcanvas->ppbuf;
+
+	if(p->imgbits == 8)
 	{
-		for(ix = 0; ix < p->imgw; ix++, pd += 4)
+		//----- 8bit: アルファ値を詰める
+
+		for(iy = p->imgh; iy; iy--)
 		{
-			pixres.v64 = 0;
+			pd = *(ppbuf++);
+			ps = pd;
+
+			for(ix = p->imgw; ix; ix--, ps += 4, pd += 3)
+			{
+				pd[0] = ps[0];
+				pd[1] = ps[1];
+				pd[2] = ps[2];
+			}
+		}
+	}
+	else
+	{
+		//---- 16bit: 値を変換 & アルファ値詰める
+
+		if(!_create_colconv_table(dstbits, &table8, &table16))
+			return MLKERR_ALLOC;
+
+		for(iy = p->imgh; iy; iy--)
+		{
+			pd = *(ppbuf++);
+			pd16 = (uint16_t *)pd;
+			ps16 = (uint16_t *)pd;
+
+			for(ix = p->imgw; ix; ix--, ps16 += 4)
+			{
+				if(dstbits == 8)
+				{
+					for(i = 0; i < 3; i++)
+						pd[i] = table8[ps16[i]];
+
+					pd += 3;
+				}
+				else
+				{
+					for(i = 0; i < 3; i++)
+						pd16[i] = table16[ps16[i]];
+
+					pd16 += 3;
+				}
+			}
+		}
+
+		mFree(table8);
+		mFree(table16);
+	}
+
+	return MLKERR_OK;
+}
+
+/** アルファ付きで合成
+ *
+ * - 合成モードはすべて「通常」とする。
+ * - トーンレイヤはトーン処理なし。
+ *
+ * dstbits: 出力ビット数 */
+
+mlkerr drawImage_blendImageReal_alpha(AppDraw *p,int dstbits,mPopupProgress *prog,int stepnum)
+{
+	LayerItem *pi;
+	uint8_t **ppbuf,*pd,*table8;
+	uint16_t *pd16,*ps16,*table16;
+	int w,h,ix,iy,i,bits,a;
+	uint64_t colres,colsrc;
+	TileImagePixelColorFunc func_blend;
+
+	ppbuf = p->imgcanvas->ppbuf;
+	w = p->imgw;
+	h = p->imgh;
+	bits = p->imgbits;
+
+	func_blend = TileImage_global_getPixelColorFunc(TILEIMAGE_PIXELCOL_NORMAL);
+
+	//変換テーブル
+
+	if(!_create_colconv_table(dstbits, &table8, &table16))
+		return MLKERR_ALLOC;
+
+	//
+
+	mPopupProgressThreadSubStep_begin(prog, stepnum, h);
+
+	for(iy = 0; iy < h; iy++)
+	{
+		pd = *(ppbuf++);
+		
+		for(ix = 0; ix < w; ix++)
+		{
+			colres = 0;
 
 			//各レイヤ合成
 
@@ -503,52 +760,89 @@ void drawImage_blendImage_RGBA8(DrawData *p)
 
 			for( ; pi; pi = LayerItem_getPrevVisibleImage(pi))
 			{
-				TileImage_getPixel(pi->img, ix, iy, &pixsrc);
+				TileImage_getPixel(pi->img, ix, iy, &colsrc);
 
-				if(pixsrc.a)
+				if(bits == 8)
+					a = *((uint8_t *)&colsrc + 3);
+				else
+					a = *((uint16_t *)&colsrc + 3);
+
+				if(a)
 				{
-					if(pi->img8texture)
-						pixsrc.a = pixsrc.a * ImageBuf8_getPixel_forTexture(pi->img8texture, ix, iy) / 255;
+					//テクスチャ
+					
+					if(pi->img_texture)
+						a = a * ImageMaterial_getPixel_forTexture(pi->img_texture, ix, iy) / 255;
 
-					pixsrc.a = pixsrc.a * LayerItem_getOpacity_real(pi) >> 7;
+					//レイヤ不透明度
 
-					if(pixsrc.a)
-						TileImage_colfunc_normal(pi->img, &pixres, &pixsrc, NULL);
+					a = a * LayerItem_getOpacity_real(pi) >> 7;
+
+					//アルファ合成 (res + src -> res)
+
+					if(a)
+					{
+						if(bits == 8)
+							*((uint8_t *)&colsrc + 3) = a;
+						else
+							*((uint16_t *)&colsrc + 3) = a;
+					
+						(func_blend)(pi->img, &colres, &colsrc, NULL);
+					}
 				}
 			}
 
 			//セット
 
-			if(pixres.a == 0)
-				*((uint32_t *)pd) = 0;
-			else
+			if(bits == 8)
 			{
-				for(i = 0; i < 4; i++)
-					pd[i] = (pixres.c[i] * 255 + 0x4000) >> 15;
+				//8bit は常に 8bit
+
+				*((uint32_t *)pd) = *((uint32_t *)&colres);
+
+				pd += 4;
+			}
+			else if(dstbits == 8)
+			{
+				//16bit -> 8bit
+
+				if(colres == 0)
+					*((uint32_t *)pd) = 0;
+				else
+				{
+					ps16 = (uint16_t *)&colres;
+					
+					for(i = 0; i < 4; i++)
+						pd[i] = table8[ps16[i]];
+				}
+
+				pd += 4;
+			}
+			else if(dstbits == 16)
+			{
+				//16bit(fix15bit) -> 16bit
+
+				if(colres == 0)
+					*((uint64_t *)pd) = 0;
+				else
+				{
+					pd16 = (uint16_t *)pd;
+					ps16 = (uint16_t *)&colres;
+
+					for(i = 0; i < 4; i++)
+						pd16[i] = table16[ps16[i]];
+				}
+
+				pd += 8;
 			}
 		}
-	}
-}
 
-/** 指定位置の全レイヤ合成後の色を取得 */
-
-void drawImage_getBlendColor_atPoint(DrawData *p,int x,int y,RGBAFix15 *dst)
-{
-	LayerItem *pi;
-	RGBFix15 pix;
-
-	pix.r = pix.g = pix.b = 0x8000;
-
-	pi = LayerList_getItem_bottomVisibleImage(p->layerlist);
-
-	for( ; pi; pi = LayerItem_getPrevVisibleImage(pi))
-	{
-		TileImage_getBlendPixel(pi->img, x, y, &pix,
-			LayerItem_getOpacity_real(pi), pi->blendmode, pi->img8texture);
+		mPopupProgressThreadSubStep_inc(prog);
 	}
 
-	dst->r = pix.r;
-	dst->g = pix.g;
-	dst->b = pix.b;
-	dst->a = 0x8000;
+	mFree(table8);
+	mFree(table16);
+
+	return MLKERR_OK;
 }
+

@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,92 +18,153 @@
 $*/
 
 /**************************************
- * フィルタ処理
- *
- * アンチエイリアシング
+ * フィルタ処理: アンチエイリアシング
  **************************************/
+
+#include "mlk.h"
+
+#include "def_filterdraw.h"
+
+#include "tileimage.h"
+#include "tileimage_drawinfo.h"
+
+#include "pv_filter_sub.h"
+
+
 /*
- * TANE 氏のソースを参考にしています。
- *
+ * TANE 氏のソースより。
  * http://www5.ocn.ne.jp/~tane/
  *
  * layman-0.62.tar.gz : lervise.c
  */
 
-#include "mDef.h"
 
-#include "TileImage.h"
-#include "TileImageDrawInfo.h"
+/* 色の比較 */
 
-#include "FilterDrawInfo.h"
-#include "filter_sub.h"
-
-
-/** 色の比較 */
-
-static mBool _comp_pix(RGBAFix15 *p1,RGBAFix15 *p2)
+static mlkbool _comp_color(FilterDrawInfo *info,void *col1,void *col2)
 {
-	return ((p1->a == 0 && p2->a == 0)
-		|| (p1->a && p2->a
-				&& (p1->r >> 9) == (p2->r >> 9)
-				&& (p1->g >> 9) == (p2->g >> 9)
-				&& (p1->b >> 9) == (p2->b >> 9)));
+	if(info->bits == 8)
+	{
+		RGBA8 *p8a,*p8b;
+
+		p8a = (RGBA8 *)col1;
+		p8b = (RGBA8 *)col2;
+		
+		return ((p8a->a == 0 && p8b->a == 0)
+			|| (p8a->a && p8b->a
+				&& (p8a->r >> 2) == (p8b->r >> 2)
+				&& (p8a->g >> 2) == (p8b->g >> 2)
+				&& (p8a->b >> 2) == (p8b->b >> 2)));
+	}
+	else
+	{
+		RGBA16 *p16a,*p16b;
+
+		p16a = (RGBA16 *)col1;
+		p16b = (RGBA16 *)col2;
+
+		return ((p16a->a == 0 && p16b->a == 0)
+			|| (p16a->a && p16b->a
+				&& (p16a->r >> 9) == (p16b->r >> 9)
+				&& (p16a->g >> 9) == (p16b->g >> 9)
+				&& (p16a->b >> 9) == (p16b->b >> 9)));
+	}
 }
 
-/** 色の比較 (位置) */
+/* 色の比較 (位置) */
 
-static mBool _comp_pixel(TileImage *img,int x1,int y1,int x2,int y2)
+static mlkbool _comp_color_at(FilterDrawInfo *info,TileImage *img,int x1,int y1,int x2,int y2)
 {
-	RGBAFix15 pix1,pix2;
+	uint64_t col1,col2;
 
-	TileImage_getPixel(img, x1, y1, &pix1);
-	TileImage_getPixel(img, x2, y2, &pix2);
+	TileImage_getPixel(img, x1, y1, &col1);
+	TileImage_getPixel(img, x2, y2, &col2);
 
-	return _comp_pix(&pix1, &pix2);
+	return _comp_color(info, &col1, &col2);
 }
 
-/** 点の描画 */
+/* 点の描画 */
 
 static void _setpixel(FilterDrawInfo *info,int sx,int sy,int dx,int dy,int opacity)
 {
-	RGBAFix15 pix,pix1,pix2;
 	int i;
 	double sa,da,na;
+	uint64_t col,col1,col2;
 
 	if(opacity <= 0) return;
 
-	TileImage_getPixel(info->imgsrc, sx, sy, &pix1);
-	TileImage_getPixel(info->imgsrc, dx, dy, &pix2);
+	TileImage_getPixel(info->imgsrc, sx, sy, &col1);
+	TileImage_getPixel(info->imgsrc, dx, dy, &col2);
 
-	if(_comp_pix(&pix1, &pix2)) return;
+	if(_comp_color(info, &col1, &col2)) return;
 
 	//合成
 
-	sa = (double)(pix1.a * opacity >> 15) / 0x8000;
-	da = (double)pix2.a / 0x8000;
-	na = sa + da - sa * da;
+	if(info->bits == 8)
+	{
+		//8bit
+		
+		uint8_t *p8a,*p8b,*p8d;
 
-	pix.a = (int)(na * 0x8000 + 0.5);
+		p8a = (uint8_t *)&col1;
+		p8b = (uint8_t *)&col2;
+		p8d = (uint8_t *)&col;
+		
+		sa = (double)(p8a[3] * opacity / 255) / 255;
+		da = (double)p8b[3] / 255;
+		na = sa + da - sa * da;
 
-	if(pix.a == 0)
-		pix.v64 = 0;
+		p8d[3] = (int)(na * 255 + 0.5);
+
+		if(p8d[3] == 0)
+			col = 0;
+		else
+		{
+			da = da * (1 - sa);
+			na = 1.0 / na;
+
+			for(i = 0; i < 3; i++)
+				p8d[i] = (uint8_t)((p8a[i] * sa + p8b[i] * da) * na + 0.5);
+		}
+	}
 	else
 	{
-		da = da * (1 - sa);
-		na = 1.0 / na;
+		//16bit
 
-		for(i = 0; i < 3; i++)
-			pix.c[i] = (int)((pix1.c[i] * sa + pix2.c[i] * da) * na + 0.5);
+		uint16_t *p16a,*p16b,*p16d;
+
+		p16a = (uint16_t *)&col1;
+		p16b = (uint16_t *)&col2;
+		p16d = (uint16_t *)&col;
+		
+		sa = (double)(p16a[3] * opacity >> 15) / 0x8000;
+		da = (double)p16b[3] / 0x8000;
+		na = sa + da - sa * da;
+
+		p16d[3] = (int)(na * 0x8000 + 0.5);
+
+		if(p16d[3] == 0)
+			col = 0;
+		else
+		{
+			da = da * (1 - sa);
+			na = 1.0 / na;
+
+			for(i = 0; i < 3; i++)
+				p16d[i] = (int)((p16a[i] * sa + p16b[i] * da) * na + 0.5);
+		}
 	}
 
-	(g_tileimage_dinfo.funcDrawPixel)(info->imgdst, dx, dy, &pix);
+	(g_tileimage_dinfo.func_setpixel)(info->imgdst, dx, dy, &col);
 }
 
-/** 描画 */
+/* 描画 */
 
-static void _aa_draw(FilterDrawInfo *info,int x,int y,mBool right,mRect *rc)
+static void _aa_draw(FilterDrawInfo *info,int x,int y,mlkbool right,mRect *rc)
 {
-	int x1,y1,x2,y2,i,a,cnt;
+	int x1,y1,x2,y2,i,a,cnt,csub;
+
+	csub = (info->bits == 8)? 16: 1966;
 
 	//上
 
@@ -118,7 +179,7 @@ static void _aa_draw(FilterDrawInfo *info,int x,int y,mBool right,mRect *rc)
 		if(y - cnt + 1 < info->rc.y1) cnt = y - info->rc.y1 + 1;
 
 		a = info->ntmp[0];
-		if(cnt < 4) a -= 1966;
+		if(cnt < 4) a -= csub;
 
 		for(i = 0; i <= cnt; i++)
 			_setpixel(info, x1, y, x2, y - i, a - (a * i / cnt));
@@ -138,7 +199,7 @@ static void _aa_draw(FilterDrawInfo *info,int x,int y,mBool right,mRect *rc)
 		if(y + cnt > info->rc.y2) cnt = info->rc.y2 - y;
 
 		a = info->ntmp[0];
-		if(cnt < 4) a -= 1966;
+		if(cnt < 4) a -= csub;
 
 		for(i = 0; i <= cnt; i++)
 			_setpixel(info, x1, y1, x2, y2 + i, a - (a * i / cnt));
@@ -155,7 +216,7 @@ static void _aa_draw(FilterDrawInfo *info,int x,int y,mBool right,mRect *rc)
 		if(x - cnt + 1 < info->rc.x1) cnt = x - info->rc.x1 + 1;
 
 		a = info->ntmp[0];
-		if(cnt < 4) a -= 1966;
+		if(cnt < 4) a -= csub;
 
 		for(i = 0; i <= cnt; i++)
 			_setpixel(info, x, y1, x - i, y2, a - (a * i / cnt));
@@ -173,21 +234,21 @@ static void _aa_draw(FilterDrawInfo *info,int x,int y,mBool right,mRect *rc)
 		if(x + cnt > info->rc.x2) cnt = info->rc.x2 - x;
 
 		a = info->ntmp[0];
-		if(cnt < 4) a -= 1966;
+		if(cnt < 4) a -= csub;
 
 		for(i = 0; i <= cnt; i++)
 			_setpixel(info, x1, y1, x2 + i, y2, a - (a * i / cnt));
 	}
 }
 
-/** 判定 */
+/* 判定 */
 
-static void _aa_func(FilterDrawInfo *info,int x,int y,mBool right)
+static void _aa_func(FilterDrawInfo *info,int x,int y,mlkbool right)
 {
 	TileImage *imgsrc = info->imgsrc;
 	mRect rc;
 	int i,x1,x2,y1,y2;
-	RGBAFix15 pix,pix2,pix3;
+	uint64_t col,col2,col3;
 
 	rc.x1 = rc.y1 = rc.x2 = rc.y2 = 0;
 
@@ -196,16 +257,16 @@ static void _aa_func(FilterDrawInfo *info,int x,int y,mBool right)
 	x1 = x2 = x;
 	if(right) x1++; else x2++;
 
-	if(!_comp_pixel(imgsrc, x1, y, x2, y))
+	if(!_comp_color_at(info, imgsrc, x1, y, x2, y))
 	{
-		TileImage_getPixel(imgsrc, x1, y, &pix);
+		TileImage_getPixel(imgsrc, x1, y, &col);
 
 		for(i = y - 1; i >= info->rc.y1; i--)
 		{
-			TileImage_getPixel(imgsrc, x1, i, &pix2);
-			TileImage_getPixel(imgsrc, x2, i, &pix3);
+			TileImage_getPixel(imgsrc, x1, i, &col2);
+			TileImage_getPixel(imgsrc, x2, i, &col3);
 
-			if(_comp_pix(&pix, &pix2) && !_comp_pix(&pix, &pix3))
+			if(_comp_color(info, &col, &col2) && !_comp_color(info, &col, &col3))
 				rc.y1++;
 			else
 				break;
@@ -218,16 +279,16 @@ static void _aa_func(FilterDrawInfo *info,int x,int y,mBool right)
 	y1 = y + 1;
 	if(right) x2++; else x1++;
 
-	if(!_comp_pixel(imgsrc, x1, y1, x2, y1))
+	if(!_comp_color_at(info, imgsrc, x1, y1, x2, y1))
 	{
-		TileImage_getPixel(imgsrc, x1, y1, &pix);
+		TileImage_getPixel(imgsrc, x1, y1, &col);
 
 		for(i = y + 2; i <= info->rc.y2; i++)
 		{
-			TileImage_getPixel(imgsrc, x1, i, &pix2);
-			TileImage_getPixel(imgsrc, x2, i, &pix3);
+			TileImage_getPixel(imgsrc, x1, i, &col2);
+			TileImage_getPixel(imgsrc, x2, i, &col3);
 
-			if(_comp_pix(&pix, &pix2) && !_comp_pix(&pix, &pix3))
+			if(_comp_color(info, &col, &col2) && !_comp_color(info, &col, &col3))
 				rc.y2++;
 			else
 				break;
@@ -239,16 +300,16 @@ static void _aa_func(FilterDrawInfo *info,int x,int y,mBool right)
 	y1 = y2 = y;
 	if(right) y1++; else y2++;
 
-	if(!_comp_pixel(imgsrc, x, y1, x, y2))
+	if(!_comp_color_at(info, imgsrc, x, y1, x, y2))
 	{
-		TileImage_getPixel(imgsrc, x, y1, &pix);
+		TileImage_getPixel(imgsrc, x, y1, &col);
 
 		for(i = x - 1; i >= info->rc.x1; i--)
 		{
-			TileImage_getPixel(imgsrc, i, y1, &pix2);
-			TileImage_getPixel(imgsrc, i, y2, &pix3);
+			TileImage_getPixel(imgsrc, i, y1, &col2);
+			TileImage_getPixel(imgsrc, i, y2, &col3);
 
-			if(_comp_pix(&pix, &pix2) && !_comp_pix(&pix, &pix3))
+			if(_comp_color(info, &col, &col2) && !_comp_color(info, &col, &col3))
 				rc.x1++;
 			else
 				break;
@@ -261,16 +322,16 @@ static void _aa_func(FilterDrawInfo *info,int x,int y,mBool right)
 	y1 = y2 = y;
 	if(right) y2++; else y1++;
 
-	if(!_comp_pixel(imgsrc, x1, y1, x1, y2))
+	if(!_comp_color_at(info, imgsrc, x1, y1, x1, y2))
 	{
-		TileImage_getPixel(imgsrc, x1, y1, &pix);
+		TileImage_getPixel(imgsrc, x1, y1, &col);
 
 		for(i = x + 2; i <= info->rc.x2; i++)
 		{
-			TileImage_getPixel(imgsrc, i, y1, &pix2);
-			TileImage_getPixel(imgsrc, i, y2, &pix3);
+			TileImage_getPixel(imgsrc, i, y1, &col2);
+			TileImage_getPixel(imgsrc, i, y2, &col3);
 
-			if(_comp_pix(&pix, &pix2) && !_comp_pix(&pix, &pix3))
+			if(_comp_color(info, &col, &col2) && !_comp_color(info, &col, &col3))
 				rc.x2++;
 			else
 				break;
@@ -280,36 +341,39 @@ static void _aa_func(FilterDrawInfo *info,int x,int y,mBool right)
 	_aa_draw(info, x, y, right, &rc);
 }
 
-/** アンチエイリアシング */
+/* アンチエイリアシング */
 
-mBool FilterDraw_antialiasing(FilterDrawInfo *info)
+mlkbool FilterDraw_antialiasing(FilterDrawInfo *info)
 {
 	TileImage *imgsrc;
 	int ix,iy,f;
-	RGBAFix15 pix,pixx,pixy,pixxy;
+	uint64_t col,colx,coly,colxy;
 
-	info->ntmp[0] = (info->val_bar[0] << 14) / 100;
+	if(info->bits == 8)
+		info->ntmp[0] = (info->val_bar[0] << 7) / 100;
+	else
+		info->ntmp[0] = (info->val_bar[0] << 14) / 100;
 
-	FilterSub_copyImage_forPreview(info);
+	FilterSub_copySrcImage_forPreview(info);
 
 	imgsrc = info->imgsrc;
 
 	//[!] 右端、下端は処理しない
 
-	FilterSub_progBeginOneStep(info, 50, info->box.h - 1);
+	FilterSub_prog_substep_begin_onestep(info, 50, info->box.h - 1);
 
 	for(iy = info->rc.y1; iy < info->rc.y2; iy++)
 	{
 		for(ix = info->rc.x1; ix < info->rc.x2; ix++)
 		{
-			TileImage_getPixel(imgsrc, ix, iy, &pix);
-			TileImage_getPixel(imgsrc, ix + 1, iy, &pixx);
-			TileImage_getPixel(imgsrc, ix, iy + 1, &pixy);
-			TileImage_getPixel(imgsrc, ix + 1, iy + 1, &pixxy);
+			TileImage_getPixel(imgsrc, ix, iy, &col);
+			TileImage_getPixel(imgsrc, ix + 1, iy, &colx);
+			TileImage_getPixel(imgsrc, ix, iy + 1, &coly);
+			TileImage_getPixel(imgsrc, ix + 1, iy + 1, &colxy);
 
-			f = _comp_pix(&pix, &pixxy)
-				| (_comp_pix(&pixx, &pixy) << 1)
-				| (_comp_pix(&pix, &pixy) << 2);
+			f = _comp_color(info, &col, &colxy)
+				| (_comp_color(info, &colx, &coly) << 1)
+				| (_comp_color(info, &col, &coly) << 2);
 
 			if(f == 7) continue;
 
@@ -320,8 +384,9 @@ mBool FilterDraw_antialiasing(FilterDrawInfo *info)
 				_aa_func(info, ix, iy, TRUE);
 		}
 
-		FilterSub_progIncSubStep(info);
+		FilterSub_prog_substep_inc(info);
 	}
 
 	return TRUE;
 }
+

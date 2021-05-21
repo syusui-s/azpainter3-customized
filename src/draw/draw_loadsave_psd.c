@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -23,20 +23,25 @@ $*/
 
 #include <string.h>
 
-#include "mDef.h"
-#include "mPopupProgress.h"
-#include "mPSDLoad.h"
-#include "mPSDSave.h"
-#include "mUtilFile.h"
+#include "mlk_gui.h"
+#include "mlk_widget_def.h"
+#include "mlk_popup_progress.h"
+#include "mlk_psd.h"
+#include "mlk_file.h"
+#include "mlk_list.h"
+#include "mlk_rectbox.h"
+#include "mlk_imagebuf.h"
 
-#include "defMacros.h"
-#include "defDraw.h"
-#include "defConfig.h"
+#include "def_macro.h"
+#include "def_config.h"
+#include "def_draw.h"
+#include "def_saveopt.h"
+#include "def_tileimage.h"
 
-#include "TileImage.h"
-#include "LayerList.h"
-#include "LayerItem.h"
-#include "ImageBufRGB16.h"
+#include "tileimage.h"
+#include "layerlist.h"
+#include "layeritem.h"
+#include "imagecanvas.h"
 
 #include "draw_main.h"
 
@@ -45,271 +50,333 @@ $*/
 
 enum
 {
-	_TYPE_RGB = 1,
+	_TYPE_LAYER,
+	_TYPE_RGB,
 	_TYPE_GRAY,
 	_TYPE_MONO
 };
 
-#define _TOGRAY(r,g,b)  ((r * 77 + g * 150 + b * 29) >> 8)
+#define _RGB_TO_GRAY(r,g,b)  ((r * 77 + g * 150 + b * 29) >> 8)
 
 //--------------------
 
+//添字:AzPainter 合成モード, 値:PSD 合成モード
 static const uint32_t g_blendmode[] = {
 	MPSD_BLENDMODE_NORMAL, MPSD_BLENDMODE_MULTIPLY, MPSD_BLENDMODE_LINEAR_DODGE,
 	MPSD_BLENDMODE_SUBTRACT, MPSD_BLENDMODE_SCREEN, MPSD_BLENDMODE_OVERLAY,
 	MPSD_BLENDMODE_HARD_LIGHT, MPSD_BLENDMODE_SOFT_LIGHT, MPSD_BLENDMODE_DODGE,
 	MPSD_BLENDMODE_BURN, MPSD_BLENDMODE_LINEAR_BURN, MPSD_BLENDMODE_VIVID_LIGHT,
 	MPSD_BLENDMODE_LINEAR_LIGHT, MPSD_BLENDMODE_PIN_LIGHT, MPSD_BLENDMODE_DARKEN,
-	MPSD_BLENDMODE_LIGHTEN, MPSD_BLENDMODE_DIFFERENCE, 0
+	MPSD_BLENDMODE_LIGHTEN, MPSD_BLENDMODE_DIFFERENCE,
+	//"加算"と重複する
+	MPSD_BLENDMODE_LINEAR_DODGE, MPSD_BLENDMODE_LINEAR_DODGE,
+	0
 };
 
 //--------------------
 
 
-//=============================
+//******************************
 // 読み込み
-//=============================
+//******************************
 
 
-/** レイヤ読み込み - チャンネルを読み込み、バッファにセット */
+/* レイヤ読み込み: チャンネルイメージ全体の読み込み */
 
-static mBool _load_layer_image_channel(mPSDLoad *psd,mBox *boximg,mPopupProgress *prog,uint8_t *dstbuf)
+static mlkerr _load_layer_image_channel(mPSDLoad *psd,int layerno,int chid,
+	mBox *boximg,uint8_t **ppimg,mPopupProgress *prog)
 {
-	int i,w;
-	uint8_t *ps;
+	int iy,n;
+	mlkerr ret;
 
-	w = boximg->w;
-	ps = mPSDLoad_getLineImageBuf(psd);
+	//開始
 
-	for(i = boximg->h; i > 0; i--)
+	ret = mPSDLoad_setLayerImageCh_id(psd, layerno, chid, NULL);
+
+	if(ret == -2)
 	{
-		if(!mPSDLoad_readLayerImageChannelLine(psd))
-			return FALSE;
+		//チャンネルがない場合
 
-		memcpy(dstbuf, ps, w);
-		dstbuf += w;
+		if(chid == MPSD_CHID_ALPHA)
+		{
+			//[ALPHA] 範囲内すべて不透明
 
-		mPopupProgressThreadIncSubStep(prog);
+			n = boximg->w * (APPDRAW->imgbits / 8);
+
+			for(iy = boximg->h; iy; iy--, ppimg++)
+				memset(*ppimg, 0xff, n);
+		}
+
+		mPopupProgressThreadAddPos(prog, 10);
+
+		return MLKERR_OK;
+	}
+	else if(ret)
+		return ret;
+
+	//読み込み
+
+	mPopupProgressThreadSubStep_begin(prog, 10, boximg->h);
+
+	for(iy = boximg->h; iy; iy--, ppimg++)
+	{
+		ret = mPSDLoad_readLayerImageRowCh(psd, *ppimg);
+		if(ret) return ret;
+
+		mPopupProgressThreadSubStep_inc(prog);
 	}
 
-	return TRUE;
+	return MLKERR_OK;
 }
 
-/** レイヤ読み込み - アルファ値読み込み
- *
- * @return FALSE 時は、psd->err にエラー番号を入れておく */
+/* レイヤマスクをアルファチャンネルイメージに適用 */
 
-static mBool _load_layer_image_alpha(mPSDLoad *psd,
-	TileImage *img,mPSDLoadLayerInfo *info,mPopupProgress *prog,uint8_t *buf)
+static mlkerr _set_layermask_image(mPSDLoad *psd,mPSDImageInfo *info,mBox *boximg,uint8_t **ppimg)
 {
-	uint8_t *ps,*pd;
-	int ret,ix,iy;
-	mBox box;
+	uint8_t *rowbuf,*pd8,*ps8;
+	uint16_t *pd16,*ps16;
+	int ix,iy,bits;
+	mlkerr ret;
 
-	box = info->box_img;
+	bits = APPDRAW->imgbits;
 
-	//アルファチャンネルを buf にセット
+	//Y1行バッファ
+	// [!] イメージ・マスクの大きい方の分のサイズが必要
 
-	ret = mPSDLoad_beginLayerImageChannel(psd, MPSD_CHANNEL_ID_ALPHA);
-	if(!ret) return FALSE;
+	ix = info->rowsize;
+	if(ix < info->rowsize_mask) ix = info->rowsize_mask;
 
-	if(ret == -1)
-	{
-		//チャンネルがない場合はすべて不透明
+	rowbuf = (uint8_t *)mMalloc(ix);
+	if(!rowbuf) return MLKERR_ALLOC;
 
-		memset(buf, 255, box.w * box.h);
-		mPopupProgressThreadAddPos(prog, 4);
-	}
-	else
+	//
+
+	for(iy = boximg->h; iy; iy--, ppimg++)
 	{
 		//読み込み
 		
-		mPopupProgressThreadBeginSubStep(prog, 4, box.h);
+		ret = mPSDLoad_readLayerMaskImageRow(psd, rowbuf);
+		if(ret) break;
 
-		if(!_load_layer_image_channel(psd, &box, prog, buf))
-			return FALSE;
+		//適用
+
+		if(bits == 8)
+		{
+			pd8 = *ppimg;
+			ps8 = rowbuf;
+			
+			for(ix = boximg->w; ix; ix--, pd8++, ps8++)
+			{
+				if(*pd8 > *ps8)
+					*pd8 = *ps8;
+			}
+		}
+		else
+		{
+			pd16 = (uint16_t *)*ppimg;
+			ps16 = (uint16_t *)rowbuf;
+			
+			for(ix = boximg->w; ix; ix--, pd16++, ps16++)
+			{
+				if(*pd16 > *ps16)
+					*pd16 = *ps16;
+			}
+		}
 	}
+
+	mFree(rowbuf);
+
+	return ret;
+}
+
+/* レイヤ読み込み: アルファ値読み込み */
+
+static mlkerr _load_layer_image_alpha(mPSDLoad *psd,int layerno,
+	mPSDLayer *info,TileImage *img,uint8_t **ppimg,mPopupProgress *prog)
+{
+	mBox box;
+	mPSDImageInfo imginfo;
+	mlkerr ret;
+
+	box = info->box_img;
+
+	//アルファチャンネル読み込み
+
+	ret = _load_layer_image_channel(psd, layerno, MPSD_CHID_ALPHA, &box, ppimg, prog);
+	if(ret) return ret;
 
 	//レイヤマスクがある場合、アルファ値に適用
 
-	if(!(info->layermask_flags & MPSDLOAD_LAYERMASK_F_DISABLE))
+	if(!(info->mask_flags & MPSD_LAYER_MASK_FLAGS_DISABLE))
 	{
-		ret = mPSDLoad_beginLayerImageChannel(psd, MPSD_CHANNEL_ID_MASK);
-		if(!ret) return FALSE;
+		ret = mPSDLoad_setLayerImageCh_id(psd, layerno, MPSD_CHID_MASK, &imginfo);
 
-		if(ret != -1)
+		if(ret == MLKERR_OK)
 		{
-			pd = buf;
-		
-			for(iy = box.h; iy > 0; iy--)
-			{
-				if(!mPSDLoad_readLayerImageChannelLine_mask(psd))
-					return FALSE;
-
-				ps = mPSDLoad_getLineImageBuf(psd);
-
-				for(ix = box.w; ix > 0; ix--, ps++, pd++)
-				{
-					if(*pd > *ps) *pd = *ps;
-				}
-			}
+			ret = _set_layermask_image(psd, &imginfo, &box, ppimg);
+			if(ret) return ret;
 		}
 	}
 
 	//アルファ値セット
 
-	if(TileImage_setChannelImage(img, buf, -1, box.w, box.h))
-		return TRUE;
-	else
-	{
-		psd->err = MPSDLOAD_ERR_ALLOC;
-		return FALSE;
-	}
+	if(!TileImage_setChannelImage(img, -1, ppimg, box.w, box.h))
+		return MLKERR_ALLOC;
+
+	return MLKERR_OK;
 }
 
-/** レイヤ読み込み - イメージ (RGBA/GRAY) */
+/* レイヤイメージ読み込み (RGBA/GRAY) */
 
-static int _load_layer_image(DrawData *p,mPSDLoad *psd,mPopupProgress *prog)
+static mlkerr _load_layer_image(AppDraw *p,mPSDLoad *psd,mPSDHeader *hd,mPopupProgress *prog)
 {
-	mPSDLoadLayerInfo info;
+	mPSDLayer info;
 	LayerItem *item;
 	TileImage *img;
-	uint8_t *allocbuf = NULL,*buf;
+	mImageBuf2 *chimg = NULL;
+	uint8_t **ppimg;
 	mSize size;
-	int i,chnum,ret;
+	int layerno,chnum,i;
+	mlkerr ret;
 
-	chnum = (psd->colmode == MPSD_COLMODE_GRAYSCALE)? 1: 3;
+	chnum = (hd->colmode == MPSD_COLMODE_GRAYSCALE)? 1: 3;
 
-	//1チャンネル分のバッファ確保
-	//(blendimg のバッファで足りるならそちらを使う)
+	//チャンネル用イメージ (全体)
+	// :imgcanvas のサイズ内であれば、それを使う
 
 	mPSDLoad_getLayerImageMaxSize(psd, &size);
 
-	if(size.w * size.h <= p->imgw * p->imgh * 6)
-		buf = (uint8_t *)p->blendimg->buf;
+	if(size.h <= p->imgh && size.w <= p->imgw * 4)
+		ppimg = p->imgcanvas->ppbuf;
 	else
 	{
-		buf = allocbuf = (uint8_t *)mMalloc(size.w * size.h, FALSE);
-		if(!allocbuf) return MPSDLOAD_ERR_ALLOC;
+		chimg = mImageBuf2_new(size.w, size.h, p->imgbits, -4);
+		if(!chimg) return MLKERR_ALLOC;
+
+		ppimg = chimg->ppbuf;
 	}
 
 	//---- 各レイヤ読み込み
-	/* ファイルの格納順に読み込むので、
-	 * 一覧上において下から順にイメージのあるレイヤを読み込み。 */
+	// ファイルの格納順に読み込むため、下層のレイヤから順に読み込み。
 
-	mPopupProgressThreadSetMax(prog,
-		LayerList_getNormalLayerNum(p->layerlist) * 16);
+	ret = MLKERR_OK;
 
-	item = LayerList_getItem_bottomNormal(p->layerlist);
+	mPopupProgressThreadSetMax(prog, LayerList_getNum(p->layerlist) * (chnum + 1) * 10);
 
-	for(; item; item = LayerItem_getPrevNormal(item))
+	for(layerno = 0; layerno < hd->layer_num; layerno++)
 	{
-		//読み込み開始
-		
-		if(!mPSDLoad_beginLayerImage(psd, &info, TRUE))
+		mPSDLoad_getLayerInfo(psd, layerno, &info);
+
+		item = (LayerItem *)info.param;
+		if(!item) continue;
+
+		//フォルダ or 空イメージ
+
+		if(LAYERITEM_IS_FOLDER(item)
+			|| (info.box_img.w == 0 || info.box_img.h == 0))
 		{
-			//空イメージ
-			
-			mPSDLoad_endLayerImage(psd);
-			mPopupProgressThreadAddPos(prog, 16);
+			mPopupProgressThreadAddPos(prog, (chnum + 1) * 10);
 			continue;
 		}
 
+		//
+	
 		img = item->img;
 
-		//A チャンネルを先に読み込み
+		//A チャンネルを先にセット
 
-		if(!_load_layer_image_alpha(psd, img, &info, prog, buf))
-			goto ERR;
+		ret = _load_layer_image_alpha(psd, layerno, &info, img, ppimg, prog);
+		if(ret) goto ERR;
 
-		//色チャンネル読み込み
+		//RGB/GRAY チャンネル読み込み
 
 		for(i = 0; i < chnum; i++)
 		{
-			//開始
-			
-			ret = mPSDLoad_beginLayerImageChannel(psd, i);
-			if(!ret)
-				goto ERR;
-			else if(ret == -1)
+			ret = _load_layer_image_channel(psd, layerno, i, &info.box_img, ppimg, prog);
+			if(ret) goto ERR;
+
+			if(!TileImage_setChannelImage(img, i, ppimg, info.box_img.w, info.box_img.h))
 			{
-				mPopupProgressThreadAddPos(prog, 4);
-				continue;
-			}
-
-			//buf に読み込み
-
-			mPopupProgressThreadBeginSubStep(prog, (chnum == 1)? 12: 4, info.box_img.h);
-
-			if(!_load_layer_image_channel(psd, &info.box_img, prog, buf))
+				ret = MLKERR_ALLOC;
 				goto ERR;
-
-			//セット
-
-			TileImage_setChannelImage(img, buf, i, info.box_img.w, info.box_img.h);
+			}
 		}
-
-		mPSDLoad_endLayerImage(psd);
 	}
 
-	mFree(allocbuf);
-
-	return MPSDLOAD_ERR_OK;
-
 ERR:
-	mFree(allocbuf);
-	return psd->err;
+	mImageBuf2_free(chimg);
+
+	return ret;
 }
 
-/** レイヤ読み込み */
+/* レイヤ情報を読み込み、レイヤ作成 */
 
-static int _load_from_layer(DrawData *p,mPSDLoad *psd,mPopupProgress *prog)
+static mlkerr _load_layer(AppDraw *p,mPSDLoad *psd,mPSDHeader *hd,mPopupProgress *prog)
 {
-	mPSDLoadLayerInfo info;
+	mPSDLayer info;
+	mPSDInfoSelection selinfo;
 	TileImageInfo tinfo;
+	mList list = MLIST_INIT;
 	LayerItem *item,*item_parent;
 	TileImage *img;
-	int layerno,i,coltype;
+	int layerno,i,imgtype;
+	mlkerr ret;
 
-	//------ レイヤ作成
+	//[!] list を解放すること
 
-	item_parent = NULL;
-	coltype = (psd->colmode == MPSD_COLMODE_GRAYSCALE)? TILEIMAGE_COLTYPE_GRAY: TILEIMAGE_COLTYPE_RGBA;
+	item_parent = NULL; //現在の親
 
-	//グループレイヤ構造を維持するため、一覧上において上から順に作成する
+	imgtype = (hd->colmode == MPSD_COLMODE_GRAYSCALE)? TILEIMAGE_COLTYPE_GRAY: TILEIMAGE_COLTYPE_RGBA;
 
-	for(layerno = psd->layernum - 1; layerno >= 0; layerno--)
+	//上のレイヤから順に作成 (PSD 上では最後のレイヤから)
+
+	for(layerno = hd->layer_num - 1; layerno >= 0; layerno--)
 	{
-		if(!mPSDLoad_getLayerInfo(psd, layerno, &info))
-			return psd->err;
+		//情報取得
 
-	/*
+		mListDeleteAll(&list);
+		
+		ret = mPSDLoad_getLayerInfoEx(psd, layerno, &info, &list);
+		if(ret) break;
+
+		//selection
+
+		if(!mPSDLoad_exinfo_getSelection(psd, &list, &selinfo))
+			selinfo.type = MPSD_INFO_SELECTION_TYPE_NORMAL;
+
+		//
+
+	#if 0
 		mDebug("%s : (%d,%d-%dx%d) m(%d,%d-%dx%d)\n",
 			info.name,
 			info.box_img.x, info.box_img.y, info.box_img.w, info.box_img.h,
 			info.box_mask.x, info.box_mask.y, info.box_mask.w, info.box_mask.h);
-	*/
+	#endif
 
-		//フォルダ終了
+		//フォルダ閉じる -> 親へ移動
 
-		if(info.group == MPSDLOAD_LAYERGROUP_END)
+		if(selinfo.type == MPSD_INFO_SELECTION_TYPE_END_LAST)
 		{
-			if(item_parent) item_parent = LAYERITEM(item_parent->i.parent);
+			if(item_parent)
+				item_parent = LAYERITEM(item_parent->i.parent);
+
 			continue;
 		}
 		
-		//レイヤ作成
+		//レイヤ作成 (親の終端へ)
 
-		item = LayerList_addLayer(p->layerlist, NULL);
-		if(!item) return MPSDLOAD_ERR_ALLOC;
+		item = LayerList_addLayer_parent(p->layerlist, item_parent);
+		if(!item)
+		{
+			ret = MLKERR_ALLOC;
+			break;
+		}
 
-		//位置移動 (親の最後に)
+		mPSDLoad_setLayerInfo_param(psd, layerno, item);
 
-		LayerList_moveitem_forLoad_topdown(p->layerlist, item, item_parent);
+		//名前
 
-		//名前 (UTF-8 とみなす)
-
-		LayerList_setItemName_utf8(p->layerlist, item, info.name);
+		item->name = mStrdup(info.name);
 
 		//不透明度
 
@@ -317,18 +384,23 @@ static int _load_from_layer(DrawData *p,mPSDLoad *psd,mPopupProgress *prog)
 
 		//非表示
 
-		if(info.flags & MPSDLOAD_LAYERINFO_F_HIDE)
+		if(info.flags & MPSD_LAYER_FLAGS_HIDE)
 			item->flags &= ~LAYERITEM_F_VISIBLE;
 
 		//フォルダ
 
-		if(info.group == MPSDLOAD_LAYERGROUP_EXPAND
-			|| info.group == MPSDLOAD_LAYERGROUP_FOLDED)
+		if(selinfo.type == MPSD_INFO_SELECTION_TYPE_FOLDER_OPEN
+			|| selinfo.type == MPSD_INFO_SELECTION_TYPE_FOLDER_CLOSED)
 		{
 			item_parent = item;
-			item->flags |= LAYERITEM_F_FOLDER_EXPAND;
+
+			if(selinfo.type == MPSD_INFO_SELECTION_TYPE_FOLDER_OPEN)
+				item->flags |= LAYERITEM_F_FOLDER_OPENED;
+			
 			continue;
 		}
+
+		//------- イメージ
 
 		//イメージ作成
 
@@ -346,10 +418,14 @@ static int _load_from_layer(DrawData *p,mPSDLoad *psd,mPopupProgress *prog)
 			tinfo.tileh = (info.box_img.h + 63) / 64;
 		}
 
-		img = TileImage_newFromInfo(coltype, &tinfo);
-		if(!img) return MPSDLOAD_ERR_ALLOC;
+		img = TileImage_newFromInfo(imgtype, &tinfo);
+		if(!img)
+		{
+			ret = MLKERR_ALLOC;
+			break;
+		}
 
-		LayerItem_replaceImage(item, img);
+		LayerItem_replaceImage(item, img, imgtype);
 
 		//合成モード
 
@@ -363,252 +439,345 @@ static int _load_from_layer(DrawData *p,mPSDLoad *psd,mPopupProgress *prog)
 		}
 	}
 
-	//------ イメージ読み込み
+	mListDeleteAll(&list);
 
-	return _load_layer_image(p, psd, prog);
+	return ret;
 }
 
-/** 一枚絵イメージから読み込み */
+/* 一枚絵イメージから読み込み */
 
-static int _load_from_image(DrawData *p,mPSDLoad *psd,mPopupProgress *prog)
+static int _load_image(AppDraw *p,mPSDLoad *psd,mPSDHeader *hd,mPopupProgress *prog)
 {
 	LayerItem *item;
 	TileImage *img;
-	int type,i,ix,iy,w,h,chnum;
-	uint8_t *ps,*pd,f;
+	uint8_t *rowbuf,**ppbuf,*buf,*ps8,*pd8,f;
+	uint16_t *ps16,*pd16,*table16 = NULL;
+	int type,bits,i,ix,iy,width,height,chnum;
+	mlkerr ret;
 
-	w = psd->width;
-	h = psd->height;
+	width = hd->width;
+	height = hd->height;
 
-	//カラータイプ
-	/* 1bit 白黒、8bit グレースケール => GRAY
-	 * RGB(A) 8bit => RGBA */
+	//カラータイプ, bits
 
-	if(psd->bits == 1)
-		type = _TYPE_MONO;
-	else if(psd->colmode == MPSD_COLMODE_GRAYSCALE)
+	bits = hd->bits;
+
+	if(hd->bits == 1)
+		type = _TYPE_MONO, bits = 8;
+	else if(hd->colmode == MPSD_COLMODE_GRAYSCALE)
 		type = _TYPE_GRAY;
-	else if(psd->colmode == MPSD_COLMODE_RGB && psd->img_channels >= 3)
+	else if(hd->colmode == MPSD_COLMODE_RGB && hd->img_channels >= 3)
 		type = _TYPE_RGB;
 	else
-		return MPSDLOAD_ERR_UNSUPPORTED;
+		return MLKERR_UNSUPPORTED;
 
 	//レイヤ作成
 
 	item = LayerList_addLayer(p->layerlist, NULL);
-	if(!item) return MPSDLOAD_ERR_ALLOC;
+	if(!item) return MLKERR_ALLOC;
 
 	img = TileImage_new(
-		(type == _TYPE_RGB)? TILEIMAGE_COLTYPE_RGBA: TILEIMAGE_COLTYPE_GRAY, w, h);
+		(type == _TYPE_RGB)? TILEIMAGE_COLTYPE_RGBA: TILEIMAGE_COLTYPE_GRAY,
+		width, height);
 
-	if(!img) return MPSDLOAD_ERR_ALLOC;
+	if(!img) return MLKERR_ALLOC;
 
-	LayerItem_replaceImage(item, img);
+	LayerItem_replaceImage(item, img, img->type);
 	LayerList_setItemName_curlayernum(p->layerlist, item);
 
 	//------- イメージ
 
-	if(!mPSDLoad_beginImage(psd)) goto PSDERR;
+	//開始
 
-	//mono or gray
+	ret = mPSDLoad_startImage(psd);
+	if(ret) return ret;
+
+	//バッファ
+
+	rowbuf = (uint8_t *)mMalloc(mPSDLoad_getImageChRowSize(psd));
+	if(!rowbuf) return MLKERR_ALLOC;
+
+	//16bit GRAY/RGB
+
+	if(type != _TYPE_MONO && bits == 16)
+	{
+		table16 = TileImage_create16to16fix_table();
+		if(!table16)
+		{
+			mFree(rowbuf);
+			return MLKERR_ALLOC;
+		}
+	}
+
+	//mono/gray
 
 	if(type != _TYPE_RGB)
 	{
-		mPopupProgressThreadSetMax(prog, 40);
-		mPopupProgressThreadBeginSubStep(prog, 20, h);
+		mPopupProgressThreadSetMax(prog, 50);
+		mPopupProgressThreadSubStep_begin(prog, 50, height);
 
-		if(!mPSDLoad_beginImageChannel(psd)) goto PSDERR;
+		ppbuf = p->imgcanvas->ppbuf;
 	}
 
-	//blendimg に RGBA 8bit としてセット
+	//imgcanvas に RGBA としてセット
 
 	switch(type)
 	{
-		//1bit 白黒
+		//1bit 白黒 (8bit でセット)
 		case _TYPE_MONO:
-			pd = (uint8_t *)p->blendimg->buf;
-			
-			for(iy = h; iy; iy--)
+			for(iy = height; iy; iy--)
 			{
-				if(!mPSDLoad_readImageChannelLine(psd)) goto PSDERR;
+				//読み込み
+				
+				ret = mPSDLoad_readImageRowCh(psd, rowbuf);
+				if(ret) goto ERR;
 
-				ps = mPSDLoad_getLineImageBuf(psd);
+				//変換
 
-				for(ix = w, f = 0x80; ix; ix--, pd += 4)
+				ps8 = rowbuf;
+				pd8 = *(ppbuf++);
+				
+				for(ix = width, f = 0x80; ix; ix--, pd8 += 4)
 				{
-					pd[0] = pd[1] = pd[2] = (*ps & f)? 0: 255;
-					pd[3] = 255;
+					pd8[0] = pd8[1] = pd8[2] = (*ps8 & f)? 0: 255;
+					pd8[3] = 255;
 				
 					f >>= 1;
-					if(f == 0) f = 0x80, ps++;
+					if(!f) f = 0x80, ps8++;
 				}
 
-				mPopupProgressThreadIncSubStep(prog);
+				mPopupProgressThreadSubStep_inc(prog);
 			}
 			break;
 
 		//グレイスケール
 		case _TYPE_GRAY:
-			pd = (uint8_t *)p->blendimg->buf;
-			
-			for(iy = h; iy; iy--)
+			for(iy = height; iy; iy--)
 			{
-				if(!mPSDLoad_readImageChannelLine(psd)) goto PSDERR;
+				//読み込み
+				
+				ret = mPSDLoad_readImageRowCh(psd, rowbuf);
+				if(ret) goto ERR;
 
-				ps = mPSDLoad_getLineImageBuf(psd);
+				//変換
 
-				for(ix = w; ix; ix--, pd += 4)
+				buf = *(ppbuf++);
+
+				if(bits == 8)
 				{
-					pd[0] = pd[1] = pd[2] = *(ps++);
-					pd[3] = 255;
+					//8bit
+
+					ps8 = rowbuf;
+					pd8 = buf;
+					
+					for(ix = width; ix; ix--, pd8 += 4)
+					{
+						pd8[0] = pd8[1] = pd8[2] = *(ps8++);
+						pd8[3] = 255;
+					}
+				}
+				else
+				{
+					//16bit
+
+					ps16 = (uint16_t *)rowbuf;
+					pd16 = (uint16_t *)buf;
+
+					for(ix = width; ix; ix--, pd16 += 4, ps16++)
+					{
+						pd16[0] = pd16[1] = pd16[2] = table16[*ps16];
+						pd16[3] = 0x8000;
+					}
 				}
 
-				mPopupProgressThreadIncSubStep(prog);
+				mPopupProgressThreadSubStep_inc(prog);
 			}
 			break;
 
-		//RGB,RGBA
+		//RGB/RGBA
 		case _TYPE_RGB:
-			chnum = psd->img_channels;
+			chnum = hd->img_channels;
 			if(chnum > 4) chnum = 4;
 
-			mPopupProgressThreadSetMax(prog, chnum * 10 + 20);
+			mPopupProgressThreadSetMax(prog, chnum * 20);
 
-			//RGB(A)
+			//チャンネルごとに読み込み
 
 			for(i = 0; i < chnum; i++)
 			{
-				if(!mPSDLoad_beginImageChannel(psd)) goto PSDERR;
+				mPopupProgressThreadSubStep_begin(prog, 20, height);
 
-				mPopupProgressThreadBeginSubStep(prog, 10, h);
+				ppbuf = p->imgcanvas->ppbuf;
 
-				pd = (uint8_t *)p->blendimg->buf + i;
-
-				for(iy = h; iy; iy--)
+				for(iy = height; iy; iy--)
 				{
-					if(!mPSDLoad_readImageChannelLine(psd)) goto PSDERR;
+					//読み込み
+					
+					ret = mPSDLoad_readImageRowCh(psd, rowbuf);
+					if(ret) goto ERR;
 
-					ps = mPSDLoad_getLineImageBuf(psd);
+					//変換
 
-					for(ix = w; ix; ix--, pd += 4)
-						*pd = *(ps++);
+					buf = *(ppbuf++);
 
-					mPopupProgressThreadIncSubStep(prog);
+					if(bits == 8)
+					{
+						ps8 = rowbuf;
+						pd8 = buf + i;
+						
+						for(ix = width; ix; ix--, pd8 += 4)
+							*pd8 = *(ps8++);
+					}
+					else
+					{
+						ps16 = (uint16_t *)rowbuf;
+						pd16 = (uint16_t *)buf + i;
+
+						for(ix = width; ix; ix--, pd16 += 4, ps16++)
+							*pd16 = table16[*ps16];
+					}
+
+					mPopupProgressThreadSubStep_inc(prog);
 				}
 			}
 
-			//A なしの場合
+			//A がない場合、最大値セット
 
 			if(chnum != 4)
 			{
-				mPopupProgressThreadBeginSubStep(prog, 10, h);
+				mPopupProgressThreadSubStep_begin(prog, 20, height);
 
-				pd = (uint8_t *)p->blendimg->buf + 3;
+				ppbuf = p->imgcanvas->ppbuf;
 
-				for(iy = h; iy; iy--)
+				for(iy = height; iy; iy--)
 				{
-					for(ix = w; ix; ix--, pd += 4)
-						*pd = 255;
+					buf = *(ppbuf++);
 
-					mPopupProgressThreadIncSubStep(prog);
+					if(bits == 8)
+					{
+						pd8 = buf + 3;
+
+						for(ix = width; ix; ix--, pd8 += 4)
+							*pd8 = 255;
+					}
+					else
+					{
+						pd16 = (uint16_t *)buf + 3;
+
+						for(ix = width; ix; ix--, pd16 += 4)
+							*pd16 = 0x8000;
+					}
+
+					mPopupProgressThreadSubStep_inc(prog);
 				}
 			}
 			break;
 	}
 
-	//RGBA8 イメージからタイルセット
+	//タイルに変換 (img のタイプに変換される)
 
-	TileImage_setImage_fromRGBA8(img, (uint8_t *)p->blendimg->buf, w, h, prog, 20);
+	TileImage_convertFromCanvas(img, p->imgcanvas, NULL, 0);
 
-	return MPSDLOAD_ERR_OK;
+ERR:
+	mFree(rowbuf);
+	mFree(table16);
 
-PSDERR:
-	return psd->err;
+	return ret;
 }
 
-/** PSD 読み込み */
+/* メイン処理 */
 
-mBool drawFile_load_psd(DrawData *p,const char *filename,mPopupProgress *prog,char **errmes)
+static mlkerr _load_main(AppDraw *p,mPSDLoad *psd,mPopupProgress *prog)
+{
+	mPSDHeader hd;
+	mlkerr ret;
+	int horz,vert;
+
+	//ヘッダ読み込み
+
+	ret = mPSDLoad_readHeader(psd, &hd);
+	if(ret) return ret;
+
+	//CMYK
+
+	if(hd.colmode == MPSD_COLMODE_CMYK)
+		return MLKERR_UNSUPPORTED;
+
+	//画像サイズ制限
+
+	if(hd.width > IMAGE_SIZE_MAX || hd.height > IMAGE_SIZE_MAX)
+		return MLKERR_MAX_SIZE;
+
+	//画像リソース
+
+	ret = mPSDLoad_readResource(psd);
+	if(ret) return ret;
+
+	if(!mPSDLoad_res_getResoDPI(psd, &horz, &vert))
+		horz = -1;
+
+	//新規イメージ
+
+	if(!drawImage_newCanvas_openFile(p, hd.width, hd.height,
+		(hd.bits == 16)? 16: 8, horz))
+		return MLKERR_ALLOC;
+
+	//レイヤ or 一枚絵イメージ
+
+	if(hd.layer_num)
+	{
+		//レイヤ
+
+		ret = mPSDLoad_startLayer(psd);
+		if(ret) return ret;
+
+		ret = _load_layer(p, psd, &hd, prog);
+		if(ret) return ret;
+
+		ret = _load_layer_image(p, psd, &hd, prog);
+	}
+	else
+	{
+		//一枚絵イメージ
+
+		ret = _load_image(p, psd, &hd, prog);
+	}
+
+	if(ret) return ret;
+
+	//カレントレイヤセット
+
+	p->curlayer = LayerList_getTopItem(p->layerlist);
+
+	return MLKERR_OK;
+}
+
+/** PSD 読み込み
+ *
+ * PSD 側のビット数で読み込む */
+
+mlkerr drawFile_load_psd(AppDraw *p,const char *filename,mPopupProgress *prog)
 {
 	mPSDLoad *psd;
-	mBool ret = FALSE;
-	int err = -1,horz,vert;
-
-	/* err: [-1] psd->err [-2] サイズ制限 [それ以外] PSD エラー */
+	mlkerr ret;
 
 	//作成
 
 	psd = mPSDLoad_new();
-	if(!psd)
-	{
-		err = MPSDLOAD_ERR_ALLOC;
-		goto ERR;
-	}
+	if(!psd) return MLKERR_ALLOC;
 
 	//開く
 
-	if(!mPSDLoad_openFile(psd, filename)) goto ERR;
-
-	//画像サイズ制限
-
-	if(psd->width > IMAGE_SIZE_MAX || psd->height > IMAGE_SIZE_MAX)
+	ret = mPSDLoad_openFile(psd, filename);
+	if(ret)
 	{
-		err = -2;
-		goto ERR;
+		mPSDLoad_close(psd);
+		return ret;
 	}
 
-	//新規イメージ
+	//処理
 
-	if(!drawImage_new(p, psd->width, psd->height, -1, -1))
-	{
-		err = MPSDLOAD_ERR_ALLOC;
-		goto ERR;
-	}
-
-	//画像リソース (DPI)
-
-	if(mPSDLoad_readResource_resolution_dpi(psd, &horz, &vert))
-		p->imgdpi = horz;
-
-	//レイヤ or 一枚絵イメージ
-
-	if(mPSDLoad_isHaveLayer(psd))
-	{
-		//レイヤ読み込み
-
-		if(!mPSDLoad_beginLayer(psd)) goto ERR;
-
-		err = _load_from_layer(p, psd, prog);
-
-		mPSDLoad_endLayer(psd);
-	}
-	else
-	{
-		//レイヤなしの場合は一枚絵イメージから読み込み
-
-		err = _load_from_image(p, psd, prog);
-	}
-
-	//成功
-
-	if(err == MPSDLOAD_ERR_OK)
-	{
-		p->curlayer = LayerList_getItem_top(p->layerlist);
-		ret = TRUE;
-	}
-
-	//---------
-
-ERR:
-	//失敗時、エラー文字列
-	
-	if(!ret)
-	{
-		if(err == -2)
-			*errmes = mStrdup("image size is large");
-		else
-			*errmes = mStrdup(mPSDLoad_getErrorMessage((err == -1)? psd->err: err));
-	}
+	ret = _load_main(p, psd, prog);
 
 	mPSDLoad_close(psd);
 
@@ -616,315 +785,586 @@ ERR:
 }
 
 
-//=============================
+//******************************
 // 保存
-//=============================
+//******************************
 
 
-/** 一枚絵イメージ書き込み
- *
- * blendimg に RGB 8bit としてセットされている。 */
+/* 書き込むレイヤ数を取得 */
 
-static mBool _psdimage_write(DrawData *p,mPSDSave *psd,int type,mPopupProgress *prog)
+static int _get_write_layernum(AppDraw *p)
 {
-	uint8_t *ps,*pd,*dstbuf,val,f;
-	int w,h,i,j,ix,iy;
+	LayerItem *pi;
+	int num = 0;
 
-	if(!mPSDSave_beginImage(psd)) return FALSE;
-	
-	w = p->imgw;
-	h = p->imgh;
-	ps = (uint8_t *)p->blendimg->buf;
-
-	dstbuf = mPSDSave_getLineImageBuf(psd);
-
-	switch(type)
+	for(pi = LayerList_getTopItem(p->layerlist); pi; pi = LayerItem_getNext(pi))
 	{
-		//RGB
-		case _TYPE_RGB:
-			mPopupProgressThreadBeginSubStep_onestep(prog, 30, h * 3);
-
-			for(i = 0; i < 3; i++)
-			{
-				mPSDSave_beginImageChannel(psd);
-
-				ps = (uint8_t *)p->blendimg->buf + i;
-
-				for(iy = h; iy > 0; iy--)
-				{
-					pd = dstbuf;
-
-					for(ix = w; ix > 0; ix--, ps += 3)
-						*(pd++) = *ps;
-
-					mPSDSave_writeImageChannelLine(psd);
-
-					mPopupProgressThreadIncSubStep(prog);
-				}
-
-				mPSDSave_endImageChannel(psd);
-			}
-			break;
-
-		//グレイスケール
-		case _TYPE_GRAY:
-			mPopupProgressThreadBeginSubStep_onestep(prog, 20, h);
-
-			mPSDSave_beginImageChannel(psd);
-			
-			for(iy = h; iy > 0; iy--)
-			{
-				pd = dstbuf;
-
-				for(ix = w; ix > 0; ix--, ps += 3)
-					*(pd++) = _TOGRAY(ps[0], ps[1], ps[2]);
-
-				mPSDSave_writeImageChannelLine(psd);
-
-				mPopupProgressThreadIncSubStep(prog);
-			}
-
-			mPSDSave_endImageChannel(psd);
-			break;
-
-		//mono (白=0、それ以外は1)
-		case _TYPE_MONO:
-			mPopupProgressThreadBeginSubStep_onestep(prog, 20, h);
-
-			mPSDSave_beginImageChannel(psd);
-			
-			for(iy = h; iy > 0; iy--)
-			{
-				pd = dstbuf;
-				ix = w;
-
-				for(i = (w + 7) >> 3; i > 0; i--)
-				{
-					val = 0;
-					f = 0x80;
-
-					for(j = 8; j && ix; j--, ix--, ps += 3, f >>= 1)
-					{
-						if(ps[0] != 255 || ps[1] != 255 || ps[2] != 255)
-							val |= f;
-					}
-
-					*(pd++) = val;
-				}
-
-				mPSDSave_writeImageChannelLine(psd);
-
-				mPopupProgressThreadIncSubStep(prog);
-			}
-
-			mPSDSave_endImageChannel(psd);
-			break;
+		if(LAYERITEM_IS_FOLDER(pi))
+			//フォルダを閉じる用に1つ必要
+			num += 2;
+		else
+			num++;
 	}
 
-	return TRUE;
+	return num;
 }
 
-/** レイヤ出力 */
+/* フォルダ閉じるレイヤのセット */
 
-static mBool _write_layer(DrawData *p,mPSDSave *psd,int layernum,mPopupProgress *prog)
+static mlkerr _set_layer_folder_close(mPSDSave *psd,mPSDLayer *info,int layerno)
 {
-	LayerItem *pi_bottom,*pi;
-	mPSDSaveLayerInfo info;
-	mRect rc;
-	mBox box;
-	int ch,ix,iy;
-	uint8_t *pd;
-	RGBAFix15 pix;
+	mList list = MLIST_INIT;
+	mlkerr ret;
 
-	mPopupProgressThreadSetMax(prog, layernum * 4);
+	info->layerno = layerno;
+	info->chnum = 4;
+	info->flags = MPSD_LAYER_FLAGS_HAVE_BIT4 | MPSD_LAYER_FLAGS_NODISP;
+	info->blendmode = MPSD_BLENDMODE_NORMAL;
 
-	//書き込む先頭レイヤ
+	mPSDSave_exinfo_addSection(&list,
+		MPSD_INFO_SELECTION_TYPE_END_LAST, MPSD_BLENDMODE_NORMAL);
 
-	pi_bottom = LayerList_getItem_bottomNormal(p->layerlist);
-
-	//レイヤ開始
-
-	if(!mPSDSave_beginLayer(psd, layernum)) return FALSE;
-
-	//レイヤ情報
-
-	for(pi = pi_bottom; pi; pi = LayerItem_getPrevNormal(pi))
-	{
-		mMemzero(&info, sizeof(mPSDSaveLayerInfo));
+	//
 	
-		if(TileImage_getHaveImageRect_pixel(pi->img, &rc, NULL))
+	ret = mPSDSave_setLayerInfo(psd, info, &list);
+
+	mPSDSave_exinfo_freeList(&list);
+
+	return ret;
+}
+
+/* レイヤ情報の書き込み */
+
+static mlkerr _write_layer_info(AppDraw *p,mPSDSave *psd)
+{
+	LayerItem *pi;
+	mPSDLayer info;
+	mList list = MLIST_INIT;
+	mRect rc;
+	int layerno;
+	mlkerr ret;
+
+	//レイヤ情報セット
+
+	layerno = 0;
+
+	for(pi = LayerList_getBottomLastItem(p->layerlist); pi; pi = LayerItem_getPrev(pi))
+	{
+		mMemset0(&info, sizeof(mPSDLayer));
+
+		//------ フォルダ閉じる
+		// :(フォルダに子がある時) 最後のアイテムの前
+		// :(フォルダに子がない時) フォルダの前
+		// :[!] 子がないフォルダが、親フォルダの最後のアイテムの場合、上記の条件を2つとも満たすため、
+		// : 2個続くことになる。
+
+		if(pi->i.parent && !pi->i.next)
 		{
-			info.left = rc.x1;
-			info.top = rc.y1;
-			info.right = rc.x2 + 1;
-			info.bottom = rc.y2 + 1;
+			ret = _set_layer_folder_close(psd, &info, layerno++);
+			if(ret) return ret;
 		}
 
-		info.name = pi->name;
-		info.opacity = (int)(pi->opacity / 128.0 * 255.0 + 0.5);
-		info.hide = !(pi->flags & LAYERITEM_F_VISIBLE);
-		info.blendmode = g_blendmode[pi->blendmode];
-		info.channels = 4;
-
-		mPSDSave_writeLayerInfo(psd, &info);
-	}
-
-	if(!mPSDSave_endLayerInfo(psd)) return FALSE;
-
-	//イメージ
-
-	for(pi = pi_bottom; pi; pi = LayerItem_getPrevNormal(pi))
-	{
-		if(!mPSDSave_beginLayerImage(psd, &box))
+		if(LAYERITEM_IS_FOLDER(pi) && !pi->i.first)
 		{
-			//空イメージ
+			ret = _set_layer_folder_close(psd, &info, layerno++);
+			if(ret) return ret;
+		}
 
-			mPopupProgressThreadAddPos(prog, 4);
+		//------ イメージ or フォルダ
+
+		info.layerno = layerno++;
+		info.name = pi->name;
+		info.opacity = (int)(pi->opacity / 128.0 * 255 + 0.5);
+		info.chnum = 4;
+		info.flags = MPSD_LAYER_FLAGS_HAVE_BIT4;
+
+		if(!LAYERITEM_IS_VISIBLE(pi))
+			info.flags |= MPSD_LAYER_FLAGS_HIDE;
+
+		if(LAYERITEM_IS_FOLDER(pi))
+		{
+			//フォルダ
+			
+			info.flags |= MPSD_LAYER_FLAGS_NODISP;
+			info.blendmode = MPSD_BLENDMODE_NORMAL;
+
+			mPSDSave_exinfo_addSection(&list,
+				(LAYERITEM_IS_FOLDER_OPENED(pi))?
+					MPSD_INFO_SELECTION_TYPE_FOLDER_OPEN: MPSD_INFO_SELECTION_TYPE_FOLDER_CLOSED,
+				MPSD_BLENDMODE_NORMAL);
 		}
 		else
 		{
-			//各チャンネル
+			//イメージ
+			
+			info.blendmode = g_blendmode[pi->blendmode];
+			info.param = pi;
 
-			for(ch = 0; ch < 4; ch++)
-			{
-				mPSDSave_beginLayerImageChannel(psd,
-					(ch == 3)? MPSD_CHANNEL_ID_ALPHA: ch);
-				
-				for(iy = 0; iy < box.h; iy++)
-				{
-					pd = mPSDSave_getLineImageBuf(psd);
-
-					for(ix = 0; ix < box.w; ix++)
-					{
-						TileImage_getPixel(pi->img, box.x + ix, box.y + iy, &pix);
-
-						*(pd++) = RGBCONV_FIX15_TO_8(pix.c[ch]);
-					}
-
-					mPSDSave_writeLayerImageChannelLine(psd);
-				}
-
-				mPSDSave_endLayerImageChannel(psd);
-
-				mPopupProgressThreadIncPos(prog);
-			}
+			if(TileImage_getHaveImageRect_pixel(pi->img, &rc, NULL))
+				mBoxSetRect(&info.box_img, &rc);
 		}
+
+		ret = mPSDSave_setLayerInfo(psd, &info, &list);
+
+		mPSDSave_exinfo_freeList(&list);
+		
+		if(ret) return ret;
+	}
+
+	//レイヤ情報書き込み
+
+	return mPSDSave_writeLayerInfo(psd);
+}
+
+/* レイヤイメージ書き込み (8bit->8bit) */
+
+static mlkerr _write_layer_image_8bit(mPSDSave *psd,TileImage *img,uint8_t *rowbuf,int ch,mRect *rcsrc)
+{
+	mRect rc;
+	int ix,iy;
+	mlkerr ret;
+	uint8_t *pd,col[4];
+
+	rc = *rcsrc;
+
+	for(iy = rc.y1; iy <= rc.y2; iy++)
+	{
+		pd = rowbuf;
+		
+		for(ix = rc.x1; ix <= rc.x2; ix++)
+		{
+			TileImage_getPixel(img, ix, iy, col);
+
+			*(pd++) = col[ch];
+		}
+
+		ret = mPSDSave_writeLayerImageRowCh(psd, rowbuf);
+		if(ret) return ret;
+	}
+
+	return MLKERR_OK;
+}
+
+/* レイヤイメージ書き込み (16bit->8bit) */
+
+static mlkerr _write_layer_image_16to8bit(mPSDSave *psd,TileImage *img,uint8_t *rowbuf,int ch,mRect *rcsrc)
+{
+	mRect rc;
+	int ix,iy;
+	mlkerr ret;
+	uint8_t *pd;
+	uint16_t col[4];
+
+	rc = *rcsrc;
+
+	for(iy = rc.y1; iy <= rc.y2; iy++)
+	{
+		pd = rowbuf;
+		
+		for(ix = rc.x1; ix <= rc.x2; ix++)
+		{
+			TileImage_getPixel(img, ix, iy, col);
+
+			*(pd++) = (int)((double)col[ch] / 0x8000 * 255 + 0.5);
+		}
+
+		ret = mPSDSave_writeLayerImageRowCh(psd, rowbuf);
+		if(ret) return ret;
+	}
+
+	return MLKERR_OK;
+}
+
+/* レイヤイメージ書き込み (16bit(fix15)->16bit) */
+
+static mlkerr _write_layer_image_16bit(mPSDSave *psd,TileImage *img,uint8_t *rowbuf,int ch,mRect *rcsrc)
+{
+	mRect rc;
+	int ix,iy;
+	mlkerr ret;
+	uint16_t *pd,col[4];
+
+	rc = *rcsrc;
+
+	for(iy = rc.y1; iy <= rc.y2; iy++)
+	{
+		pd = (uint16_t *)rowbuf;
+		
+		for(ix = rc.x1; ix <= rc.x2; ix++)
+		{
+			TileImage_getPixel(img, ix, iy, col);
+
+			*(pd++) = (int)((double)col[ch] / 0x8000 * 0xffff + 0.5);
+		}
+
+		ret = mPSDSave_writeLayerImageRowCh(psd, rowbuf);
+		if(ret) return ret;
+	}
+
+	return MLKERR_OK;
+}
+
+/* レイヤ出力 (RGBA) */
+
+static mlkerr _write_layer(AppDraw *p,mPSDSave *psd,int layernum,int bits,mPopupProgress *prog)
+{
+	LayerItem *pi;
+	uint8_t *rowbuf;
+	mPSDLayer info;
+	mSize size;
+	mRect rc;
+	int ch,i,srcbits;
+	mlkerr ret;
+
+	//レイヤ開始
+
+	ret = mPSDSave_startLayer(psd, layernum);
+	if(ret) return ret;
+
+	//レイヤ情報書き込み
+
+	ret = _write_layer_info(p, psd);
+	if(ret) return ret;
+
+	//チャンネルバッファ
+
+	mPSDSave_getLayerImageMaxSize(psd, &size);
+
+	rowbuf = (uint8_t *)mMalloc(size.w * (bits / 8));
+	if(!rowbuf) return MLKERR_ALLOC;
+
+	//レイヤイメージ
+
+	srcbits = p->imgbits;
+
+	for(i = 0; i < layernum; i++)
+	{
+		mPSDSave_getLayerInfo(psd, i, &info);
+
+		//pi = NULL でフォルダ関連
+		// [!] 空イメージでも書き込む必要あり
+
+		pi = (LayerItem *)info.param;
+
+		//イメージ開始
+		
+		ret = mPSDSave_startLayerImage(psd);
+		if(ret) goto ERR;
+
+		//イメージ範囲
+
+		mRectSetBox(&rc, &info.box_img);
+
+		//各チャンネル
+
+		for(ch = 0; ch < 4; ch++)
+		{
+			//チャンネル開始
+			
+			ret = mPSDSave_startLayerImageCh(psd,
+				(ch == 3)? MPSD_CHID_ALPHA: ch);
+
+			if(ret) goto ERR;
+			
+			//イメージ
+
+			if(pi)
+			{
+				if(srcbits == 8)
+					ret = _write_layer_image_8bit(psd, pi->img, rowbuf, ch, &rc);
+				else if(bits == 8)
+					//16->8bit
+					ret = _write_layer_image_16to8bit(psd, pi->img, rowbuf, ch, &rc);
+				else
+					//16bit
+					ret = _write_layer_image_16bit(psd, pi->img, rowbuf, ch, &rc);
+
+				if(ret) goto ERR;
+			}
+
+			//チャンネル終了
+
+			ret = mPSDSave_endLayerImageCh(psd);
+			if(ret) goto ERR;
+
+			mPopupProgressThreadIncPos(prog);
+		}
+
+		//イメージ終了
 
 		mPSDSave_endLayerImage(psd);
 	}
 
-	mPSDSave_endLayer(psd);
+ERR:
+	mFree(rowbuf);
 
-	return TRUE;
-}
-
-/** PSD 保存 (レイヤ維持)
- *
- * [!] フォルダは保存されない。 */
-
-mBool drawFile_save_psd_layer(DrawData *p,const char *filename,mPopupProgress *prog)
-{
-	mPSDSave *psd;
-	mPSDSaveInfo info;
-	mBool ret = FALSE;
-	int layernum;
-
-	//通常レイヤ数 (フォルダしかない場合はエラー)
-
-	layernum = LayerList_getNormalLayerNum(p->layerlist);
-
-	if(layernum == 0) return FALSE;
-
-	//情報
-
-	info.width = p->imgw;
-	info.height = p->imgh;
-	info.img_channels = 3;
-	info.bits = 8;
-	info.colmode = MPSD_COLMODE_RGB;
-
-	//開く
-
-	psd = mPSDSave_openFile(filename, &info,
-		((APP_CONF->save.flags & CONFIG_SAVEOPTION_F_PSD_UNCOMPRESSED) == 0));
-
-	if(!psd) return FALSE;
-
-	//画像リソース
-
-	mPSDSave_beginResource(psd);
-
-	mPSDSave_writeResource_resolution_dpi(psd, p->imgdpi, p->imgdpi);
-	mPSDSave_writeResource_currentLayer(psd, 0);
-
-	mPSDSave_endResource(psd);
-
-	//レイヤ
-
-	if(_write_layer(p, psd, layernum, prog))
-	{
-		//一枚絵イメージ
-
-		ret = _psdimage_write(p, psd, _TYPE_RGB, prog);
-	}
-
-	mPSDSave_close(psd);
-
-	if(!ret) mDeleteFile(filename);
+	if(ret == MLKERR_OK)
+		ret = mPSDSave_endLayer(psd);
 
 	return ret;
 }
 
-/** PSD 保存 (レイヤなし)
- *
- * @param type 1:8bitRGB 2:grayscale 3:mono */
+/* 一枚絵イメージ書き込み */
 
-mBool drawFile_save_psd_image(DrawData *p,int type,const char *filename,mPopupProgress *prog)
+static mlkerr _write_image(AppDraw *p,mPSDSave *psd,int type,int bits,
+	mPopupProgress *prog,int substep)
 {
-	mPSDSave *psd;
-	mPSDSaveInfo info;
-	mBool ret;
+	uint8_t *rowbuf,**ppbuf,*ps8,*pd8,*buf,val,f;
+	uint16_t *ps16,*pd16;
+	int width,height,ch,ix,iy,i,j;
+	mlkerr ret;
 
-	//情報
-
-	info.width = p->imgw;
-	info.height = p->imgh;
-	info.img_channels = (type == _TYPE_RGB)? 3: 1;
-	info.bits = (type == _TYPE_MONO)? 1: 8;
+	width = p->imgw;
+	height = p->imgh;
 
 	switch(type)
 	{
-		case _TYPE_RGB: info.colmode = MPSD_COLMODE_RGB; break;
-		case _TYPE_GRAY: info.colmode = MPSD_COLMODE_GRAYSCALE; break;
-		default: info.colmode = MPSD_COLMODE_MONO; break;
+		//RGB/Layer
+		case _TYPE_LAYER:
+		case _TYPE_RGB:
+			rowbuf = (uint8_t *)mMalloc(mPSDSave_getImageRowSize(psd));
+			if(!rowbuf) return MLKERR_ALLOC;
+
+			mPopupProgressThreadSubStep_begin(prog, substep, height * 3);
+
+			for(ch = 0; ch < 3; ch++)
+			{
+				ppbuf = p->imgcanvas->ppbuf;
+
+				for(iy = height; iy; iy--)
+				{
+					buf = *(ppbuf++);
+					
+					if(bits == 8)
+					{
+						//8bit
+						
+						pd8 = rowbuf;
+						ps8 = buf + ch;
+
+						for(ix = width; ix; ix--, ps8 += 3)
+							*(pd8++) = *ps8;
+					}
+					else
+					{
+						//16bit
+						
+						pd16 = (uint16_t *)rowbuf;
+						ps16 = (uint16_t *)buf + ch;
+
+						for(ix = width; ix; ix--, ps16 += 3)
+							*(pd16++) = *ps16;
+					}
+
+					//書き込み
+
+					ret = mPSDSave_writeImageRowCh(psd, rowbuf);
+					if(ret)
+					{
+						mFree(rowbuf);
+						return ret;
+					}
+
+					mPopupProgressThreadSubStep_inc(prog);
+				}
+			}
+
+			mFree(rowbuf);
+			break;
+
+		//グレイスケール
+		case _TYPE_GRAY:
+			mPopupProgressThreadSubStep_begin(prog, substep, height);
+
+			ppbuf = p->imgcanvas->ppbuf;
+
+			for(iy = height; iy; iy--)
+			{
+				buf = *(ppbuf++);
+			
+				if(bits == 8)
+				{
+					//8bit
+					
+					pd8 = ps8 = buf;
+
+					for(ix = width; ix; ix--, ps8 += 3)
+						*(pd8++) = _RGB_TO_GRAY(ps8[0], ps8[1], ps8[2]);
+				}
+				else
+				{
+					//16bit
+					
+					pd16 = ps16 = (uint16_t *)buf;
+
+					for(ix = width; ix; ix--, ps16 += 3)
+						*(pd16++) = _RGB_TO_GRAY(ps16[0], ps16[1], ps16[2]);
+				}
+
+				ret = mPSDSave_writeImageRowCh(psd, buf);
+				if(ret) return ret;
+
+				mPopupProgressThreadSubStep_inc(prog);
+			}
+			break;
+
+		//1bit MONO (白=0、それ以外は1)
+		default:
+			mPopupProgressThreadSubStep_begin(prog, substep, height);
+
+			ppbuf = p->imgcanvas->ppbuf;
+
+			for(iy = height; iy; iy--)
+			{
+				buf = *(ppbuf++);
+				ps8 = pd8 = buf;
+				ix = width;
+
+				for(i = (width + 7) >> 3; i; i--)
+				{
+					val = 0;
+					f = 0x80;
+
+					for(j = 8; j && ix; j--, ix--, ps8 += 3, f >>= 1)
+					{
+						if(ps8[0] != 255 || ps8[1] != 255 || ps8[2] != 255)
+							val |= f;
+					}
+
+					*(pd8++) = val;
+				}
+
+				ret = mPSDSave_writeImageRowCh(psd, buf);
+				if(ret) return ret;
+
+				mPopupProgressThreadSubStep_inc(prog);
+			}
+			break;
 	}
 
-	//開く
+	return MLKERR_OK;
+}
 
-	psd = mPSDSave_openFile(filename, &info,
-		((APP_CONF->save.flags & CONFIG_SAVEOPTION_F_PSD_UNCOMPRESSED) == 0));
+/* ヘッダ書き込み */
 
-	if(!psd) return FALSE;
+static mlkerr _write_header(AppDraw *p,mPSDSave *psd,int type,int bits)
+{
+	mPSDHeader hd;
 
-	//画像リソース (DPI)
+	hd.width = p->imgw;
+	hd.height = p->imgh;
+	hd.bits = bits;
+	hd.img_channels = (type == _TYPE_GRAY || type == _TYPE_MONO)? 1: 3;
 
-	mPSDSave_beginResource(psd);
+	if(type == _TYPE_GRAY)
+		hd.colmode = MPSD_COLMODE_GRAYSCALE;
+	else if(type == _TYPE_MONO)
+		hd.colmode = MPSD_COLMODE_MONO;
+	else
+		//RGB/Layer
+		hd.colmode = MPSD_COLMODE_RGB;
 
-	mPSDSave_writeResource_resolution_dpi(psd, p->imgdpi, p->imgdpi);
+	return mPSDSave_writeHeader(psd, &hd);
+}
 
-	mPSDSave_endResource(psd);
+/* 書き込み処理 */
+
+static mlkerr _write_main(AppDraw *p,mPSDSave *psd,mPopupProgress *prog)
+{
+	mlkerr ret;
+	int type,bits,substep,layernum;
+
+	type = SAVEOPT_PSD_GET_TYPE(APPCONF->save.psd);
+
+	if(type == _TYPE_MONO)
+		bits = 1;
+	else if(p->imgbits == 16 && (APPCONF->save.psd & SAVEOPT_PSD_F_16BIT))
+		bits = 16;
+	else
+		bits = 8;
+
+	//ヘッダ書き込み
+
+	ret = _write_header(p, psd, type, bits);
+	if(ret) return ret;
+
+	//リソース書き込み
+
+	mPSDSave_res_setResoDPI(psd, p->imgdpi, p->imgdpi);
+
+	ret = mPSDSave_writeResource(psd);
+	if(ret) return ret;
 	
-	//レイヤなし
+	//レイヤ
 
-	mPSDSave_writeLayerNone(psd);
+	if(type == _TYPE_LAYER)
+	{
+		//レイヤあり
+		
+		layernum = _get_write_layernum(p);
+	
+		substep = 20;
+		mPopupProgressThreadSetMax(prog, substep + layernum * 4);
+
+		ret = _write_layer(p, psd, layernum, bits, prog);
+		if(ret) return ret;
+	}
+	else
+	{
+		//一枚絵
+		
+		substep = 100;
+		mPopupProgressThreadSetMax(prog, substep);
+
+		ret = mPSDSave_writeLayerNone(psd);
+		if(ret) return ret;
+	}
 
 	//一枚絵イメージ
 
-	ret = _psdimage_write(p, psd, type, prog);
+	ret = mPSDSave_startImage(psd);
+	if(ret) return ret;
+
+	ret = _write_image(p, psd, type, bits, prog, substep);
+	if(ret) return ret;
+
+	return mPSDSave_endImage(psd);
+}
+
+/** PSD 保存 */
+
+mlkerr drawFile_save_psd(AppDraw *p,const char *filename,mPopupProgress *prog)
+{
+	mPSDSave *psd;
+	mlkerr ret;
+
+	//作成
+
+	psd = mPSDSave_new();
+	if(!psd) return MLKERR_ALLOC;
+
+	//開く
+
+	ret = mPSDSave_openFile(psd, filename);
+	if(ret)
+	{
+		mPSDSave_close(psd);
+		return ret;
+	}
+
+	//無圧縮
+
+	if(APPCONF->save.psd & SAVEOPT_PSD_F_UNCOMPRESS)
+		mPSDSave_setCompression_none(psd);
+
+	//
+
+	ret = _write_main(p, psd, prog);
 
 	mPSDSave_close(psd);
 
-	if(!ret) mDeleteFile(filename);
+	if(ret) mDeleteFile(filename);
 
 	return ret;
 }
+

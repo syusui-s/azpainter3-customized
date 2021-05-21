@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,73 +18,77 @@
 $*/
 
 /**********************************
- * DrawData 操作関連の定義
+ * AppDraw 操作関連の定義
  **********************************/
 
-#ifndef DRAW_OP_DEF_H
-#define DRAW_OP_DEF_H
+#ifndef AZPT_DRAW_OP_DEF_H
+#define AZPT_DRAW_OP_DEF_H
 
-/* DrawData::w.optype (現在の操作タイプ) */
+/* AppDraw::w.optype (現在の操作タイプ) */
 
 enum
 {
 	DRAW_OPTYPE_NONE,
-	DRAW_OPTYPE_GENERAL,
-	DRAW_OPTYPE_DRAW_FREE,
-	DRAW_OPTYPE_SELIMGMOVE,
+	DRAW_OPTYPE_GENERAL,	//関数のみで完結するため、タイプ指定の必要なし
+	DRAW_OPTYPE_DRAW_FREE,	//自由線描画
+	DRAW_OPTYPE_SELIMGMOVE,	//選択範囲イメージのコピー/移動
+	DRAW_OPTYPE_TMPIMG_MOVE,	//tileimg_tmp のイメージ移動処理
+	DRAW_OPTYPE_TEXTLAYER_SEL,	//テキストレイヤのテキスト選択中
 
-	DRAW_OPTYPE_XOR_LINE,
-	DRAW_OPTYPE_XOR_BOXAREA,
-	DRAW_OPTYPE_XOR_BOXIMAGE,
-	DRAW_OPTYPE_XOR_ELLIPSE,
-	DRAW_OPTYPE_XOR_SUMLINE,
-	DRAW_OPTYPE_XOR_BEZIER,
-	DRAW_OPTYPE_XOR_POLYGON,
-	DRAW_OPTYPE_XOR_LASSO,
-	DRAW_OPTYPE_SPLINE
+	DRAW_OPTYPE_XOR_LINE,		//直線
+	DRAW_OPTYPE_XOR_RECT_CANV,	//矩形 (キャンバスに対する)
+	DRAW_OPTYPE_XOR_RECT_IMAGE,	//矩形 (イメージに対する)
+	DRAW_OPTYPE_XOR_ELLIPSE,	//楕円
+	DRAW_OPTYPE_XOR_SUMLINE,	//連続直線/集中線
+	DRAW_OPTYPE_XOR_BEZIER,		//ベジェ曲線
+	DRAW_OPTYPE_XOR_POLYGON,	//多角形
+	DRAW_OPTYPE_XOR_LASSO		//多角形フリーハンド
 };
 
-/* DrawData::w.opsubtype (操作タイプのサブ情報) */
+/* AppDraw::w.optype_sub (操作タイプのサブ情報) */
 
 enum
 {
-	DRAW_OPSUB_DRAW_LINE,
-	DRAW_OPSUB_DRAW_FRAME,
-	DRAW_OPSUB_DRAW_FILL,
-	DRAW_OPSUB_DRAW_GRADATION,
-	DRAW_OPSUB_DRAW_SUCCLINE,
-	DRAW_OPSUB_DRAW_CONCLINE,
-	DRAW_OPSUB_SET_STAMP,
-	DRAW_OPSUB_SET_SELECT,
-	DRAW_OPSUB_SET_BOXEDIT,
+	DRAW_OPSUB_DRAW_LINE,		//直線描画
+	DRAW_OPSUB_DRAW_FRAME,		//枠描画
+	DRAW_OPSUB_DRAW_FILL,		//塗りつぶし描画
+	DRAW_OPSUB_DRAW_GRADATION,	//グラデーション描画
+	DRAW_OPSUB_DRAW_SUCCLINE,	//連続直線
+	DRAW_OPSUB_DRAW_CONCLINE,	//集中線
+	DRAW_OPSUB_SET_STAMP,		//スタンプイメージのセット
+	DRAW_OPSUB_SET_SELECT,		//選択範囲のセット
+	DRAW_OPSUB_SET_BOXSEL,		//矩形範囲をセット
 
-	DRAW_OPSUB_TO_BEZIER,
-	DRAW_OPSUB_RULE_SETTING
+	DRAW_OPSUB_TO_BEZIER,		//直線からベジェ曲線へ切り替え
+	DRAW_OPSUB_RULE_SETTING		//定規設定
 };
 
-/* funcAction() 時のアクション */
+/* func_action() 時のアクション */
 
 enum
 {
-	DRAW_FUNCACTION_RBTT_UP,
-	DRAW_FUNCACTION_LBTT_DBLCLK,
-	DRAW_FUNCACTION_KEY_ENTER,
-	DRAW_FUNCACTION_KEY_ESC,
-	DRAW_FUNCACTION_KEY_BACKSPACE,
-	DRAW_FUNCACTION_UNGRAB
+	DRAW_FUNC_ACTION_RBTT_UP,		//右ボタン離し
+	DRAW_FUNC_ACTION_LBTT_DBLCLK,	//左ボタンダブルクリック
+	DRAW_FUNC_ACTION_KEY_ENTER,		//ENTER キー押し
+	DRAW_FUNC_ACTION_KEY_ESC,		//ESC キー押し
+	DRAW_FUNC_ACTION_KEY_BACKSPACE,	//BS キー押し
+	DRAW_FUNC_ACTION_UNGRAB			//グラブ解除
 };
 
-/* DrawData::w.opflags (操作中のオプションフラグ) */
+/* AppDraw::w.opflags (操作中のオプションフラグ) */
 
 enum
 {
-	DRAW_OPFLAGS_MOTION_DISABLE_STATE = 1<<0,	//ポインタ移動時、装飾キー無効
-	DRAW_OPFLAGS_MOTION_POS_INT = 1<<1,			//ポインタ移動時、位置は整数値で取得
-	DRAW_OPFLAGS_BRUSH_PRESSURE_MAX = 1<<2		//ブラシ描画時、常に筆圧最大
+	DRAW_OPFLAGS_MOTION_DISABLE_STATE = 1<<0,	//ポインタ移動時、装飾キーを無効にする
+	DRAW_OPFLAGS_MOTION_POS_INT = 1<<1,			//ポインタ移動時、位置は整数値で判断し、前回と同じ位置なら処理しない
+	//DRAW_OPFLAGS_BRUSH_PRESSURE_MAX = 1<<2		//ブラシ描画時、常に筆圧最大
 };
 
-/* DrawData::w.drawinfo_flags */
+/* AppDraw::w.drawinfo_flags */
 
-#define DRAW_DRAWINFO_F_BRUSH_STROKE  1  //ブラシ描画でストローク重ね塗りを行う
+enum
+{
+	DRAW_DRAWINFO_F_BRUSH_STROKE = 1<<0  //ブラシ描画でストローク重ね塗りを行う
+};
 
 #endif

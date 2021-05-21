@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,40 +18,122 @@
 $*/
 
 /**************************************
- * フィルタ処理
- *
- * 描画
+ * フィルタ処理: 描画
  **************************************/
 
 #include <math.h>
 
-#include "mDef.h"
-#include "mRandXorShift.h"
+#include "mlk.h"
+#include "mlk_rand.h"
 
-#include "TileImage.h"
+#include "tileimage.h"
 
-#include "FilterDrawInfo.h"
-#include "filter_sub.h"
+#include "def_filterdraw.h"
+#include "pv_filter_sub.h"
 
-#include "PerlinNoise.h"
+#include "perlin_noise.h"
 
 
-/** 雲模様 */
+//===========================
+// 雲模様
+//===========================
 
-mBool FilterDraw_cloud(FilterDrawInfo *info)
+
+/* 8bit */
+
+static mlkbool _proc_cloud_8bit(FilterDrawInfo *info)
 {
 	PerlinNoise *perlin;
 	int i,ix,iy,xx,yy,n;
 	double resmul;
-	mBool to_alpha;
-	RGBAFix15 pix1,pix2,pix;
+	mlkbool to_alpha;
+	RGB8 col1,col2;
+	RGBA8 col;
 	TileImageSetPixelFunc setpix;
 
 	FilterSub_getPixelFunc(&setpix);
 
 	//PerlinNoise 初期化
 
-	perlin = PerlinNoise_new(info->val_bar[0] / 400.0, info->val_bar[1] * 0.01);
+	perlin = PerlinNoise_new(info->val_bar[0] / 400.0, info->val_bar[1] * 0.01, info->rand);
+	if(!perlin) return FALSE;
+
+	//
+
+	resmul = info->val_bar[2] * 5 + 38;
+
+	//色
+
+	to_alpha = FALSE;
+
+	switch(info->val_combo[0])
+	{
+		//黒/白
+		case 0:
+			col1.r = col1.g = col1.b = 0;
+			col2.r = col2.g = col2.b = 255;
+			break;
+		//描画色/背景色
+		case 1:
+			col1 = info->rgb_drawcol.c8;
+			col2 = info->rgb_bkgnd.c8;
+			break;
+		//黒+アルファ値
+		default:
+			col.v32 = 0;
+			to_alpha = TRUE;
+			break;
+	}
+
+	//
+
+	col.a = 255;
+
+	for(iy = info->rc.y1, yy = 0; iy <= info->rc.y2; iy++, yy++)
+	{
+		for(ix = info->rc.x1, xx = 0; ix <= info->rc.x2; ix++, xx++)
+		{
+			n = (int)(PerlinNoise_getNoise(perlin, xx, yy) * resmul + 128);
+
+			if(n < 0) n = 0;
+			else if(n > 255) n = 255;
+
+			if(to_alpha)
+				col.a = n;
+			else
+			{
+				for(i = 0; i < 3; i++)
+					col.ar[i] = (col2.ar[i] - col1.ar[i]) * n / 255 + col1.ar[i];
+			}
+
+			(setpix)(info->imgdst, ix, iy, &col);
+		}
+
+		FilterSub_prog_substep_inc(info);
+	}
+	
+	PerlinNoise_free(perlin);
+
+	return TRUE;
+}
+
+/* 16bit */
+
+static mlkbool _proc_cloud_16bit(FilterDrawInfo *info)
+{
+	PerlinNoise *perlin;
+	int i,ix,iy,xx,yy,n;
+	double resmul;
+	mlkbool to_alpha;
+	RGB16 col1,col2;
+	RGBA16 col;
+	TileImageSetPixelFunc setpix;
+
+	FilterSub_getPixelFunc(&setpix);
+
+	//PerlinNoise 初期化
+
+	perlin = PerlinNoise_new(info->val_bar[0] / 400.0, info->val_bar[1] * 0.01, info->rand);
 	if(!perlin) return FALSE;
 
 	//
@@ -66,24 +148,24 @@ mBool FilterDraw_cloud(FilterDrawInfo *info)
 	{
 		//黒/白
 		case 0:
-			pix1.v64 = 0;
-			pix2.r = pix2.g = pix2.b = 0x8000;
+			col1.r = col1.g = col1.b = 0;
+			col2.r = col2.g = col2.b = COLVAL_16BIT;
 			break;
 		//描画色/背景色
 		case 1:
-			pix1 = info->rgba15Draw;
-			pix2 = info->rgba15Bkgnd;
+			col1 = info->rgb_drawcol.c16;
+			col2 = info->rgb_bkgnd.c16;
 			break;
 		//黒+アルファ値
 		default:
-			pix.v64 = 0;
+			col.v64 = 0;
 			to_alpha = TRUE;
 			break;
 	}
 
 	//
 
-	pix.a = 0x8000;
+	col.a = COLVAL_16BIT;
 
 	for(iy = info->rc.y1, yy = 0; iy <= info->rc.y2; iy++, yy++)
 	{
@@ -92,20 +174,20 @@ mBool FilterDraw_cloud(FilterDrawInfo *info)
 			n = (int)(PerlinNoise_getNoise(perlin, xx, yy) * resmul + 0x4000);
 
 			if(n < 0) n = 0;
-			else if(n > 0x8000) n = 0x8000;
+			else if(n > COLVAL_16BIT) n = COLVAL_16BIT;
 
 			if(to_alpha)
-				pix.a = n;
+				col.a = n;
 			else
 			{
 				for(i = 0; i < 3; i++)
-					pix.c[i] = ((pix2.c[i] - pix1.c[i]) * n >> 15) + pix1.c[i];
+					col.ar[i] = ((col2.ar[i] - col1.ar[i]) * n >> 15) + col1.ar[i];
 			}
 
-			(setpix)(info->imgdst, ix, iy, &pix);
+			(setpix)(info->imgdst, ix, iy, &col);
 		}
 
-		FilterSub_progIncSubStep(info);
+		FilterSub_prog_substep_inc(info);
 	}
 	
 	PerlinNoise_free(perlin);
@@ -113,31 +195,49 @@ mBool FilterDraw_cloud(FilterDrawInfo *info)
 	return TRUE;
 }
 
-/** アミトーン描画
- *
- * @param len ボックスの1辺の長さ
- *
- * val_bar : [0] 線数またはサイズ [1] 密度 [2] 角度 [3] DPI */
+/** 雲模様 */
 
-static mBool _draw_amitone(FilterDrawInfo *info,double len)
+mlkbool FilterDraw_draw_cloud(FilterDrawInfo *info)
 {
-	int density,c,ix,iy,ixx,iyy;
-	double rr,dcos,dsin,len_half,dsx,dsy,xx,yy,cx,cy,dyy;
-	RGBAFix15 pix;
+	if(info->bits == 8)
+		return _proc_cloud_8bit(info);
+	else
+		return _proc_cloud_16bit(info);
+}
+
+
+//===========================
+//
+//===========================
+
+
+/** アミトーン描画 */
+
+mlkbool FilterDraw_draw_amitone(FilterDrawInfo *info)
+{
+	int density,c,ix,iy,ixx,iyy,fantialias,bits,maxval;
+	double rr,dcos,dsin,len,len_half,dsx,dsy,xx,yy,cx,cy,dyy;
+	uint64_t col;
 	TileImageSetPixelFunc setpix;
+
+	//val_bar: [0] サイズ [1] 濃度 [2] 角度
 
 	FilterSub_getPixelFunc(&setpix);
 
-	FilterSub_getDrawColor_fromType(info, info->val_combo[0], &pix);
+	FilterSub_getDrawColor_type(info, info->val_combo[0], &col);
 
+	bits = info->bits;
+	maxval = (bits == 8)? 255: COLVAL_16BIT;
+	len = info->val_bar[0] * 0.1;
 	density = info->val_bar[1];
+	fantialias = info->val_ckbtt[0];
 
-	rr = -info->val_bar[2] / 180.0 * M_MATH_PI;
+	rr = info->val_bar[2] / 180.0 * MLK_MATH_PI;
 	dcos = cos(rr);
 	dsin = sin(rr);
 
-	c = (density > 50)? 100 - density: density;		//密度 50% 以上は反転
-	rr = sqrt(len * len * (c * 0.01) / M_MATH_PI);	//点の半径
+	c = (density > 50)? 100 - density: density;		//濃度 50% 以上は反転
+	rr = sqrt(len * len * (c * 0.01) / MLK_MATH_PI);	//点の半径
 	rr *= rr;
 
 	len_half = len * 0.5;
@@ -161,7 +261,7 @@ static mBool _draw_amitone(FilterDrawInfo *info,double len)
 
 			//
 
-			if(info->val_ckbtt[0])
+			if(fantialias)
 			{
 				//アンチエイリアス (5x5)
 
@@ -174,11 +274,14 @@ static mBool _draw_amitone(FilterDrawInfo *info,double len)
 					for(ixx = 0, dsx = xx - cx; ixx < 5; ixx++, dsx += 0.2)
 					{
 						if(dsx * dsx + dyy < rr)
-							c += 0x8000;
+							c++;
 					}
 				}
 
-				c /= 25;
+				if(bits == 8)
+					c = c * 255 / 25;
+				else
+					c = (c << 15) / 25;
 			}
 			else
 			{
@@ -188,7 +291,7 @@ static mBool _draw_amitone(FilterDrawInfo *info,double len)
 				dsy = yy - cy;
 
 				if(dsx * dsx + dsy * dsy < rr)
-					c = 0x8000;
+					c = maxval;
 				else
 					c = 0;
 			}
@@ -196,11 +299,16 @@ static mBool _draw_amitone(FilterDrawInfo *info,double len)
 			//50% 以上は反転
 
 			if(density > 50)
-				c = 0x8000 - c;
+				c = maxval - c;
 
-			pix.a = c;
+			//
 
-			(setpix)(info->imgdst, ix, iy, &pix);
+			if(bits == 8)
+				*((uint8_t *)&col + 3) = c;
+			else
+				*((uint16_t *)&col + 3) = c;
+
+			(setpix)(info->imgdst, ix, iy, &col);
 
 			//
 
@@ -208,35 +316,20 @@ static mBool _draw_amitone(FilterDrawInfo *info,double len)
 			yy += dsin;
 		}
 
-		FilterSub_progIncSubStep(info);
+		FilterSub_prog_substep_inc(info);
 	}
 
 	return TRUE;
 }
 
-/** アミトーン1 */
-
-mBool FilterDraw_amitone1(FilterDrawInfo *info)
-{
-	return _draw_amitone(info, (double)info->val_bar[3] / (info->val_bar[0] * 0.1));
-}
-
-/** アミトーン2 */
-
-mBool FilterDraw_amitone2(FilterDrawInfo *info)
-{
-	return _draw_amitone(info, info->val_bar[0] * 0.1);
-}
-
 /** ランダムに点描画 */
 
-mBool FilterDraw_draw_randpoint(FilterDrawInfo *info)
+mlkbool FilterDraw_draw_randpoint(FilterDrawInfo *info)
 {
 	FilterDrawPointInfo dat;
-	FilterDrawPointFunc setpix;
-	int amount,opamax,rmax,rmin,rlen,opamin,opalen,ix,iy,n;
-
-	FilterSub_getDrawPointFunc(info->val_combo[0], &setpix);
+	FilterSubFunc_drawpoint_setpix setpix;
+	mRandSFMT *rand;
+	int amount,rmax,rmin,rlen,opamax,opamin,opalen,ix,iy,n;
 
 	//FilterDrawPointInfo
 
@@ -245,21 +338,23 @@ mBool FilterDraw_draw_randpoint(FilterDrawInfo *info)
 	dat.coltype = info->val_combo[1];
 	dat.masktype = 0;
 
+	FilterSub_drawpoint_init(&dat, TILEIMAGE_PIXELCOL_NORMAL);
+	FilterSub_drawpoint_getPixelFunc(info->val_combo[0], &setpix);
+
 	//
 
 	amount = info->val_bar[0];
 	rmax = info->val_bar[1];
-	opamax = Density100toFix15(info->val_bar[2]);
-	rmin = (info->val_bar[3] << 8) / 100;
+	rmin = 256 - (info->val_bar[3] << 8) / 100;
 	rlen = 256 - rmin;
-	opamin = (info->val_bar[4] << 8) / 100;
+	opamax = info->val_bar[2];
+	opamin = 256 - (info->val_bar[4] << 8) / 100;
 	opalen = 256 - opamin;
+	rand = info->rand;
 
-	FilterSub_initDrawPoint(info, FALSE);
-	
 	//プレビュー時は背景としてソースをコピー
 
-	FilterSub_copyImage_forPreview(info);
+	FilterSub_copySrcImage_forPreview(info);
 
 	//
 
@@ -269,26 +364,26 @@ mBool FilterDraw_draw_randpoint(FilterDrawInfo *info)
 		{
 			//量調整
 			
-			if((mRandXorShift_getUint32() & 8191) >= amount)
+			if((mRandSFMT_getUint32(rand) & 8191) >= amount)
 				continue;
 
 			//半径
 
-			n = (mRandXorShift_getIntRange(0, 256) * rlen >> 8) + rmin;
+			n = (mRandSFMT_getIntRange(rand, 0, 256) * rlen >> 8) + rmin;
 			dat.radius = rmax * n >> 8;
 
-			//濃度
+			//濃度 (0-100)
 
-			n = (mRandXorShift_getIntRange(0, 256) * opalen >> 8) + opamin;
-			dat.opacity = opamax * n >> 8;
+			n = (mRandSFMT_getIntRange(rand, 0, 256) * opalen >> 8) + opamin;
+			dat.density = opamax * n >> 8;
 
 			//セット
 
-			if(dat.radius > 0 && dat.opacity)
+			if(dat.radius > 0 && dat.density)
 				(setpix)(ix, iy, &dat);
 		}
 
-		FilterSub_progIncSubStep(info);
+		FilterSub_prog_substep_inc(info);
 	}
 	
 	return TRUE;
@@ -296,38 +391,46 @@ mBool FilterDraw_draw_randpoint(FilterDrawInfo *info)
 
 /** 縁に沿って点描画 */
 
-mBool FilterDraw_draw_edgepoint(FilterDrawInfo *info)
+mlkbool FilterDraw_draw_edgepoint(FilterDrawInfo *info)
 {
 	FilterDrawPointInfo dat;
-	FilterDrawPointFunc setpix;
-	int type,ix,iy;
+	FilterSubFunc_drawpoint_setpix setpix;
 	TileImage *imgsrc;
+	int type,ix,iy;
 
 	type = info->val_combo[0];
 
-	FilterSub_getDrawPointFunc(info->val_combo[1], &setpix);
+	//ソース
+
+	imgsrc = NULL;
+
+	if(info->val_ckbtt[0])
+		imgsrc = FilterSub_getCheckedLayerImage();
+
+	if(!imgsrc) imgsrc = info->imgsrc;
 
 	//FilterDrawPointInfo
+	// :不透明部分の外側の場合は、アルファ値比較上書きで描画
 
 	dat.info = info;
-	dat.imgsrc = info->imgsrc;
+	dat.imgsrc = imgsrc;
 	dat.imgdst = info->imgdst;
 	dat.radius = info->val_bar[0];
-	dat.opacity = Density100toFix15(info->val_bar[1]);
+	dat.density = info->val_bar[1];
 	dat.coltype = info->val_combo[2];
 	dat.masktype = type + 1;
 
-	//不透明部分の外側の場合は、アルファ値比較上書きで描画
-
-	FilterSub_initDrawPoint(info, (type == 0));
+	FilterSub_drawpoint_init(&dat,
+		(type == 0)? TILEIMAGE_PIXELCOL_COMPARE_A: TILEIMAGE_PIXELCOL_NORMAL);
 	
-	//プレビュー時はソースをコピー (点を描画しない部分はソースのままにするため)
+	FilterSub_drawpoint_getPixelFunc(info->val_combo[1], &setpix);
+	
+	//プレビュー時はソースをコピー
+	// :点を描画しない部分はソースのままにするため
 
-	FilterSub_copyImage_forPreview(info);
+	FilterSub_copySrcImage_forPreview(info);
 
 	//
-
-	imgsrc = info->imgsrc;
 
 	for(iy = info->rc.y1; iy <= info->rc.y2; iy++)
 	{
@@ -337,26 +440,26 @@ mBool FilterDraw_draw_edgepoint(FilterDrawInfo *info)
 			{
 				//不透明部分の内側
 
-				if(TileImage_isPixelOpaque(imgsrc, ix, iy))
+				if(TileImage_isPixel_opaque(imgsrc, ix, iy))
 					continue;
 
-				if(TileImage_isPixelTransparent(imgsrc, ix - 1, iy)
-					&& TileImage_isPixelTransparent(imgsrc, ix + 1, iy)
-					&& TileImage_isPixelTransparent(imgsrc, ix, iy - 1)
-					&& TileImage_isPixelTransparent(imgsrc, ix, iy + 1))
+				if(TileImage_isPixel_transparent(imgsrc, ix - 1, iy)
+					&& TileImage_isPixel_transparent(imgsrc, ix + 1, iy)
+					&& TileImage_isPixel_transparent(imgsrc, ix, iy - 1)
+					&& TileImage_isPixel_transparent(imgsrc, ix, iy + 1))
 					continue;
 			}
 			else
 			{
 				//不透明部分の外側
 
-				if(TileImage_isPixelTransparent(imgsrc, ix, iy))
+				if(TileImage_isPixel_transparent(imgsrc, ix, iy))
 					continue;
 
-				if(TileImage_isPixelOpaque(imgsrc, ix - 1, iy)
-					&& TileImage_isPixelOpaque(imgsrc, ix + 1, iy)
-					&& TileImage_isPixelOpaque(imgsrc, ix, iy - 1)
-					&& TileImage_isPixelOpaque(imgsrc, ix, iy + 1))
+				if(TileImage_isPixel_opaque(imgsrc, ix - 1, iy)
+					&& TileImage_isPixel_opaque(imgsrc, ix + 1, iy)
+					&& TileImage_isPixel_opaque(imgsrc, ix, iy - 1)
+					&& TileImage_isPixel_opaque(imgsrc, ix, iy + 1))
 					continue;
 			}
 
@@ -365,7 +468,7 @@ mBool FilterDraw_draw_edgepoint(FilterDrawInfo *info)
 			(setpix)(ix, iy, &dat);
 		}
 
-		FilterSub_progIncSubStep(info);
+		FilterSub_prog_substep_inc(info);
 	}
 	
 	return TRUE;
@@ -373,19 +476,20 @@ mBool FilterDraw_draw_edgepoint(FilterDrawInfo *info)
 
 /** 枠線 */
 
-mBool FilterDraw_draw_frame(FilterDrawInfo *info)
+mlkbool FilterDraw_draw_frame(FilterDrawInfo *info)
 {
 	int i,w,h,x,y;
-	RGBAFix15 pix;
+	uint64_t col;
 
-	FilterSub_getDrawColor_fromType(info, info->val_combo[0], &pix);
+	FilterSub_getDrawColor_type(info, info->val_combo[0], &col);
+
+	FilterSub_getImageSize(&w, &h);
 
 	x = y = 0;
-	FilterSub_getImageSize(&w, &h);
 
 	for(i = info->val_bar[0]; i && w > 0 && h > 0; i--, x++, y++)
 	{
-		TileImage_drawBox(info->imgdst, x, y, w, h, &pix);
+		TileImage_drawBox(info->imgdst, x, y, w, h, &col);
 
 		w -= 2;
 		h -= 2;
@@ -394,19 +498,21 @@ mBool FilterDraw_draw_frame(FilterDrawInfo *info)
 	return TRUE;
 }
 
-/** 水平線＆垂直線 */
+/** 水平線 & 垂直線 */
 
-mBool FilterDraw_draw_horzvertLine(FilterDrawInfo *info)
+mlkbool FilterDraw_draw_horzvertLine(FilterDrawInfo *info)
 {
 	int min_w,min_it,len_w,len_it,pos,w,ix,iy;
 	mRect rc;
-	RGBAFix15 pix;
+	uint64_t col;
 	TileImageSetPixelFunc setpix;
+	mRandSFMT *rand;
 
 	FilterSub_getPixelFunc(&setpix);
-	FilterSub_getDrawColor_fromType(info, info->val_combo[0], &pix);
+	FilterSub_getDrawColor_type(info, info->val_combo[0], &col);
 
 	rc = info->rc;
+	rand = info->rand;
 
 	min_w = info->val_bar[0];
 	min_it = info->val_bar[2];
@@ -416,7 +522,7 @@ mBool FilterDraw_draw_horzvertLine(FilterDrawInfo *info)
 	if(len_w < 0) len_w = 0;
 	if(len_it < 0) len_it = 0;
 
-	FilterSub_progSetMax(info, 2);
+	FilterSub_prog_setMax(info, 2);
 
 	//横線
 
@@ -428,7 +534,7 @@ mBool FilterDraw_draw_horzvertLine(FilterDrawInfo *info)
 		{
 			//太さ
 
-			w = mRandXorShift_getIntRange(0, len_w) + min_w;
+			w = mRandSFMT_getIntRange(rand, 0, len_w) + min_w;
 			if(pos + w > rc.y2) w = rc.y2 - pos + 1;
 
 			//描画
@@ -436,16 +542,16 @@ mBool FilterDraw_draw_horzvertLine(FilterDrawInfo *info)
 			for(iy = 0; iy < w; iy++)
 			{
 				for(ix = rc.x1; ix <= rc.x2; ix++)
-					(setpix)(info->imgdst, ix, pos + iy, &pix);
+					(setpix)(info->imgdst, ix, pos + iy, &col);
 			}
 
 			//次の位置
 
-			pos += mRandXorShift_getIntRange(0, len_it) + min_it + w;
+			pos += mRandSFMT_getIntRange(rand, 0, len_it) + min_it + w;
 		}
 	}
 
-	FilterSub_progInc(info);
+	FilterSub_prog_inc(info);
 	
 	//縦線
 
@@ -457,7 +563,7 @@ mBool FilterDraw_draw_horzvertLine(FilterDrawInfo *info)
 		{
 			//太さ
 
-			w = mRandXorShift_getIntRange(0, len_w) + min_w;
+			w = mRandSFMT_getIntRange(rand, 0, len_w) + min_w;
 			if(pos + w > rc.x2) w = rc.x2 - pos + 1;
 
 			//描画
@@ -465,30 +571,30 @@ mBool FilterDraw_draw_horzvertLine(FilterDrawInfo *info)
 			for(iy = rc.y1; iy <= rc.y2; iy++)
 			{
 				for(ix = 0; ix < w; ix++)
-					(setpix)(info->imgdst, pos + ix, iy, &pix);
+					(setpix)(info->imgdst, pos + ix, iy, &col);
 			}
 
 			//次の位置
 
-			pos += mRandXorShift_getIntRange(0, len_it) + min_it + w;
+			pos += mRandSFMT_getIntRange(rand, 0, len_it) + min_it + w;
 		}
 	}
 
-	FilterSub_progInc(info);
+	FilterSub_prog_inc(info);
 
 	return TRUE;
 }
 
 /** チェック柄 */
 
-mBool FilterDraw_draw_plaid(FilterDrawInfo *info)
+mlkbool FilterDraw_draw_plaid(FilterDrawInfo *info)
 {
 	int colw,roww,colmod,rowmod,ix,iy,xf,yf;
-	RGBAFix15 pix;
+	uint64_t col;
 	TileImageSetPixelFunc setpix;
 
 	FilterSub_getPixelFunc(&setpix);
-	FilterSub_getDrawColor_fromType(info, info->val_combo[0], &pix);
+	FilterSub_getDrawColor_type(info, info->val_combo[0], &col);
 
 	//
 
@@ -511,10 +617,10 @@ mBool FilterDraw_draw_plaid(FilterDrawInfo *info)
 			xf = (ix % colmod) / colw;
 
 			if((xf ^ yf) == 0)
-				(setpix)(info->imgdst, ix, iy, &pix);
+				(setpix)(info->imgdst, ix, iy, &col);
 		}
 
-		FilterSub_progIncSubStep(info);
+		FilterSub_prog_substep_inc(info);
 	}
 	
 	return TRUE;

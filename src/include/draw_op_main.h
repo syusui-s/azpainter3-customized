@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,17 +18,13 @@
 $*/
 
 /**********************************
- * DrawData 操作のメイン関数
+ * AppDraw: 操作のメイン関数
  **********************************/
 
-#ifndef DRAW_OP_MAIN_H
-#define DRAW_OP_MAIN_H
+mlkbool drawOp_onPress(AppDraw *p,mEvent *ev);
+mlkbool drawOp_onRelease(AppDraw *p,mEvent *ev);
+void drawOp_onMotion(AppDraw *p,mEvent *ev);
+mlkbool drawOp_onLBttDblClk(AppDraw *p,mEvent *ev);
+mlkbool drawOp_onKeyDown(AppDraw *p,uint32_t key);
+void drawOp_onUngrab(AppDraw *p);
 
-mBool drawOp_onPress(DrawData *p,mEvent *ev);
-mBool drawOp_onRelease(DrawData *p,mEvent *ev);
-void drawOp_onMotion(DrawData *p,mEvent *ev);
-mBool drawOp_onLBttDblClk(DrawData *p,mEvent *ev);
-mBool drawOp_onKeyDown(DrawData *p,uint32_t key);
-void drawOp_onUngrab(DrawData *p);
-
-#endif

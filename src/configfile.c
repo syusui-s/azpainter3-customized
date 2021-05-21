@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -24,38 +24,36 @@ $*/
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "mDef.h"
-#include "mGui.h"
-#include "mAppDef.h"
-#include "mStr.h"
-#include "mIniRead.h"
-#include "mIniWrite.h"
-#include "mWidgetDef.h"
-#include "mWindow.h"
-#include "mDockWidget.h"
+#include "mlk_gui.h"
+#include "mlk_widget_def.h"
+#include "mlk_window.h"
+#include "mlk_panel.h"
+#include "mlk_str.h"
+#include "mlk_list.h"
+#include "mlk_iniread.h"
+#include "mlk_iniwrite.h"
 
-#include "defMacros.h"
-#include "defConfig.h"
-#include "defDraw.h"
-#include "defWidgets.h"
-#include "defScalingType.h"
-#include "defCanvasKeyID.h"
+#include "def_macro.h"
+#include "def_config.h"
+#include "def_widget.h"
+#include "def_draw.h"
+#include "def_draw_toollist.h"
+#include "def_tool_option.h"
+#include "def_saveopt.h"
+#include "def_canvaskey.h"
 
-#include "ConfigData.h"
-#include "DockObject.h"
-#include "macroToolOpt.h"
-#include "FilterSaveData.h"
+#include "appconfig.h"
+#include "filter_save_param.h"
 
+#include "configfile.h"
 
 //-------------------
 
-#define _INIT_VAL        -100000
-
 //パネル名
-
-static const char *g_dock_name[] = {
-	"tool", "option", "layer", "brush", "color", "colpal",
-	"cvctrl", "cvview", "imgview", "filterl", "colwheel"
+static const char *g_panel_name[] = {
+	"tool", "toollist", "brushopt", "option", "layer",
+	"color", "colwheel", "colpal",
+	"cvctrl", "cvview", "imgview", "filterlist"
 };
 
 //-------------------
@@ -67,83 +65,98 @@ static const char *g_dock_name[] = {
  ********************************/
 
 
-/** 読み込み前の初期化 */
+/* 読み込み前のデータ初期化 */
 
-static void _load_init_data(ConfigData *cf,DrawData *pdw)
+static void _load_init_data(AppConfig *cf,AppDraw *draw)
 {
 	int i;
 
-	/* [!] 確保時にゼロクリアはされている */
+	//起動時初期サイズ
 
-	//中間色、左右の色
+	cf->newcanvas_init.w = cf->newcanvas_init.h = 400;
+	cf->newcanvas_init.dpi = 300;
+	cf->newcanvas_init.bit = 8;
 
-	for(i = 0; i < COLPAL_GRADNUM; i++)
-		pdw->col.gradcol[i][1] = 0xffffff;
+	//キャンバスビュー:ボタン操作
 
-	//グリッド登録リスト
+	cf->canvview.bttcmd[CONFIG_PANELVIEW_BTT_LEFT] = 1;
+	cf->canvview.bttcmd[CONFIG_PANELVIEW_BTT_LEFT_CTRL] = 2;
 
-	for(i = 0; i < CONFIG_GRIDREG_NUM; i++)
-		cf->grid.reglist[i] = (100 << 16) | 100;
+	//イメージビューア:ボタン操作
+
+	cf->imgviewer.bttcmd[CONFIG_PANELVIEW_BTT_LEFT_CTRL] = 1;
+	cf->imgviewer.bttcmd[CONFIG_PANELVIEW_BTT_LEFT_SHIFT] = 2;
+	cf->imgviewer.bttcmd[CONFIG_PANELVIEW_BTT_RIGHT] = 2;
+
+	//中間色:左右の色
+
+	for(i = 0; i < DRAW_GRADBAR_NUM; i++)
+		draw->col.gradcol[i][1] = 0xffffff;
 
 	//水彩プリセット
 
-	ConfigData_waterPreset_default();
+	AppConfig_setWaterPreset_default();
 
-	//ボタン操作
-	/* 中ボタン:キャンバス移動
-	 * 右ボタン:スポイト
-	 * ホイール上:一段階拡大
-	 * ホイール下:一段階縮小 */
+	//ポインタデバイス:デフォルトのボタン操作
+	// 右ボタン:スポイト
+	// 中ボタン:キャンバス移動
+	// ホイール上:一段階拡大
+	// ホイール下:一段階縮小
 
-	cf->default_btt_cmd[2] = CANVASKEYID_OP_TOOL + TOOL_CANVAS_MOVE;
-	cf->default_btt_cmd[3] = CANVASKEYID_OP_TOOL + TOOL_SPOIT;
-	cf->default_btt_cmd[4] = CANVASKEYID_CMD_OTHER_ZOOM_UP;
-	cf->default_btt_cmd[5] = CANVASKEYID_CMD_OTHER_ZOOM_DOWN;
+	cf->pointer_btt_default[2] = CANVASKEY_OP_TOOL + TOOL_SPOIT;
+	cf->pointer_btt_default[3] = CANVASKEY_OP_TOOL + TOOL_CANVAS_MOVE;
+	cf->pointer_btt_default[4] = CANVASKEY_CMD_OTHER + CANVASKEY_CMD_OTHER_ZOOM_UP;
+	cf->pointer_btt_default[5] = CANVASKEY_CMD_OTHER + CANVASKEY_CMD_OTHER_ZOOM_DOWN;
 }
 
-/** 新規作成サイズ (履歴/登録)
- *
- * カンマで区切った４つのデータ ("単位, DPI, 幅, 高さ") */
+/* ConfigNewCanvas 読み込み (w,h,dpi,unit,bit) */
 
-static void _load_imagesize(mIniRead *ini,ImageSizeData *dat)
+static void _load_newcanvas(mIniRead *ini,const char *key,ConfigNewCanvas *dst)
 {
-	int i,buf[4];
+	int32_t val[5];
+
+	if(mIniRead_getNumbers(ini, key, val, 5, 4, FALSE) < 5)
+		return;
+
+	dst->w = val[0];
+	dst->h = val[1];
+	dst->dpi = val[2];
+	dst->unit = val[3];
+	dst->bit = val[4];
+}
+
+/* 新規作成サイズ (履歴/登録) */
+
+static void _load_newcanvas_array(mIniRead *ini,ConfigNewCanvas *buf)
+{
+	int32_t i;
 	char m[16];
 
-	for(i = 0; i < CONFIG_IMAGESIZE_NUM; i++)
+	for(i = 0; i < CONFIG_NEWCANVAS_NUM; i++)
 	{
 		snprintf(m, 16, "%d", i);
 
-		if(mIniReadNums(ini, m, buf, 4, 4, FALSE) < 4)
-		{
-			dat[i].unit = 255;
-			break;
-		}
-
-		dat[i].unit = buf[0];
-		dat[i].dpi = buf[1];
-		dat[i].w = buf[2];
-		dat[i].h = buf[3];
+		_load_newcanvas(ini, m, buf + i);
 	}
 }
 
-/** 定規記録データ読み込み */
+/* 定規記録データ読み込み */
 
 static void _load_draw_rule_record(mIniRead *ini)
 {
 	const char *key,*param;
 	char *end;
-	int no,i;
 	RuleRecord *rec;
+	int no,i;
 
-	if(!mIniReadSetGroup(ini, "rule_record")) return;
+	if(!mIniRead_setGroup(ini, "rule_record")) return;
 
-	while(mIniReadGetNextItem(ini, &key, &param))
+	while(mIniRead_getNextItem(ini, &key, &param))
 	{
 		no = atoi(key);
-		if(no < 0 || no >= RULE_RECORD_NUM) continue;
+		if(no < 0 || no >= DRAW_RULE_RECORD_NUM) continue;
 
-		rec = APP_DRAW->rule.record + no;
+		rec = APPDRAW->rule.record + no;
 	
 		//タイプ
 
@@ -155,453 +168,434 @@ static void _load_draw_rule_record(mIniRead *ini)
 
 		for(i = 0; i < 4; i++)
 		{
-			rec->d[i] = strtod(end + 1, &end);
+			rec->dval[i] = strtod(end + 1, &end);
 			if(!(*end)) break;
 		}
 	}
 }
 
-/** パネル配置値を正規化 */
+/* ウィンドウ状態読み込み */
 
-static void _normalize_panel_layout(ConfigData *cf)
+static void _load_winstate(mIniRead *ini,const char *key,mToplevelSaveState *state)
 {
-	char *pc;
-	int i,no,pos,buf[4];
+	int32_t n[7];
 
-	//----- ペイン
-
-	for(i = 0; i < 4; i++)
-		buf[i] = -1;
-
-	//各ペインの位置
-
-	for(pc = cf->pane_layout, pos = 0; *pc; pc++)
+	if(mIniRead_getNumbers(ini, key, n, 7, 4, FALSE) == 7)
 	{
-		no = *pc - '0';
-		if(no >= 0 && no <= 3 && buf[no] == -1)
-			buf[no] = pos++;
+		state->x = n[0];
+		state->y = n[1];
+		state->w = n[2];
+		state->h = n[3];
+		state->norm_x = n[4];
+		state->norm_y = n[5];
+		state->flags = n[6];
 	}
-
-	//記述されていないもの
-
-	for(i = 0; i < 4; i++)
-	{
-		if(buf[i] == -1)
-			buf[i] = pos++;
-	}
-
-	//再セット
-
-	pc = cf->pane_layout;
-
-	for(i = 0; i < 4; i++)
-	{
-		for(no = 0; no < 4 && buf[no] != i; no++);
-	
-		*(pc++) = no + '0';
-	}
-
-	*pc = 0;
-
-	//------ パネル
-
-	DockObject_normalize_layout_config();
 }
 
-/** ウィジェット状態読み込み */
+/* ウィジェット状態読み込み */
 
-static void _load_widgets_state(mIniRead *ini,ConfigData *cf,mDockWidgetState *dock_state)
+static void _load_widgets_state(mIniRead *ini,AppConfig *cf,ConfigFileState *dst)
 {
 	int i;
-	int32_t val[6];
-	mBox *pbox;
-	uint8_t inith[] = { 92,180,200,200,161,147,59,168,158,150,200 };
+	int32_t val[2];
+	mStr str = MSTR_INIT;
+	mPanelState *pst;
+	const uint16_t inith[] = { 105/*tool*/,200/*toollist*/,300/*brushopt*/,
+		230/*option*/,200/*layer*/,166/*color*/,170/*wheel*/,143/*palette*/,
+		63/*canvctrl*/,212/*canvview*/,190/*imgview*/,200/*filter*/ };
 
-	mIniReadSetGroup(ini, "widgets");
+	mIniRead_setGroup(ini, "widgets");
 
 	//メインウィンドウ
 
-	mIniReadBox(ini, "mainwin", &cf->box_mainwin, _INIT_VAL, _INIT_VAL, _INIT_VAL, _INIT_VAL);
+	_load_winstate(ini, "mainwin", &dst->mainst);
 
-	cf->mainwin_maximized = mIniReadInt(ini, "maximized", 1);
-	cf->dockbrush_height[0] = mIniReadInt(ini, "brush_sizeh", 58);
-	cf->dockbrush_height[1] = mIniReadInt(ini, "brush_listh", 100);
+	//テキストダイアログ
+
+	_load_winstate(ini, "textdlg", &cf->winstate_textdlg);
+
+	cf->textdlg_toph = mIniRead_getInt(ini, "textdlg_toph", 200);
+
+	//フィルタダイアログ
+
+	_load_winstate(ini, "filterdlg", &cf->winstate_filterdlg);
 
 	//ペイン幅
 
-	for(i = 0; i < 3; i++)
-		cf->pane_width[i] = 230;
+	for(i = 0; i < PANEL_PANE_NUM; i++)
+		dst->pane_w[i] = 250;
 
-	mIniReadNums(ini, "pane_width", cf->pane_width, 3, 2, FALSE);
+	mIniRead_getNumbers(ini, "pane_width", dst->pane_w, PANEL_PANE_NUM, 4, FALSE);
 
-	//配置
+	//パネル
 
-	mIniReadTextBuf(ini, "pane_layout", cf->pane_layout, 5, "1023");
-	mIniReadTextBuf(ini, "dock_layout", cf->dock_layout, 16, "tol:ivrb:cwpf");
-
-	_normalize_panel_layout(cf);
-
-	//ダイアログ
-
-	mIniReadBox(ini, "textdlg", &cf->box_textdlg, 0, 0, 0, 0);
-	mIniReadSize(ini, "boxeditdlg", &cf->size_boxeditdlg, 0, 0);
-	mIniReadPoint(ini, "filterdlg", &cf->pt_filterdlg, _INIT_VAL, _INIT_VAL);
-
-	//dock widget
-
-	for(i = 0; i < DOCKWIDGET_NUM; i++)
+	for(i = 0; i < PANEL_NUM; i++)
 	{
-		pbox = &dock_state[i].boxWin;
+		pst = dst->panelst + i;
+		
+		//ウィンドウ状態
 
-		if(mIniReadNums(ini, g_dock_name[i], val, 6, 4, FALSE) == 6)
+		mStrSetFormat(&str, "%s_win", g_panel_name[i]);
+
+		_load_winstate(ini, str.buf, &pst->winstate);
+
+		if(!pst->winstate.w || !pst->winstate.h)
 		{
-			pbox->x = val[0];
-			pbox->y = val[1];
-			pbox->w = val[2];
-			pbox->h = val[3];
+			pst->winstate.w = 250;
+			pst->winstate.h = 250;
+		}
 
-			dock_state[i].dockH = val[4];
-			dock_state[i].flags = val[5];
+		//ほか値
+
+		mStrSetFormat(&str, "%s_st", g_panel_name[i]);
+
+		if(mIniRead_getNumbers(ini, str.buf, val, 2, 4, FALSE) == 2)
+		{
+			pst->height = val[0];
+			pst->flags = val[1];
 		}
 		else
 		{
 			//デフォルト
-			/* イメージビューア、フィルタ一覧は閉じる */
 
-			pbox->x = pbox->y = 0;
-			pbox->w = pbox->h = 250;
-
-			dock_state[i].dockH = inith[i];
-			dock_state[i].flags = MDOCKWIDGET_F_VISIBLE;
-
-			if(i != DOCKWIDGET_IMAGE_VIEWER && i != DOCKWIDGET_FILTER_LIST)
-				dock_state[i].flags |= MDOCKWIDGET_F_EXIST;
+			pst->height = inith[i];
+			pst->flags = MPANEL_F_CREATED | MPANEL_F_VISIBLE;
 		}
 	}
+
+	mStrFree(&str);
 }
 
-/** ConfigData 読み込み */
+/* AppConfig 読み込み */
 
-static void _load_configdata(mIniRead *ini,ConfigData *cf)
+static void _load_configdata(mIniRead *ini,AppConfig *cf)
 {
 	int no;
 	uint32_t u32;
 
 	//----- 環境
 
-	mIniReadSetGroup(ini, "env");
+	mIniRead_setGroup(ini, "env");
 
-	cf->init_imgw = mIniReadInt(ini, "init_imgw", 400);
-	cf->init_imgh = mIniReadInt(ini, "init_imgh", 400);
-	cf->init_dpi = mIniReadInt(ini, "init_dpi", 300);
+	_load_newcanvas(ini, "initimg", &cf->newcanvas_init);
 
-	cf->optflags = mIniReadHex(ini, "optflags",
+	cf->loadimg_default_bits = mIniRead_getInt(ini, "loadimg_bits", 8);
+	cf->canvas_zoom_step_hi = mIniRead_getInt(ini, "zoomstep_hi", 100);
+	cf->canvas_angle_step = mIniRead_getInt(ini, "anglestep", 15);
+	cf->tone_lines_default = mIniRead_getInt(ini, "tone_lines_default", 600);
+	cf->iconsize_toolbar = mIniRead_getInt(ini, "iconsize_toolbar", 20);
+	cf->iconsize_panel_tool = mIniRead_getInt(ini, "iconsize_panel_tool", 16);
+	cf->iconsize_other = mIniRead_getInt(ini, "iconsize_other", 16);
+	cf->canvas_scale_method = mIniRead_getInt(ini, "canvas_scale_method", 0);
+
+	cf->undo_maxbufsize = mIniRead_getInt(ini, "undo_maxbufsize", 10 * 1024 * 1024);
+	cf->undo_maxnum = mIniRead_getInt(ini, "undo_maxnum", 100);
+	cf->savedup_type = mIniRead_getInt(ini, "savedup_type", 0);
+
+	mIniRead_getNumbers(ini, "cursor_hotspot", cf->cursor_hotspot, 2, 2, FALSE);
+
+	//hex
+
+	cf->fview = mIniRead_getHex(ini, "fview",
+		CONFIG_VIEW_F_TOOLBAR | CONFIG_VIEW_F_STATUSBAR | CONFIG_VIEW_F_PANEL
+		| CONFIG_VIEW_F_RULE_GUIDE | CONFIG_VIEW_F_FILTERDLG_PREVIEW);
+
+	cf->foption = mIniRead_getHex(ini, "foption",
 		CONFIG_OPTF_MES_SAVE_OVERWRITE | CONFIG_OPTF_MES_SAVE_APD);
 
-	cf->fView = mIniReadHex(ini, "fview",
-		CONFIG_VIEW_F_TOOLBAR | CONFIG_VIEW_F_STATUSBAR | CONFIG_VIEW_F_DOCKS | CONFIG_VIEW_F_BKGND_PLAID | CONFIG_VIEW_F_FILTERDLG_PREVIEW);
+	cf->canvasbkcol = mIniRead_getHex(ini, "canvasbkcol", 0xc0c0c0);
+	cf->rule_guide_col = mIniRead_getHex(ini, "rule_guide_col", 0x40ff0000);
 
-	cf->savedup_type = mIniReadInt(ini, "savedup_type", 0);
-	cf->canvas_resize_flags = mIniReadInt(ini, "canvas_resize_flags", CONFIG_CANVAS_RESIZE_F_CROP);
-	cf->canvas_scale_type = mIniReadInt(ini, "canvas_scale_type", SCALING_TYPE_LANCZOS2);
-	cf->boxedit_flags = mIniReadInt(ini, "boxedit_flags", 0);
-	
-	cf->undo_maxbufsize = mIniReadInt(ini, "undo_maxbufsize", 1024 * 1024);
-	cf->undo_maxnum = mIniReadInt(ini, "undo_maxnum", 100);
+	mIniRead_getNumbers(ini, "textsize_recent", cf->textsize_recent, CONFIG_TEXTSIZE_RECENT_NUM, 2, TRUE);
 
-	cf->canvasZoomStep_low = mIniReadInt(ini, "zoomstep_low", -5);
-	cf->canvasZoomStep_hi = mIniReadInt(ini, "zoomstep_hi", 100);
-	cf->canvasAngleStep = mIniReadInt(ini, "anglestep", 15);
-	cf->dragBrushSize_step = mIniReadInt(ini, "dragbrushsize_step", 10);
-	cf->iconsize_toolbar = mIniReadInt(ini, "iconsize_toolbar", 20);
-	cf->iconsize_layer = mIniReadInt(ini, "iconsize_layer", 13);
-	cf->iconsize_other = mIniReadInt(ini, "iconsize_other", 16);
+	//ツールバーボタン
 
-	cf->colCanvasBkgnd = mIniReadHex(ini, "col_canvasbkgnd", 0xc0c0c0);
-	cf->colBkgndPlaid[0] = mIniReadHex(ini, "col_bkgndplaid1", 0xd0d0d0);
-	cf->colBkgndPlaid[1] = mIniReadHex(ini, "col_bkgndplaid2", 0xf0f0f0);
+	cf->toolbar_btts = mIniRead_getBase64(ini, "toolbar_btts", &cf->toolbar_btts_size);
 
-	cf->cursor_buf = mIniReadBase64(ini, "cursor_draw", &cf->cursor_bufsize);
+	//----- パネル関連
 
-	if(mIniReadIsHaveKey(ini, "toolbar_btts"))
-	{
-		cf->toolbar_btts = mIniReadNums_alloc(ini, "toolbar_btts", 1, FALSE, 1, &cf->toolbar_btts_size);
+	mIniRead_setGroup(ini, "panel");
 
-		if(cf->toolbar_btts)
-			*(cf->toolbar_btts + cf->toolbar_btts_size - 1) = 255;
-	}
+	mIniRead_getTextBuf(ini, "pane_layout", cf->panel.pane_layout, 5, "3012");
+	mIniRead_getTextBuf(ini, "panel_layout", cf->panel.panel_layout, 16, "tocs:wpbf:ivrl");
 
-	//----- dock 関連
+	cf->panel.color_type = mIniRead_getInt(ini, "color_type", 0);
+	cf->panel.colwheel_type = mIniRead_getInt(ini, "colwheel_type", 0);
+	cf->panel.colpal_type = mIniRead_getInt(ini, "colpal_type", 0);
+	cf->panel.option_type = mIniRead_getInt(ini, "option_type", 0);
+	cf->panel.toollist_sizelist_h = mIniRead_getInt(ini, "toollist_sizelist_h", 60);
 
-	mIniReadSetGroup(ini, "dock");
+	cf->panel.brushopt_flags = mIniRead_getHex(ini, "brushopt_flags",
+		CONFIG_PANEL_BRUSHOPT_F_EXPAND_WATER | CONFIG_PANEL_BRUSHOPT_F_EXPAND_SHAPE
+		| CONFIG_PANEL_BRUSHOPT_F_EXPAND_PRESSURE);
 
-	cf->dockcolor_tabno = mIniReadInt(ini, "color_tabno", 0);
-	cf->dockcolpal_tabno = mIniReadInt(ini, "colpal_tabno", 0);
-	cf->dockopt_tabno = mIniReadInt(ini, "opt_tabno", 0);
-	cf->dockbrush_expand_flags = mIniReadInt(ini, "brush_expand", 0xffff);
-	cf->dockcolwheel_type = mIniReadInt(ini, "colwheel_type", 0);
+	mIniRead_getNumbers(ini, "water_preset", cf->panel.water_preset, CONFIG_WATER_PRESET_NUM, 4, TRUE);
 
-	mIniReadNums(ini, "water_preset", cf->water_preset, CONFIG_WATER_PRESET_NUM, 4, TRUE);
+	//---- 変形ダイアログ
+
+	mIniRead_setGroup(ini, "transform");
+
+	cf->transform.view_w = mIniRead_getInt(ini, "view_w", 500);
+	cf->transform.view_h = mIniRead_getInt(ini, "view_h", 500);
+	cf->transform.flags = mIniRead_getInt(ini, "flags", 0);
 
 	//----- キャンバスビュー
 
-	mIniReadSetGroup(ini, "canvasview");
+	mIniRead_setGroup(ini, "canvasview");
 
-	cf->canvasview_flags = mIniReadInt(ini, "flags", CONFIG_CANVASVIEW_F_FIT);
-	cf->canvasview_zoom_normal = mIniReadInt(ini, "zoom_norm", 100);
-	cf->canvasview_zoom_loupe = mIniReadInt(ini, "zoom_loupe", 600);
+	cf->canvview.flags = mIniRead_getInt(ini, "flags", CONFIG_CANVASVIEW_F_TOOLBAR_VISIBLE | CONFIG_CANVASVIEW_F_FIT);
+	cf->canvview.zoom = mIniRead_getInt(ini, "zoom", 1000);
 
-	//ボタン
-
-	cf->canvasview_btt[0] = 1;
-	cf->canvasview_btt[2] = 2;
-
-	mIniReadNums(ini, "btt", cf->canvasview_btt, 5, 1, FALSE);
+	mIniRead_getNumbers(ini, "btt", cf->canvview.bttcmd, 5, 1, FALSE);
 
 	//----- イメージビューア
 
-	mIniReadSetGroup(ini, "imageviewer");
+	mIniRead_setGroup(ini, "imgviewer");
 
-	mIniReadStr(ini, "dir", &cf->strImageViewerDir, NULL);
+	mIniRead_getTextStr(ini, "dir", &cf->strImageViewerDir, NULL);
 
-	cf->imageviewer_flags = mIniReadInt(ini, "flags", CONFIG_IMAGEVIEWER_F_FIT);
+	cf->imgviewer.flags = mIniRead_getInt(ini, "flags", CONFIG_IMAGEVIEWER_F_FIT);
 
 	//ボタン
 
-	cf->imageviewer_btt[1] = 1;
-	cf->imageviewer_btt[2] = 2;
-	cf->imageviewer_btt[3] = 2;
-
-	mIniReadNums(ini, "btt", cf->imageviewer_btt, 5, 1, FALSE);
-
-	//フラグ、左右反転は起動時常にOFF
-
-	cf->imageviewer_flags &= ~CONFIG_IMAGEVIEWER_F_MIRROR;
+	mIniRead_getNumbers(ini, "btt", cf->imgviewer.bttcmd, 5, 1, FALSE);
 
 	//----- グリッド
 
-	mIniReadSetGroup(ini, "grid");
+	mIniRead_setGroup(ini, "grid");
 
-	cf->grid.gridw = mIniReadInt(ini, "gridw", 64);
-	cf->grid.gridh = mIniReadInt(ini, "gridh", 64);
-	cf->grid.col_grid = mIniReadHex(ini, "gridcol", 0x1a0040ff);
+	cf->grid.gridw = mIniRead_getInt(ini, "gridw", 32);
+	cf->grid.gridh = mIniRead_getInt(ini, "gridh", 32);
+	cf->grid.col_grid = mIniRead_getHex(ini, "gridcol", 0x200040ff);
 
-	cf->grid.splith = mIniReadInt(ini, "sph", 2);
-	cf->grid.splitv = mIniReadInt(ini, "spv", 2);
-	cf->grid.col_split = mIniReadHex(ini, "spcol", 0x1aff00ff);
+	cf->grid.splith = mIniRead_getInt(ini, "sph", 2);
+	cf->grid.splitv = mIniRead_getInt(ini, "spv", 2);
+	cf->grid.col_split = mIniRead_getHex(ini, "spcol", 0x20ff00ff);
 
-	mIniReadNums(ini, "reg", cf->grid.reglist, CONFIG_GRIDREG_NUM, 4, TRUE);
+	cf->grid.pxgrid_zoom = mIniRead_getHex(ini, "pxgrid", 0x8000 | 8);
+	
+	mIniRead_getNumbers(ini, "recent", cf->grid.recent, CONFIG_GRID_RECENT_NUM, 4, TRUE);
 
 	//----- 保存設定
 
-	mIniReadSetGroup(ini, "save");
+	mIniRead_setGroup(ini, "save");
 
-	cf->save.flags = mIniReadHex(ini, "flags", 0);
-	cf->save.jpeg_quality = mIniReadInt(ini, "jpeg_qua", 85);
-	cf->save.jpeg_sampling_factor = mIniReadInt(ini, "jpeg_samp", 444);
-	cf->save.png_complevel = mIniReadInt(ini, "png_comp", 6);
-	cf->save.psd_type = mIniReadInt(ini, "psd_type", 0);
+	cf->save.png = mIniRead_getInt(ini, "png", SAVEOPT_PNG_DEFAULT);
+	cf->save.jpeg = mIniRead_getInt(ini, "jpeg", SAVEOPT_JPEG_DEFAULT);
+	cf->save.tiff = mIniRead_getInt(ini, "tiff", SAVEOPT_TIFF_DEFAULT);
+	cf->save.webp = mIniRead_getInt(ini, "webp", SAVEOPT_WEBP_DEFAULT);
+	cf->save.psd = mIniRead_getInt(ini, "psd", SAVEOPT_PSD_DEFAULT);
 
 	//----- 操作設定
 
-	mIniReadSetGroup(ini, "button");
+	mIniRead_setGroup(ini, "pointer");
 
-	mIniReadNums(ini, "default", cf->default_btt_cmd, CONFIG_POINTERBTT_NUM, 1, FALSE);
-	mIniReadNums(ini, "pentab", cf->pentab_btt_cmd, CONFIG_POINTERBTT_NUM, 1, FALSE);
+	mIniRead_getNumbers(ini, "default", cf->pointer_btt_default, CONFIG_POINTERBTT_NUM, 1, FALSE);
+	mIniRead_getNumbers(ini, "pentab", cf->pointer_btt_pentab, CONFIG_POINTERBTT_NUM, 1, FALSE);
 
 	//----- 文字列
 
-	mIniReadSetGroup(ini, "string");
+	mIniRead_setGroup(ini, "string");
 
-	mIniReadStr(ini, "fontstyle_gui", &cf->strFontStyle_gui, "family=sans-serif;size=10");
-	mIniReadStr(ini, "fontstyle_dock", &cf->strFontStyle_dock, "family=sans-serif;size=9");
-
-	mIniReadStr(ini, "tempdir", &cf->strTempDir, NULL);
-	mIniReadStr(ini, "layerfiledir", &cf->strLayerFileDir, NULL);
-	mIniReadStr(ini, "selectfiledir", &cf->strSelectFileDir, NULL);
-	mIniReadStr(ini, "stampfiledir", &cf->strStampFileDir, NULL);
-
-	mIniReadStr(ini, "user_texdir", &cf->strUserTextureDir, NULL);
-	mIniReadStr(ini, "user_brushdir", &cf->strUserBrushDir, NULL);
-
-	mIniReadStr(ini, "layernamelist", &cf->strLayerNameList, NULL);
-	mIniReadStr(ini, "theme", &cf->strThemeFile, NULL);
-
-	ConfigData_setTempDir_default();
-
-	//素材ディレクトリが空の場合は設定ディレクトリ下
-
-	if(mStrIsEmpty(&cf->strUserTextureDir))
-		mAppGetConfigPath(&cf->strUserTextureDir, "texture");
-
-	if(mStrIsEmpty(&cf->strUserBrushDir))
-		mAppGetConfigPath(&cf->strUserBrushDir, "brush");
+	mIniRead_getTextStr(ini, "font_panel", &cf->strFont_panel, NULL);
+	mIniRead_getTextStr(ini, "tempdir", &cf->strTempDir, NULL);
+	mIniRead_getTextStr(ini, "filedlgdir", &cf->strFileDlgDir, NULL);
+	mIniRead_getTextStr(ini, "layerfiledir", &cf->strLayerFileDir, NULL);
+	mIniRead_getTextStr(ini, "selectfiledir", &cf->strSelectFileDir, NULL);
+	mIniRead_getTextStr(ini, "fontfiledir", &cf->strFontFileDir, NULL);
+	mIniRead_getTextStr(ini, "user_texdir", &cf->strUserTextureDir, NULL);
+	mIniRead_getTextStr(ini, "user_brushdir", &cf->strUserBrushDir, NULL);
+	mIniRead_getTextStr(ini, "cursor_file", &cf->strCursorFile, NULL);
 
 	//------ ファイル履歴
 
-	mIniReadSetGroup(ini, "recentfile");
-	mIniReadNoStrs(ini, 0, cf->strRecentFile, CONFIG_RECENTFILE_NUM);
+	mIniRead_setGroup(ini, "recentfile");
+	mIniRead_getTextStrArray(ini, 0, cf->strRecentFile, CONFIG_RECENTFILE_NUM);
 
 	//------ 開いたディレクトリ履歴
 
-	mIniReadSetGroup(ini, "recent_opendir");
-	mIniReadNoStrs(ini, 0, cf->strRecentOpenDir, CONFIG_RECENTDIR_NUM);
+	mIniRead_setGroup(ini, "recent_opendir");
+	mIniRead_getTextStrArray(ini, 0, cf->strRecentOpenDir, CONFIG_RECENTDIR_NUM);
 
 	//------ 保存ディレクトリ履歴
 
-	mIniReadSetGroup(ini, "recent_savedir");
-	mIniReadNoStrs(ini, 0, cf->strRecentSaveDir, CONFIG_RECENTDIR_NUM);
+	mIniRead_setGroup(ini, "recent_savedir");
+	mIniRead_getTextStrArray(ini, 0, cf->strRecentSaveDir, CONFIG_RECENTDIR_NUM);
 
 	//----- 新規作成サイズ
 
-	mIniReadSetGroup(ini, "newimg_recent");
-	_load_imagesize(ini, cf->imgsize_recent);
+	mIniRead_setGroup(ini, "newcanvas_recent");
+	_load_newcanvas_array(ini, cf->newcanvas_recent);
 
-	mIniReadSetGroup(ini, "newimg_record");
-	_load_imagesize(ini, cf->imgsize_record);
+	mIniRead_setGroup(ini, "newcanvas_record");
+	_load_newcanvas_array(ini, cf->newcanvas_record);
 
 	//----- キャンバスキー
 
-	if(mIniReadSetGroup(ini, "canvaskey"))
+	if(mIniRead_setGroup(ini, "canvaskey"))
 	{
-		while(mIniReadGetNextItem_nonum32(ini, &no, &u32, FALSE))
+		while(mIniRead_getNextItem_keyno_int32(ini, &no, &u32, FALSE))
 			cf->canvaskey[no] = u32;
 	}
 
 	//----- フィルタデータ
 
-	FilterSaveData_getConfig(ini);
+	FilterParam_getConfig(&cf->list_filterparam, ini);
 }
 
-/** DrawData 読み込み */
+/* 色マスク読み込み */
 
-static void _load_drawdata(mIniRead *ini,DrawData *p)
+static void _load_colmask(mIniRead *ini,AppDraw *p)
 {
-	int n;
+	int i,n;
+	uint32_t col[DRAW_COLORMASK_NUM];
+
+	n = mIniRead_getNumbers(ini, "colmask", col, DRAW_COLORMASK_NUM, 4, TRUE);
+
+	for(i = 0; i < n; i++)
+		RGBA32bit_to_RGBA8(p->col.maskcol + i, col[i]);
+}
+
+/* AppDraw 読み込み */
+
+static void _load_drawdata(mIniRead *ini,AppDraw *p)
+{
+	int32_t n;
 
 	//------- main
 
-	mIniReadSetGroup(ini, "draw_main");
+	mIniRead_setGroup(ini, "draw_main");
 
-	mIniReadStr(ini, "opttex", &p->strOptTexPath, NULL);
+	mIniRead_getTextStr(ini, "opt_texture", &p->strOptTexturePath, NULL);
 
 	//------- カラー
 
-	mIniReadSetGroup(ini, "draw_color");
+	mIniRead_setGroup(ini, "draw_color");
 
-	p->col.drawcol = mIniReadHex(ini, "drawcol", 0);
-	p->col.bkgndcol = mIniReadHex(ini, "bkgndcol", 0xffffff);
+	RGB32bit_to_RGBcombo(&p->col.drawcol, mIniRead_getHex(ini, "drawcol", 0));
+	RGB32bit_to_RGBcombo(&p->col.bkgndcol, mIniRead_getHex(ini, "bkgndcol", 0xffffff));
+	RGB32bit_to_RGBcombo(&p->col.checkbkcol[0], mIniRead_getHex(ini, "checkbkcol1", 0xd0d0d0));
+	RGB32bit_to_RGBcombo(&p->col.checkbkcol[1], mIniRead_getHex(ini, "checkbkcol2", 0xf0f0f0));
 
-	n = mIniReadNums(ini, "colmask", p->col.colmask_col, COLORMASK_MAXNUM, 4, TRUE);
-	if(n == 0) n = 1;
+	_load_colmask(ini, p);
+
+	mIniRead_getNumbers(ini, "gradbarcol", p->col.gradcol, DRAW_GRADBAR_NUM * 2, 4, TRUE);
+	mIniRead_getNumbers(ini, "layercolpal", p->col.layercolpal, DRAW_LAYERCOLPAL_NUM, 4, TRUE);
+
+	//パレット選択
 	
-	p->col.colmask_num = n;
-	p->col.colmask_col[n] = -1;
-
-	mIniReadNums(ini, "gradcol", p->col.gradcol, COLPAL_GRADNUM * 2, 4, TRUE);
-
-	p->col.colpal_sel = mIniReadInt(ini, "colpal_sel", 0);
-	p->col.colpal_cellw = mIniReadInt(ini, "colpal_cellw", 14);
-	p->col.colpal_cellh = mIniReadInt(ini, "colpal_cellh", 14);
-	p->col.colpal_max_column = mIniReadInt(ini, "colpal_maxcol", 0);
-
-	mIniReadNums(ini, "layercolpal", p->col.layercolpal, LAYERCOLPAL_NUM, 4, TRUE);
+	n = mIniRead_getInt(ini, "pal_sel", 0);
+	p->col.cur_pallist = mListGetItemAtIndex(&p->col.list_pal, n);
 
 	//------- ツール
 
-	mIniReadSetGroup(ini, "draw_tool");
+	mIniRead_setGroup(ini, "draw_tool");
 
-	p->tool.no = mIniReadInt(ini, "no", 0);
-	mIniReadNums(ini, "subno", p->tool.subno, TOOL_NUM, 1, FALSE);
+	p->tool.no = mIniRead_getInt(ini, "tool", 0);
 	
-	p->tool.opt_fillpoly = mIniReadHex(ini, "opt_fillpoly", FILLPOLY_OPT_DEFAULT);
-	p->tool.opt_fillpoly_erase = mIniReadHex(ini, "opt_fillpoly_erase", FILLPOLY_OPT_DEFAULT);
-	p->tool.opt_move = mIniReadInt(ini, "opt_move", 0);
-	p->tool.opt_grad = mIniReadHex(ini, "opt_grad", GRAD_OPT_DEFAULT);
-	p->tool.opt_fill = mIniReadHex(ini, "opt_fill", FILL_OPT_DEFAULT);
-	p->tool.opt_stamp = mIniReadInt(ini, "opt_stamp", STAMP_OPT_DEFAULT);
-	p->tool.opt_magicwand = mIniReadInt(ini, "opt_magicwand", MAGICWAND_OPT_DEFAULT);
+	mIniRead_getNumbers(ini, "toolsub", p->tool.subno, TOOL_NUM, 1, FALSE);
+
+	p->tool.opt_dotpen = mIniRead_getHex(ini, "opt_dotpen", TOOLOPT_DOTPEN_DEFAULT);
+	p->tool.opt_dotpen_erase = mIniRead_getHex(ini, "opt_dotpen_erase", TOOLOPT_DOTPEN_DEFAULT);
+	p->tool.opt_finger = mIniRead_getHex(ini, "opt_finger", TOOLOPT_FINGER_DEFAULT);
+	p->tool.opt_fillpoly = mIniRead_getHex(ini, "opt_fillpoly", TOOLOPT_FILLPOLY_DEFAULT);
+	p->tool.opt_fillpoly_erase = mIniRead_getHex(ini, "opt_fillpoly_erase", TOOLOPT_FILLPOLY_DEFAULT);
+	p->tool.opt_fill = mIniRead_getHex(ini, "opt_fill", TOOLOPT_FILL_DEFAULT);
+	p->tool.opt_grad = mIniRead_getHex(ini, "opt_grad", TOOLOPT_GRAD_DEFAULT);
+	p->tool.opt_select = mIniRead_getHex(ini, "opt_select", TOOLOPT_SELECT_DEFAULT);
+	p->tool.opt_selfill = mIniRead_getInt(ini, "opt_selfill", TOOLOPT_SELFILL_DEFAULT);
+	p->tool.opt_stamp = mIniRead_getInt(ini, "opt_stamp", TOOLOPT_STAMP_DEFAULT);
+	p->tool.opt_cutpaste = mIniRead_getInt(ini, "opt_cutpaste", TOOLOPT_CUTPASTE_DEFAULT);
+	p->tool.opt_boxedit = mIniRead_getInt(ini, "opt_boxedit", 0);
+
+	//------ ブラシ
+
+	mIniRead_setGroup(ini, "draw_brush");
+
+	mIniRead_getNumbers(ini, "press_comm", p->tlist->pt_press_comm, CURVE_SPLINE_MAXNUM, 4, TRUE);
 
 	//-------- 入り抜き
 
-	mIniReadSetGroup(ini, "headtail");
+	mIniRead_setGroup(ini, "draw_headtail");
 
-	p->headtail.selno = mIniReadInt(ini, "sel", 0);
-	p->headtail.curval[0] = mIniReadHex(ini, "line", 0);
-	p->headtail.curval[1] = mIniReadHex(ini, "bezier", 0);
+	p->headtail.selno = mIniRead_getInt(ini, "sel", 0);
+	p->headtail.curval[0] = mIniRead_getHex(ini, "line", 0);
+	p->headtail.curval[1] = mIniRead_getHex(ini, "bezier", 0);
 
-	mIniReadNums(ini, "record", p->headtail.record, HEADTAIL_RECORD_NUM, 4, TRUE);
+	mIniRead_getNumbers(ini, "regist", p->headtail.regist, DRAW_HEADTAIL_REGIST_NUM, 4, TRUE);
 
 	//------- テキスト描画
 
-	mIniReadSetGroup(ini, "drawtext");
+	mIniRead_setGroup(ini, "draw_text");
 
-	mIniReadStr(ini, "name", &p->drawtext.strName, NULL);
-	mIniReadStr(ini, "style", &p->drawtext.strStyle, NULL);
+	p->text.fpreview = mIniRead_getInt(ini, "preview", 1);
 
-	p->drawtext.size = mIniReadInt(ini, "size", 90);
-	p->drawtext.weight = mIniReadInt(ini, "weight", 0);
-	p->drawtext.slant = mIniReadInt(ini, "slant", 0);
-	p->drawtext.hinting = mIniReadInt(ini, "hinting", 0);
-	p->drawtext.char_space = mIniReadInt(ini, "charsp", 0);
-	p->drawtext.line_space = mIniReadInt(ini, "linesp", 0);
-	p->drawtext.dakuten_combine = mIniReadInt(ini, "dakuten", 0);
-	p->drawtext.flags = mIniReadInt(ini, "flags", DRAW_DRAWTEXT_F_PREVIEW | DRAW_DRAWTEXT_F_ANTIALIAS);
+	mIniRead_getTextStr(ini, "font", &p->text.dt.str_font, NULL);
+	mIniRead_getTextStr(ini, "style", &p->text.dt.str_style, NULL);
 
-	//定規
+	p->text.dt.font_param = mIniRead_getInt(ini, "font_param", 0);
+	p->text.dt.fontsize = mIniRead_getInt(ini, "fontsize", 90);
+	p->text.dt.rubysize = mIniRead_getInt(ini, "rubysize", 50);
+	p->text.dt.dpi = mIniRead_getInt(ini, "dpi", 96);
+	p->text.dt.char_space = mIniRead_getInt(ini, "char_space", 0);
+	p->text.dt.line_space = mIniRead_getInt(ini, "line_space", 0);
+	p->text.dt.ruby_pos = mIniRead_getInt(ini, "ruby_pos", 0);
+	p->text.dt.angle = mIniRead_getInt(ini, "angle", 0);
+
+	p->text.dt.fontsel = mIniRead_getInt(ini, "fontsel", 0);
+	p->text.dt.unit_fontsize = mIniRead_getInt(ini, "unit_fontsize", 0);
+	p->text.dt.unit_rubysize = mIniRead_getInt(ini, "unit_rubysize", 0);
+	p->text.dt.unit_char_space = mIniRead_getInt(ini, "unit_charsp", 0);
+	p->text.dt.unit_line_space = mIniRead_getInt(ini, "unit_linesp", 0);
+	p->text.dt.unit_ruby_pos = mIniRead_getInt(ini, "unit_ruby_pos", 0);
+	p->text.dt.hinting = mIniRead_getInt(ini, "hinting", 0);
+	
+	p->text.dt.flags = mIniRead_getHex(ini, "flags", 0);
+
+	//---- 定規
 
 	_load_draw_rule_record(ini);
 }
 
 /** 設定ファイル読み込み
  *
- * @return 0:失敗 1:ファイルが存在 2:初期状態 */
+ * dst: あらかじめゼロクリアされている */
 
-int appLoadConfig(mDockWidgetState *dock_state)
+void app_load_config(ConfigFileState *dst)
 {
 	mIniRead *ini;
-	int ret;
 
-	ini = mIniReadLoadFile2(MAPP->pathConfig, CONFIG_FILENAME_MAIN);
-	if(!ini) return FALSE;
+	mIniRead_loadFile_join(&ini, mGuiGetPath_config_text(), CONFIG_FILENAME_MAIN);
+	if(!ini) return;
 
 	//バージョン
 
-	mIniReadSetGroup(ini, "azpainter");
+	mIniRead_setGroup(ini, "azpainter");
 
-	if(mIniReadInt(ini, "ver", 0) != 2)
-	{
-		mIniReadEmpty(ini);
-		ret = 2;
-	}
-	else
-		ret = 1;
-
-	//mlib
-
-	mIniReadSetGroup(ini, "mlib");
-
-	mIniReadFileDialogConfig(ini, "filedialog", MAPP->filedialog_config);
+	if(mIniRead_getInt(ini, "ver", 0) != 3)
+		mIniRead_setEmpty(ini);
 
 	//読み込み前の初期化
 
-	_load_init_data(APP_CONF, APP_DRAW);
+	_load_init_data(APPCONF, APPDRAW);
 
 	//ウィジェット状態
 
-	_load_widgets_state(ini, APP_CONF, dock_state);
+	_load_widgets_state(ini, APPCONF, dst);
 
-	//ConfigData
+	//AppConfig
 
-	_load_configdata(ini, APP_CONF);
+	_load_configdata(ini, APPCONF);
 
-	//DrawData
+	//AppDraw
 
-	_load_drawdata(ini, APP_DRAW);
+	_load_drawdata(ini, APPDRAW);
 
-	mIniReadEnd(ini);
+	//mlk
 
-	return ret;
+	mGuiReadIni_system(ini);
+
+	mIniRead_end(ini);
 }
 
 
@@ -610,364 +604,442 @@ int appLoadConfig(mDockWidgetState *dock_state)
  ********************************/
 
 
-/** 新規作成サイズ */
+/* ConfigNewCanvas 書き込み */
 
-static void _save_imagesize(FILE *fp,ImageSizeData *dat)
+static void _save_newcanvas(FILE *fp,const char *key,ConfigNewCanvas *src)
 {
-	int i,buf[4];
+	int32_t val[5];
+
+	val[0] = src->w;
+	val[1] = src->h;
+	val[2] = src->dpi;
+	val[3] = src->unit;
+	val[4] = src->bit;
+
+	mIniWrite_putNumbers(fp, key, val, 5, 4, FALSE);
+}
+
+/* ConfigNewCanvas 配列書き込み */
+
+static void _save_newcanvas_array(FILE *fp,ConfigNewCanvas *buf)
+{
+	int32_t i;
 	char m[16];
 
-	for(i = 0; i < CONFIG_IMAGESIZE_NUM; i++)
+	for(i = 0; i < CONFIG_NEWCANVAS_NUM; i++, buf++)
 	{
-		if(dat[i].unit == 255) break;
-	
-		buf[0] = dat[i].unit;
-		buf[1] = dat[i].dpi;
-		buf[2] = dat[i].w;
-		buf[3] = dat[i].h;
+		if(buf->bit == 0) break;
 	
 		snprintf(m, 16, "%d", i);
-		mIniWriteNums(fp, m, buf, 4, 4, FALSE);
+		_save_newcanvas(fp, m, buf);
 	}
 }
 
-/** 定規記録データ 書き込み */
+/* 定規記録データ 書き込み */
 
 static void _save_draw_rule_record(FILE *fp)
 {
-	RuleRecord *rec = APP_DRAW->rule.record;
+	RuleRecord *rec = APPDRAW->rule.record;
 	int i;
 
-	mIniWriteGroup(fp, "rule_record");
+	mIniWrite_putGroup(fp, "rule_record");
 
-	for(i = 0; i < RULE_RECORD_NUM; i++, rec++)
+	for(i = 0; i < DRAW_RULE_RECORD_NUM; i++, rec++)
 	{
 		if(rec->type)
 		{
 			fprintf(fp, "%d=%d,%e,%e,%e,%e\n",
-				i, rec->type, rec->d[0], rec->d[1], rec->d[2], rec->d[3]);
+				i, rec->type, rec->dval[0], rec->dval[1], rec->dval[2], rec->dval[3]);
 		}
 	}
 }
 
-/** ウィジェット状態 */
+/* ウィンドウ状態書き込み */
 
-static void _save_widgets_state(FILE *fp,ConfigData *cf)
+static void _save_winstate(FILE *fp,const char *key,mToplevel *win,mToplevelSaveState *state)
 {
-	WidgetsData *wg = APP_WIDGETS;
-	mDockWidgetState st;
-	int i;
-	int32_t val[6];
+	mToplevelSaveState st;
+	int32_t n[7];
 
-	mIniWriteGroup(fp, "widgets");
+	if(state)
+		st = *state;
+	else
+		mToplevelGetSaveState(win, &st);
+
+	n[0] = st.x;
+	n[1] = st.y;
+	n[2] = st.w;
+	n[3] = st.h;
+	n[4] = st.norm_x;
+	n[5] = st.norm_y;
+	n[6] = st.flags;
+
+	mIniWrite_putNumbers(fp, key, n, 7, 4, FALSE);
+}
+
+/* ウィジェット状態書き込み */
+
+static void _save_widgets_state(FILE *fp,AppConfig *cf)
+{
+	AppWidgets *wg = APPWIDGET;
+	mPanelState st;
+	int i;
+	int32_t val[PANEL_PANE_NUM];
+	mStr str = MSTR_INIT;
+
+	mIniWrite_putGroup(fp, "widgets");
 
 	//メインウィンドウ
 
-	mWindowGetSaveBox(M_WINDOW(wg->mainwin), &cf->box_mainwin);
+	_save_winstate(fp, "mainwin", MLK_TOPLEVEL(wg->mainwin), NULL);
 
-	mIniWriteBox(fp, "mainwin", &cf->box_mainwin);
-	mIniWriteInt(fp, "maximized", mWindowIsMaximized(M_WINDOW(wg->mainwin)));
-	mIniWriteInt(fp, "brush_sizeh", cf->dockbrush_height[0]);
-	mIniWriteInt(fp, "brush_listh", cf->dockbrush_height[1]);
+	//テキストダイアログ
+
+	_save_winstate(fp, "textdlg", NULL, &cf->winstate_textdlg);
+
+	mIniWrite_putInt(fp, "textdlg_toph", cf->textdlg_toph);
+
+	//フィルタダイアログ
+
+	_save_winstate(fp, "filterdlg", NULL, &cf->winstate_filterdlg);
 
 	//ペイン幅
 
-	for(i = 0; i < 3; i++)
-		cf->pane_width[i] = wg->pane[i]->w;
+	for(i = 0; i < PANEL_PANE_NUM; i++)
+		val[i] = wg->pane[i]->w;
 
-	mIniWriteNums(fp, "pane_width", cf->pane_width, 3, 2, FALSE);
+	mIniWrite_putNumbers(fp, "pane_width", val, PANEL_PANE_NUM, 4, FALSE);
 
-	//配置
+	//パネル
 
-	mIniWriteText(fp, "pane_layout", cf->pane_layout);
-	mIniWriteText(fp, "dock_layout", cf->dock_layout);
-
-	//ダイアログ
-
-	mIniWriteBox(fp, "textdlg", &cf->box_textdlg);
-	mIniWriteSize(fp, "boxeditdlg", &cf->size_boxeditdlg);
-	mIniWritePoint(fp, "filterdlg", &cf->pt_filterdlg);
-
-	//dock widget
-
-	for(i = 0; i < DOCKWIDGET_NUM; i++)
+	for(i = 0; i < PANEL_NUM; i++)
 	{
-		if(wg->dockobj[i])
-		{
-			mDockWidgetGetState(wg->dockobj[i]->dockwg, &st);
+		if(!wg->panel[i]) continue;
 
-			val[0] = st.boxWin.x;
-			val[1] = st.boxWin.y;
-			val[2] = st.boxWin.w;
-			val[3] = st.boxWin.h;
-			val[4] = st.dockH;
-			val[5] = st.flags;
+		mPanelGetState(wg->panel[i], &st);
 
-			mIniWriteNums(fp, g_dock_name[i], val, 6, 4, FALSE);
-		}
+		//ウィンドウ状態
+
+		mStrSetFormat(&str, "%s_win", g_panel_name[i]);
+
+		_save_winstate(fp, str.buf, NULL, &st.winstate);
+
+		//ほか値
+
+		mStrSetFormat(&str, "%s_st", g_panel_name[i]);
+
+		val[0] = st.height;
+		val[1] = st.flags;
+
+		mIniWrite_putNumbers(fp, str.buf, val, 2, 4, FALSE);
 	}
+
+	mStrFree(&str);
 }
 
-/** ConfigData */
+/* AppConfig */
 
-static void _save_configdata(FILE *fp,ConfigData *cf)
+static void _save_configdata(FILE *fp,AppConfig *cf)
 {
 	int i;
 
 	//----- env
 
-	mIniWriteGroup(fp, "env");
+	mIniWrite_putGroup(fp, "env");
 
-	mIniWriteInt(fp, "init_imgw", cf->init_imgw);
-	mIniWriteInt(fp, "init_imgh", cf->init_imgh);
-	mIniWriteInt(fp, "init_dpi", cf->init_dpi);
+	_save_newcanvas(fp, "initimg", &cf->newcanvas_init);
 
-	mIniWriteHex(fp, "optflags", cf->optflags);
-	mIniWriteHex(fp, "fview", cf->fView);
-	mIniWriteInt(fp, "savedup_type", cf->savedup_type);
-	mIniWriteInt(fp, "canvasview_flags", cf->canvasview_flags);
-	mIniWriteInt(fp, "canvas_resize_flags", cf->canvas_resize_flags);
-	mIniWriteInt(fp, "canvas_scale_type", cf->canvas_scale_type);
-	mIniWriteInt(fp, "boxedit_flags", cf->boxedit_flags);
-	mIniWriteInt(fp, "undo_maxbufsize", cf->undo_maxbufsize);
-	mIniWriteInt(fp, "undo_maxnum", cf->undo_maxnum);
+	mIniWrite_putInt(fp, "loadimg_bits", cf->loadimg_default_bits);
+	mIniWrite_putInt(fp, "zoomstep_hi", cf->canvas_zoom_step_hi);
+	mIniWrite_putInt(fp, "anglestep", cf->canvas_angle_step);
+	mIniWrite_putInt(fp, "tone_lines_default", cf->tone_lines_default);
+	mIniWrite_putInt(fp, "iconsize_toolbar", cf->iconsize_toolbar);
+	mIniWrite_putInt(fp, "iconsize_panel_tool", cf->iconsize_panel_tool);
+	mIniWrite_putInt(fp, "iconsize_other", cf->iconsize_other);
+	mIniWrite_putInt(fp, "canvas_scale_method", cf->canvas_scale_method);
 
-	mIniWriteInt(fp, "zoomstep_low", cf->canvasZoomStep_low);
-	mIniWriteInt(fp, "zoomstep_hi", cf->canvasZoomStep_hi);
-	mIniWriteInt(fp, "anglestep", cf->canvasAngleStep);
-	mIniWriteInt(fp, "dragbrushsize_step", cf->dragBrushSize_step);
-	mIniWriteInt(fp, "iconsize_toolbar", cf->iconsize_toolbar);
-	mIniWriteInt(fp, "iconsize_layer", cf->iconsize_layer);
-	mIniWriteInt(fp, "iconsize_other", cf->iconsize_other);
-	
-	mIniWriteInt(fp, "canvasview_zoom_norm", cf->canvasview_zoom_normal);
-	mIniWriteInt(fp, "canvasview_zoom_loupe", cf->canvasview_zoom_loupe);
-	
-	mIniWriteHex(fp, "col_canvasbkgnd", cf->colCanvasBkgnd);
-	mIniWriteHex(fp, "col_bkgndplaid1", cf->colBkgndPlaid[0]);
-	mIniWriteHex(fp, "col_bkgndplaid2", cf->colBkgndPlaid[1]);
+	mIniWrite_putInt(fp, "undo_maxbufsize", cf->undo_maxbufsize);
+	mIniWrite_putInt(fp, "undo_maxnum", cf->undo_maxnum);
+	mIniWrite_putInt(fp, "savedup_type", cf->savedup_type);
 
-	mIniWriteBase64(fp, "cursor_draw", cf->cursor_buf, cf->cursor_bufsize);
+	mIniWrite_putNumbers(fp, "cursor_hotspot", cf->cursor_hotspot, 2, 2, FALSE);
+
+	//hex
+
+	mIniWrite_putHex(fp, "fview", cf->fview);
+	mIniWrite_putHex(fp, "foption", cf->foption);
+	mIniWrite_putHex(fp, "canvasbkcol", cf->canvasbkcol);
+	mIniWrite_putHex(fp, "rule_guide_col", cf->rule_guide_col);
+
+	mIniWrite_putNumbers(fp, "textsize_recent", cf->textsize_recent, CONFIG_TEXTSIZE_RECENT_NUM, 4, TRUE);
+
+	//
 
 	if(cf->toolbar_btts)
-		mIniWriteNums(fp, "toolbar_btts", cf->toolbar_btts, cf->toolbar_btts_size - 1, 1, FALSE);
+		mIniWrite_putBase64(fp, "toolbar_btts", cf->toolbar_btts, cf->toolbar_btts_size);
 
-	//----- dock 関連
+	//----- パネル関連
 
-	mIniWriteGroup(fp, "dock");
+	mIniWrite_putGroup(fp, "panel");
 
-	mIniWriteInt(fp, "color_tabno", cf->dockcolor_tabno);
-	mIniWriteInt(fp, "colpal_tabno", cf->dockcolpal_tabno);
-	mIniWriteInt(fp, "opt_tabno", cf->dockopt_tabno);
-	mIniWriteInt(fp, "brush_expand", cf->dockbrush_expand_flags);
-	mIniWriteInt(fp, "colwheel_type", cf->dockcolwheel_type);
-	
-	mIniWriteNums(fp, "water_preset", cf->water_preset, CONFIG_WATER_PRESET_NUM, 4, TRUE);
+	mIniWrite_putText(fp, "pane_layout", cf->panel.pane_layout);
+	mIniWrite_putText(fp, "panel_layout", cf->panel.panel_layout);
+
+	mIniWrite_putInt(fp, "color_type", cf->panel.color_type);
+	mIniWrite_putInt(fp, "colwheel_type", cf->panel.colwheel_type);
+	mIniWrite_putInt(fp, "colpal_type", cf->panel.colpal_type);
+	mIniWrite_putInt(fp, "option_type", cf->panel.option_type);
+	mIniWrite_putInt(fp, "toollist_sizelist_h", cf->panel.toollist_sizelist_h);
+
+	mIniWrite_putHex(fp, "brushopt_flags", cf->panel.brushopt_flags);
+
+	mIniWrite_putNumbers(fp, "water_preset", cf->panel.water_preset, CONFIG_WATER_PRESET_NUM, 4, TRUE);
+
+	//---- 変形ダイアログ
+
+	mIniWrite_putGroup(fp, "transform");
+
+	mIniWrite_putInt(fp, "view_w", cf->transform.view_w);
+	mIniWrite_putInt(fp, "view_h", cf->transform.view_h);
+	mIniWrite_putInt(fp, "flags", cf->transform.flags);
 
 	//----- キャンバスビュー
 
-	mIniWriteGroup(fp, "canvasview");
+	mIniWrite_putGroup(fp, "canvasview");
 
-	mIniWriteInt(fp, "flags", cf->canvasview_flags);
-	mIniWriteInt(fp, "zoom_norm", cf->canvasview_zoom_normal);
-	mIniWriteInt(fp, "zoom_loupe", cf->canvasview_zoom_loupe);
-	mIniWriteNums(fp, "btt", cf->canvasview_btt, 5, 1, FALSE);
+	mIniWrite_putInt(fp, "flags", cf->canvview.flags);
+	mIniWrite_putInt(fp, "zoom", cf->canvview.zoom);
+	mIniWrite_putNumbers(fp, "btt", cf->canvview.bttcmd, 5, 1, FALSE);
 
 	//----- イメージビューア
 
-	mIniWriteGroup(fp, "imageviewer");
+	mIniWrite_putGroup(fp, "imgviewer");
 
-	mIniWriteStr(fp, "dir", &cf->strImageViewerDir);
-	mIniWriteInt(fp, "flags", cf->imageviewer_flags);
-	mIniWriteNums(fp, "btt", cf->imageviewer_btt, 5, 1, FALSE);
+	mIniWrite_putStr(fp, "dir", &cf->strImageViewerDir);
+	mIniWrite_putInt(fp, "flags", cf->imgviewer.flags);
+	mIniWrite_putNumbers(fp, "btt", cf->imgviewer.bttcmd, 5, 1, FALSE);
 
 	//----- グリッド
 
-	mIniWriteGroup(fp, "grid");
+	mIniWrite_putGroup(fp, "grid");
 
-	mIniWriteInt(fp, "gridw", cf->grid.gridw);
-	mIniWriteInt(fp, "gridh", cf->grid.gridh);
-	mIniWriteHex(fp, "gridcol", cf->grid.col_grid);
+	mIniWrite_putInt(fp, "gridw", cf->grid.gridw);
+	mIniWrite_putInt(fp, "gridh", cf->grid.gridh);
+	mIniWrite_putHex(fp, "gridcol", cf->grid.col_grid);
 	
-	mIniWriteInt(fp, "sph", cf->grid.splith);
-	mIniWriteInt(fp, "spv", cf->grid.splitv);
-	mIniWriteHex(fp, "spcol", cf->grid.col_split);
+	mIniWrite_putInt(fp, "sph", cf->grid.splith);
+	mIniWrite_putInt(fp, "spv", cf->grid.splitv);
+	mIniWrite_putHex(fp, "spcol", cf->grid.col_split);
 
-	mIniWriteNums(fp, "reg", cf->grid.reglist, CONFIG_GRIDREG_NUM, 4, TRUE);
+	mIniWrite_putHex(fp, "pxgrid", cf->grid.pxgrid_zoom);
+
+	mIniWrite_putNumbers(fp, "recent", cf->grid.recent, CONFIG_GRID_RECENT_NUM, 4, TRUE);
 
 	//----- 保存設定
 
-	mIniWriteGroup(fp, "save");
+	mIniWrite_putGroup(fp, "save");
 
-	mIniWriteHex(fp, "flags", cf->save.flags);
-	mIniWriteInt(fp, "jpeg_qua", cf->save.jpeg_quality);
-	mIniWriteInt(fp, "jpeg_samp", cf->save.jpeg_sampling_factor);
-	mIniWriteInt(fp, "png_comp", cf->save.png_complevel);
-	mIniWriteInt(fp, "psd_type", cf->save.psd_type);
+	mIniWrite_putInt(fp, "png", cf->save.png);
+	mIniWrite_putInt(fp, "jpeg", cf->save.jpeg);
+	mIniWrite_putInt(fp, "tiff", cf->save.tiff);
+	mIniWrite_putInt(fp, "webp", cf->save.webp);
+	mIniWrite_putInt(fp, "psd", cf->save.psd);
 
-	//----- 操作
+	//----- ポインタデバイス
 
-	mIniWriteGroup(fp, "button");
+	mIniWrite_putGroup(fp, "pointer");
 
-	mIniWriteNums(fp, "default", cf->default_btt_cmd, CONFIG_POINTERBTT_NUM, 1, FALSE);
-	mIniWriteNums(fp, "pentab", cf->pentab_btt_cmd, CONFIG_POINTERBTT_NUM, 1, FALSE);
+	mIniWrite_putNumbers(fp, "default", cf->pointer_btt_default, CONFIG_POINTERBTT_NUM, 1, FALSE);
+	mIniWrite_putNumbers(fp, "pentab", cf->pointer_btt_pentab, CONFIG_POINTERBTT_NUM, 1, FALSE);
 
 	//----- 文字列
 
-	mIniWriteGroup(fp, "string");
+	mIniWrite_putGroup(fp, "string");
 
-	mIniWriteStr(fp, "fontstyle_gui", &cf->strFontStyle_gui);
-	mIniWriteStr(fp, "fontstyle_dock", &cf->strFontStyle_dock);
-
-	mIniWriteStr(fp, "tempdir", &cf->strTempDir);
-	mIniWriteStr(fp, "layerfiledir", &cf->strLayerFileDir);
-	mIniWriteStr(fp, "selectfiledir", &cf->strSelectFileDir);
-	mIniWriteStr(fp, "stampfiledir", &cf->strStampFileDir);
-
-	mIniWriteStr(fp, "user_texdir", &cf->strUserTextureDir);
-	mIniWriteStr(fp, "user_brushdir", &cf->strUserBrushDir);
-
-	mIniWriteStr(fp, "layernamelist", &cf->strLayerNameList);
-	mIniWriteStr(fp, "theme", &cf->strThemeFile);
+	mIniWrite_putStr(fp, "font_panel", &cf->strFont_panel);
+	mIniWrite_putStr(fp, "tempdir", &cf->strTempDir);
+	mIniWrite_putStr(fp, "filedlgdir", &cf->strFileDlgDir);
+	mIniWrite_putStr(fp, "layerfiledir", &cf->strLayerFileDir);
+	mIniWrite_putStr(fp, "selectfiledir", &cf->strSelectFileDir);
+	mIniWrite_putStr(fp, "fontfiledir", &cf->strFontFileDir);
+	mIniWrite_putStr(fp, "user_texdir", &cf->strUserTextureDir);
+	mIniWrite_putStr(fp, "user_brushdir", &cf->strUserBrushDir);
+	mIniWrite_putStr(fp, "cursor_file", &cf->strCursorFile);
 
 	//----- ファイル履歴
 
-	mIniWriteGroup(fp, "recentfile");
-	mIniWriteNoStrs(fp, 0, cf->strRecentFile, CONFIG_RECENTFILE_NUM);
+	mIniWrite_putGroup(fp, "recentfile");
+	mIniWrite_putStrArray(fp, 0, cf->strRecentFile, CONFIG_RECENTFILE_NUM);
 
 	//----- 開いたディレクトリ履歴
 
-	mIniWriteGroup(fp, "recent_opendir");
-	mIniWriteNoStrs(fp, 0, cf->strRecentOpenDir, CONFIG_RECENTDIR_NUM);
+	mIniWrite_putGroup(fp, "recent_opendir");
+	mIniWrite_putStrArray(fp, 0, cf->strRecentOpenDir, CONFIG_RECENTDIR_NUM);
 
 	//----- 保存ディレクトリ履歴
 
-	mIniWriteGroup(fp, "recent_savedir");
-	mIniWriteNoStrs(fp, 0, cf->strRecentSaveDir, CONFIG_RECENTDIR_NUM);
+	mIniWrite_putGroup(fp, "recent_savedir");
+	mIniWrite_putStrArray(fp, 0, cf->strRecentSaveDir, CONFIG_RECENTDIR_NUM);
 
 	//----- 新規作成サイズ
 
-	mIniWriteGroup(fp, "newimg_recent");
-	_save_imagesize(fp, cf->imgsize_recent);
+	mIniWrite_putGroup(fp, "newcanvas_recent");
+	_save_newcanvas_array(fp, cf->newcanvas_recent);
 
-	mIniWriteGroup(fp, "newimg_record");
-	_save_imagesize(fp, cf->imgsize_record);
+	mIniWrite_putGroup(fp, "newcanvas_record");
+	_save_newcanvas_array(fp, cf->newcanvas_record);
 
 	//----- キャンバスキー
 
-	mIniWriteGroup(fp, "canvaskey");
+	mIniWrite_putGroup(fp, "canvaskey");
 
 	for(i = 0; i < 256; i++)
 	{
 		if(cf->canvaskey[i])
-			mIniWriteNoInt(fp, i, cf->canvaskey[i]);
+			mIniWrite_putInt_keyno(fp, i, cf->canvaskey[i]);
 	}
 
 	//----- フィルタデータ
 
-	FilterSaveData_setConfig(fp);
+	FilterParam_setConfig(&cf->list_filterparam, fp);
 }
 
-/** DrawData 書き込み */
+/* 色マスク書き込み */
 
-static void _save_drawdata(FILE *fp,DrawData *p)
+static void _save_colmask(FILE *fp,AppDraw *p)
+{
+	uint32_t i,col[DRAW_COLORMASK_NUM];
+
+	for(i = 0; i < DRAW_COLORMASK_NUM; i++)
+		col[i] = RGBA8_to_32bit(p->col.maskcol + i);
+
+	mIniWrite_putNumbers(fp, "colmask", col, DRAW_COLORMASK_NUM, 4, TRUE);
+}
+
+/* AppDraw 書き込み */
+
+static void _save_drawdata(FILE *fp,AppDraw *p)
 {
 	//------ main
 
-	mIniWriteGroup(fp, "draw_main");
+	mIniWrite_putGroup(fp, "draw_main");
 
-	mIniWriteStr(fp, "opttex", &p->strOptTexPath);
+	mIniWrite_putStr(fp, "opt_texture", &p->strOptTexturePath);
 
 	//------ カラー
 
-	mIniWriteGroup(fp, "draw_color");
+	mIniWrite_putGroup(fp, "draw_color");
 
-	mIniWriteHex(fp, "drawcol", p->col.drawcol);
-	mIniWriteHex(fp, "bkgndcol", p->col.bkgndcol);
-	mIniWriteNums(fp, "colmask", p->col.colmask_col, p->col.colmask_num, 4, TRUE);
-	mIniWriteNums(fp, "gradcol", p->col.gradcol, COLPAL_GRADNUM * 2, 4, TRUE);
-	mIniWriteInt(fp, "colpal_sel", p->col.colpal_sel);
-	mIniWriteInt(fp, "colpal_cellw", p->col.colpal_cellw);
-	mIniWriteInt(fp, "colpal_cellh", p->col.colpal_cellh);
-	mIniWriteInt(fp, "colpal_maxcol", p->col.colpal_max_column);
-	mIniWriteNums(fp, "layercolpal", p->col.layercolpal, LAYERCOLPAL_NUM, 4, TRUE);
+	mIniWrite_putHex(fp, "drawcol", RGBcombo_to_32bit(&p->col.drawcol));
+	mIniWrite_putHex(fp, "bkgndcol", RGBcombo_to_32bit(&p->col.bkgndcol));
+	mIniWrite_putHex(fp, "checkbkcol1", RGBcombo_to_32bit(&p->col.checkbkcol[0]));
+	mIniWrite_putHex(fp, "checkbkcol2", RGBcombo_to_32bit(&p->col.checkbkcol[1]));
 
+	_save_colmask(fp, p);
+
+	mIniWrite_putNumbers(fp, "gradbarcol", p->col.gradcol, DRAW_GRADBAR_NUM * 2, 4, TRUE);
+	mIniWrite_putNumbers(fp, "layercolpal", p->col.layercolpal, DRAW_LAYERCOLPAL_NUM, 4, TRUE);
+
+	mIniWrite_putInt(fp, "pal_sel", mListItemGetIndex(p->col.cur_pallist));
+	
 	//------- ツール
 
-	mIniWriteGroup(fp, "draw_tool");
+	mIniWrite_putGroup(fp, "draw_tool");
 
-	mIniWriteInt(fp, "no", p->tool.no);
-	mIniWriteNums(fp, "subno", p->tool.subno, TOOL_NUM, 1, FALSE);
+	mIniWrite_putInt(fp, "tool", p->tool.no);
+	mIniWrite_putNumbers(fp, "toolsub", p->tool.subno, TOOL_NUM, 1, FALSE);
 
-	mIniWriteHex(fp, "opt_fillpoly", p->tool.opt_fillpoly);
-	mIniWriteHex(fp, "opt_fillpoly_erase", p->tool.opt_fillpoly_erase);
-	mIniWriteInt(fp, "opt_move", p->tool.opt_move);
-	mIniWriteHex(fp, "opt_grad", p->tool.opt_grad);
-	mIniWriteHex(fp, "opt_fill", p->tool.opt_fill);
-	mIniWriteInt(fp, "opt_stamp", p->tool.opt_stamp);
-	mIniWriteInt(fp, "opt_magicwand", p->tool.opt_magicwand);
+	mIniWrite_putHex(fp, "opt_dotpen", p->tool.opt_dotpen);
+	mIniWrite_putHex(fp, "opt_dotpen_erase", p->tool.opt_dotpen_erase);
+	mIniWrite_putHex(fp, "opt_finger", p->tool.opt_finger);
+	mIniWrite_putHex(fp, "opt_fillpoly", p->tool.opt_fillpoly);
+	mIniWrite_putHex(fp, "opt_fillpoly_erase", p->tool.opt_fillpoly_erase);
+	mIniWrite_putHex(fp, "opt_fill", p->tool.opt_fill);
+	mIniWrite_putHex(fp, "opt_grad", p->tool.opt_grad);
+	mIniWrite_putInt(fp, "opt_select", p->tool.opt_select);
+	mIniWrite_putInt(fp, "opt_selfill", p->tool.opt_selfill);
+	mIniWrite_putInt(fp, "opt_stamp", p->tool.opt_stamp);
+	mIniWrite_putInt(fp, "opt_cutpaste", p->tool.opt_cutpaste);
+	mIniWrite_putInt(fp, "opt_boxedit", p->tool.opt_boxedit);
 
-	//-------- headtail
+	//------ ブラシ
 
-	mIniWriteGroup(fp, "headtail");
+	mIniWrite_putGroup(fp, "draw_brush");
 
-	mIniWriteInt(fp, "sel", p->headtail.selno);
-	mIniWriteHex(fp, "line", p->headtail.curval[0]);
-	mIniWriteHex(fp, "bezier", p->headtail.curval[1]);
+	mIniWrite_putNumbers(fp, "press_comm", p->tlist->pt_press_comm, CURVE_SPLINE_MAXNUM, 4, TRUE);
 
-	mIniWriteNums(fp, "record", p->headtail.record, HEADTAIL_RECORD_NUM, 4, TRUE);
+	//-------- 入り抜き
+
+	mIniWrite_putGroup(fp, "draw_headtail");
+
+	mIniWrite_putInt(fp, "sel", p->headtail.selno);
+	mIniWrite_putHex(fp, "line", p->headtail.curval[0]);
+	mIniWrite_putHex(fp, "bezier", p->headtail.curval[1]);
+
+	mIniWrite_putNumbers(fp, "regist", p->headtail.regist, DRAW_HEADTAIL_REGIST_NUM, 4, TRUE);
 
 	//------- テキスト描画
 
-	mIniWriteGroup(fp, "drawtext");
+	mIniWrite_putGroup(fp, "draw_text");
 
-	mIniWriteStr(fp, "name", &p->drawtext.strName);
-	mIniWriteStr(fp, "style", &p->drawtext.strStyle);
-	mIniWriteInt(fp, "weight", p->drawtext.weight);
-	mIniWriteInt(fp, "slant", p->drawtext.slant);
-	mIniWriteInt(fp, "size", p->drawtext.size);
-	mIniWriteInt(fp, "hinting", p->drawtext.hinting);
-	mIniWriteInt(fp, "charsp", p->drawtext.char_space);
-	mIniWriteInt(fp, "linesp", p->drawtext.line_space);
-	mIniWriteInt(fp, "dakuten", p->drawtext.dakuten_combine);
-	mIniWriteInt(fp, "flags", p->drawtext.flags);
+	mIniWrite_putInt(fp, "preview", p->text.fpreview);
 
-	//定規
+	mIniWrite_putStr(fp, "font", &p->text.dt.str_font);
+	mIniWrite_putStr(fp, "style", &p->text.dt.str_style);
+	
+	mIniWrite_putInt(fp, "font_param", p->text.dt.font_param);
+	mIniWrite_putInt(fp, "fontsize", p->text.dt.fontsize);
+	mIniWrite_putInt(fp, "rubysize", p->text.dt.rubysize);
+	mIniWrite_putInt(fp, "dpi", p->text.dt.dpi);
+	mIniWrite_putInt(fp, "char_space", p->text.dt.char_space);
+	mIniWrite_putInt(fp, "line_space", p->text.dt.line_space);
+	mIniWrite_putInt(fp, "ruby_pos", p->text.dt.ruby_pos);
+	mIniWrite_putInt(fp, "angle", p->text.dt.angle);
+	
+	mIniWrite_putInt(fp, "fontsel", p->text.dt.fontsel);
+	mIniWrite_putInt(fp, "unit_fontsize", p->text.dt.unit_fontsize);
+	mIniWrite_putInt(fp, "unit_rubysize", p->text.dt.unit_rubysize);
+	mIniWrite_putInt(fp, "unit_charsp", p->text.dt.unit_char_space);
+	mIniWrite_putInt(fp, "unit_linesp", p->text.dt.unit_line_space);
+	mIniWrite_putInt(fp, "unit_rubypos", p->text.dt.unit_ruby_pos);
+	mIniWrite_putInt(fp, "hinting", p->text.dt.hinting);
+
+	mIniWrite_putHex(fp, "flags", p->text.dt.flags);
+
+	//----- 定規
 
 	_save_draw_rule_record(fp);
 }
 
-/** 設定ファイル書き込み (メイン) */
+/** 設定ファイル書き込み */
 
-void appSaveConfig()
+void app_save_config(void)
 {
 	FILE *fp;
 
-	fp = mIniWriteOpenFile2(MAPP->pathConfig, CONFIG_FILENAME_MAIN);
+	fp = mIniWrite_openFile_join(mGuiGetPath_config_text(), CONFIG_FILENAME_MAIN);
 	if(!fp) return;
 
 	//バージョン
 
-	mIniWriteGroup(fp, "azpainter");
-	mIniWriteInt(fp, "ver", 2);
-
-	//mlib
-
-	mIniWriteGroup(fp, "mlib");
-	
-	mIniWriteFileDialogConfig(fp, "filedialog", MAPP->filedialog_config);
+	mIniWrite_putGroup(fp, "azpainter");
+	mIniWrite_putInt(fp, "ver", 3);
 
 	//ウィジェット状態
 
-	_save_widgets_state(fp, APP_CONF);
+	_save_widgets_state(fp, APPCONF);
 
-	//ConfigData
+	//AppConfig
 
-	_save_configdata(fp, APP_CONF);
+	_save_configdata(fp, APPCONF);
 
-	//DrawData
+	//AppDraw
 
-	_save_drawdata(fp, APP_DRAW);
+	_save_drawdata(fp, APPDRAW);
+
+	//mlk
+
+	mGuiWriteIni_system(fp);
 
 	fclose(fp);
 }

@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,94 +18,108 @@
 $*/
 
 /**************************************
- * DrawData : 操作関連のサブ処理関数
+ * AppDraw : 操作関連のサブ処理関数
  **************************************/
 
-#ifndef DRAW_OP_SUB_H
-#define DRAW_OP_SUB_H
-
-typedef struct _DrawData DrawData;
-typedef struct _DrawPoint DrawPoint;
 typedef struct _TileImageDrawGradInfo TileImageDrawGradInfo;
+typedef struct _DrawPoint DrawPoint;
+
+enum
+{
+	CANDRAWLAYER_F_ENABLE_TEXT = 1<<0,	//テキストレイヤを有効
+	CANDRAWLAYER_F_ENABLE_READ = 1<<1,	//ロックと非表示は有効 (イメージ参照のみの場合)
+	CANDRAWLAYER_F_NO_HIDE = 1<<2,		//非表示は判定しない
+	CANDRAWLAYER_F_NO_PASTE = 1<<3		//切り貼りツールは判定しない
+};
 
 enum
 {
 	CANDRAWLAYER_OK,
-	CANDRAWLAYER_FOLDER,
-	CANDRAWLAYER_LOCK,
+	CANDRAWLAYER_FOLDER,	//フォルダ
+	CANDRAWLAYER_TEXT,		//テキストレイヤ
+	CANDRAWLAYER_LOCK,		//ロック
+	CANDRAWLAYER_HIDE,		//レイヤが非表示
+	CANDRAWLAYER_PASTE		//切り貼りツールの貼り付けモード中
+};
 
-	CANDRAWLAYER_MES_HIDE	//レイヤが非表示
+enum
+{
+	DRAWOPSUB_UPDATE_DIRECT,	//直接更新
+	DRAWOPSUB_UPDATE_ADD,		//範囲追加
+	DRAWOPSUB_UPDATE_TIMER		//タイマー
 };
 
 
 /*-----------*/
 
-void drawOpSub_setOpInfo(DrawData *p,int optype,
-	void (*motion)(DrawData *,uint32_t),mBool (*release)(DrawData *),int opsubtype);
+void drawOpSub_setOpInfo(AppDraw *p,int optype,
+	void (*motion)(AppDraw *,uint32_t),mlkbool (*release)(AppDraw *),int sub);
 
-int drawOpSub_canDrawLayer(DrawData *p);
-int drawOpSub_canDrawLayer_mes(DrawData *p);
-mBool drawOpSub_isFolder_curlayer();
+int drawOpSub_canDrawLayer(AppDraw *p,uint32_t flags);
+int drawOpSub_canDrawLayer_mes(AppDraw *p,uint32_t flags);
+mlkbool drawOpSub_isCurLayer_folder(void);
+mlkbool drawOpSub_isCurLayer_text(void);
+mlkbool drawOpSub_isRunTextTool(void);
 
 /* 作業用イメージなど */
 
-mBool drawOpSub_createTmpImage_area(DrawData *p);
-mBool drawOpSub_createTmpImage_same_current_imgsize(DrawData *p);
+mlkbool drawOpSub_createTmpImage_canvas(AppDraw *p);
+mlkbool drawOpSub_createTmpImage_curlayer_imgsize(AppDraw *p);
+mlkbool drawOpSub_createTmpImage_curlayer_rect(AppDraw *p,const mRect *rc);
 
-void drawOpSub_freeTmpImage(DrawData *p);
-void drawOpSub_freeFillPolygon(DrawData *p);
+void drawOpSub_freeTmpImage(AppDraw *p);
+void drawOpSub_freeFillPolygon(AppDraw *p);
 
-/* イメージ */
-
-TileImage *drawOpSub_createSelectImage_byOpType(DrawData *p,mRect *rcarea);
+TileImage *drawOpSub_createSelectImage_forStamp(AppDraw *p,mRect *rcdst);
 
 /* 描画 */
 
-void drawOpSub_beginDraw(DrawData *p);
-void drawOpSub_endDraw(DrawData *p,mRect *rc,mBox *boximg);
+void drawOpSub_beginDraw(AppDraw *p);
+void drawOpSub_endDraw(AppDraw *p,mRect *rcdraw);
 
-void drawOpSub_beginDraw_single(DrawData *p);
-void drawOpSub_endDraw_single(DrawData *p);
+void drawOpSub_beginDraw_single(AppDraw *p);
+void drawOpSub_endDraw_single(AppDraw *p);
 
-void drawOpSub_addrect_and_update(DrawData *p,mBool btimer);
-void drawOpSub_finishDraw_workrect(DrawData *p);
-void drawOpSub_finishDraw_single(DrawData *p);
+void drawOpSub_addrect_and_update(AppDraw *p,int type);
+void drawOpSub_finishDraw_workrect(AppDraw *p);
+void drawOpSub_finishDraw_single(AppDraw *p);
+void drawOpSub_update_rcdraw(AppDraw *p);
 
-void drawOpSub_setDrawInfo(DrawData *p,int toolno,int param);
+void drawOpSub_setDrawInfo(AppDraw *p,int toolno,int param);
 
-void drawOpSub_clearDrawMasks();
-void drawOpSub_setDrawInfo_select();
-void drawOpSub_setDrawInfo_select_paste();
-void drawOpSub_setDrawInfo_select_cut();
-void drawOpSub_setDrawInfo_fillerase(mBool erase);
-void drawOpSub_setDrawInfo_overwrite();
-void drawOpSub_setDrawInfo_filter();
-void drawOpSub_setDrawInfo_filter_comic_brush();
+void drawOpSub_setDrawInfo_pixelcol(int type);
+void drawOpSub_setDrawInfo_clearMasks(void);
+void drawOpSub_setDrawInfo_select(void);
+void drawOpSub_setDrawInfo_select_paste(void);
+void drawOpSub_setDrawInfo_select_cut(void);
+void drawOpSub_setDrawInfo_fillerase(mlkbool erase);
+void drawOpSub_setDrawInfo_overwrite(void);
+void drawOpSub_setDrawInfo_textlayer(AppDraw *p,mlkbool erase);
+void drawOpSub_setDrawInfo_filter(void);
 
-void drawOpSub_setDrawGradationInfo(TileImageDrawGradInfo *info);
+void drawOpSub_setDrawGradationInfo(AppDraw *p,TileImageDrawGradInfo *info);
 
-mPixbuf *drawOpSub_beginAreaDraw();
-void drawOpSub_endAreaDraw(mPixbuf *pixbuf,mBox *box);
+mPixbuf *drawOpSub_beginCanvasDraw(void);
+void drawOpSub_endCanvasDraw(mPixbuf *pixbuf,mBox *box);
 
 /* ポイント取得など */
 
-void drawOpSub_getAreaPoint_int(DrawData *p,mPoint *pt);
+void drawOpSub_getCanvasPoint_int(AppDraw *p,mPoint *pt);
 
-void drawOpSub_getImagePoint_fromDrawPoint(DrawData *p,mDoublePoint *pt,DrawPoint *dpt);
-void drawOpSub_getImagePoint_double(DrawData *p,mDoublePoint *pt);
-void drawOpSub_getImagePoint_int(DrawData *p,mPoint *pt);
+void drawOpSub_getImagePoint_double(AppDraw *p,mDoublePoint *pt);
+void drawOpSub_getImagePoint_int(AppDraw *p,mPoint *pt);
+void drawOpSub_getImagePoint_dotpen(AppDraw *p,mPoint *pt);
 
-void drawOpSub_getDrawPoint(DrawData *p,DrawPoint *dst);
+void drawOpSub_getDrawPoint(AppDraw *p,DrawPoint *dst);
 
 /* 操作関連 */
 
-void drawOpSub_copyTmpPoint(DrawData *p,int num);
-void drawOpSub_startMoveImage(DrawData *p,TileImage *img);
-mBool drawOpSub_isPressInSelect(DrawData *p);
+void drawOpSub_copyTmpPoint_0toN(AppDraw *p,int max);
+void drawOpSub_startMoveImage(AppDraw *p,TileImage *img);
+mlkbool drawOpSub_isPress_inSelect(AppDraw *p);
 
-void drawOpSub_getDrawLinePoints(DrawData *p,mDoublePoint *pt1,mDoublePoint *pt2);
-void drawOpSub_getDrawBox_noangle(DrawData *p,mBox *box);
-void drawOpSub_getDrawBoxPoints(DrawData *p,mDoublePoint *pt);
-void drawOpSub_getDrawEllipseParam(DrawData *p,mDoublePoint *pt_ct,mDoublePoint *pt_radius);
+void drawOpSub_getDrawLinePoints(AppDraw *p,mDoublePoint *pt1,mDoublePoint *pt2);
+void drawOpSub_getDrawRectBox_angle0(AppDraw *p,mBox *box);
+void drawOpSub_getDrawRectPoints(AppDraw *p,mDoublePoint *pt);
+void drawOpSub_getDrawEllipseParam(AppDraw *p,mDoublePoint *pt_ct,mDoublePoint *pt_radius,mlkbool fdot);
 
-#endif

@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,7 +18,7 @@
 $*/
 
 /*****************************************
- * DrawData
+ * AppDraw
  *
  * 操作 - いろいろ1
  *****************************************/
@@ -26,50 +26,36 @@ $*/
  * 図形塗りつぶし、塗りつぶし、グラデーション、移動ツール、スタンプ
  * キャンバス移動、キャンバス回転、上下ドラッグキャンバス倍率変更
  * スポイト、中間色作成、色置き換え
- * テキスト描画
  */
-
 
 #include <math.h>
 
-#include "mDef.h"
-#include "mRectBox.h"
-#include "mNanoTime.h"
-#include "mFont.h"
-#include "mStr.h"
+#include "mlk_gui.h"
+#include "mlk_rectbox.h"
+#include "mlk_nanotime.h"
 
-#include "defDraw.h"
-#include "defWidgets.h"
+#include "def_draw.h"
+#include "def_tool_option.h"
 
 #include "draw_main.h"
 #include "draw_calc.h"
-#include "draw_select.h"
 #include "draw_op_def.h"
 #include "draw_op_sub.h"
 #include "draw_op_func.h"
 
-#include "macroToolOpt.h"
+#include "tileimage.h"
+#include "layeritem.h"
+#include "layerlist.h"
+#include "imagecanvas.h"
 
-#include "TileImage.h"
-#include "TileImageDrawInfo.h"
-#include "LayerItem.h"
-#include "LayerList.h"
+#include "fillpolygon.h"
+#include "drawfill.h"
+#include "undo.h"
 
-#include "FillPolygon.h"
-#include "DrawFill.h"
-#include "Undo.h"
-#include "DrawFont.h"
+#include "appcursor.h"
+#include "maincanvas.h"
+#include "panel_func.h"
 
-#include "AppCursor.h"
-#include "MainWinCanvas.h"
-#include "Docks_external.h"
-
-
-//----------------
-
-mBool DrawTextDlg_run(mWindow *owner);
-
-//----------------
 
 
 //==============================
@@ -77,21 +63,21 @@ mBool DrawTextDlg_run(mWindow *owner);
 //==============================
 
 
-/** 離し : キャンバス状態変更用 */
+/** [離し] キャンバス状態変更用 */
 
-static mBool _common_release_canvas(DrawData *p)
+static mlkbool _common_release_canvas(AppDraw *p)
 {
-	MainWinCanvasArea_clearTimer_updateArea();
+	MainCanvasPage_clearTimer_updatePage();
 
 	drawCanvas_normalQuality();
-	drawUpdate_canvasArea();
+	drawUpdate_canvas();
 	
 	return TRUE;
 }
 
-/** 離し : グラブ解除しない */
+/** [離し] グラブ解除しない */
 
-mBool drawOp_common_norelease(DrawData *p)
+mlkbool drawOp_common_release_none(AppDraw *p)
 {
 	return FALSE;
 }
@@ -102,9 +88,9 @@ mBool drawOp_common_norelease(DrawData *p)
 //=================================
 
 
-/** 四角形塗りつぶし描画 (領域に対する) */
+/** 四角形塗りつぶし描画 (キャンバスに対する) */
 
-void drawOpDraw_fillBox(DrawData *p)
+void drawOpDraw_fillRect(AppDraw *p)
 {
 	if(p->canvas_angle == 0)
 	{
@@ -112,12 +98,12 @@ void drawOpDraw_fillBox(DrawData *p)
 
 		mBox box;
 
-		drawOpSub_getDrawBox_noangle(p, &box);
+		drawOpSub_getDrawRectBox_angle0(p, &box);
 
 		drawOpSub_setDrawInfo(p, p->w.optoolno, 0);
 		drawOpSub_beginDraw_single(p);
 
-		TileImage_drawFillBox(p->w.dstimg, box.x, box.y, box.w, box.h, &p->w.rgbaDraw);
+		TileImage_drawFillBox(p->w.dstimg, box.x, box.y, box.w, box.h, &p->w.drawcol);
 		
 		drawOpSub_endDraw_single(p);
 	}
@@ -126,16 +112,12 @@ void drawOpDraw_fillBox(DrawData *p)
 		//キャンバス回転ありの場合、多角形で
 
 		mDoublePoint pt[4];
-		int i;
 
-		drawOpSub_getDrawBoxPoints(p, pt);
+		drawOpSub_getDrawRectPoints(p, pt);
 
 		if((p->w.fillpolygon = FillPolygon_new()))
 		{
-			for(i = 0; i < 4; i++)
-				FillPolygon_addPoint(p->w.fillpolygon, pt[i].x, pt[i].y);
-
-			if(FillPolygon_closePoint(p->w.fillpolygon))
+			if(FillPolygon_addPoint4_close(p->w.fillpolygon, pt))
 				drawOpDraw_fillPolygon(p);
 		
 			drawOpSub_freeFillPolygon(p);
@@ -145,69 +127,87 @@ void drawOpDraw_fillBox(DrawData *p)
 
 /** 楕円塗りつぶし */
 
-void drawOpDraw_fillEllipse(DrawData *p)
+void drawOpDraw_fillEllipse(AppDraw *p)
 {
 	mDoublePoint pt,pt_r;
 
-	drawOpSub_getDrawEllipseParam(p, &pt, &pt_r);
-
-	//描画
+	//ntmp[0] : アンチエイリアス
 
 	drawOpSub_setDrawInfo(p, p->w.optoolno, 0);
 	drawOpSub_beginDraw_single(p);
 
-	TileImage_drawFillEllipse(p->w.dstimg, pt.x, pt.y, pt_r.x, pt_r.y,
-		&p->w.rgbaDraw, p->w.ntmp[0],
-		&p->viewparam, p->canvas_mirror);
+	if(p->canvas_angle == 0 && !p->w.ntmp[0])
+	{
+		//キャンバス回転 0 で非アンチエイリアス時は、ドットで描画
+
+		drawOpSub_getDrawEllipseParam(p, NULL, NULL, TRUE);
+
+		TileImage_drawFillEllipse_dot(p->w.dstimg,
+			p->w.pttmp[0].x, p->w.pttmp[0].y,
+			p->w.pttmp[1].x, p->w.pttmp[1].y,
+			&p->w.drawcol);
+	}
+	else
+	{
+		drawOpSub_getDrawEllipseParam(p, &pt, &pt_r, FALSE);
+
+		TileImage_drawFillEllipse(p->w.dstimg,
+			pt.x, pt.y, pt_r.x, pt_r.y, &p->w.drawcol,
+			p->w.ntmp[0], //antialias
+			&p->viewparam, p->canvas_mirror);
+	}
 
 	drawOpSub_endDraw_single(p);
 }
 
-/** 多角形/投げ縄 塗りつぶし */
+/** 多角形塗りつぶし */
 
-void drawOpDraw_fillPolygon(DrawData *p)
+void drawOpDraw_fillPolygon(AppDraw *p)
 {
 	drawOpSub_setDrawInfo(p, p->w.optoolno, 0);
 	drawOpSub_beginDraw_single(p);
 
 	TileImage_drawFillPolygon(p->w.dstimg, p->w.fillpolygon,
-		&p->w.rgbaDraw, p->w.ntmp[0]);
+		&p->w.drawcol, p->w.ntmp[0]);
 
 	drawOpSub_endDraw_single(p);
 }
 
 /** グラデーション描画 */
 
-void drawOpDraw_gradation(DrawData *p)
+void drawOpDraw_gradation(AppDraw *p)
 {
 	TileImageDrawGradInfo info;
 	mPoint pt[2];
 	mRect rc;
-	void (*drawfunc[4])(TileImage *,int,int,int,int,mRect *,TileImageDrawGradInfo *) = {
+	TileImageDrawGradationFunc drawfunc[] = {
 		TileImage_drawGradation_line, TileImage_drawGradation_circle,
 		TileImage_drawGradation_box, TileImage_drawGradation_radial
 	};
 
-	//描画用情報
+	//グラデーション描画情報をセット
 
-	drawOpSub_setDrawGradationInfo(&info);
+	drawOpSub_setDrawGradationInfo(p, &info);
 	if(!info.buf) return;
 
 	//位置
 
-	drawCalc_areaToimage_pt(p, pt, p->w.pttmp[0].x, p->w.pttmp[0].y);
-	drawCalc_areaToimage_pt(p, pt + 1, p->w.pttmp[1].x, p->w.pttmp[1].y);
+	drawCalc_canvas_to_image_pt(p, pt, p->w.pttmp[0].x, p->w.pttmp[0].y);
+	drawCalc_canvas_to_image_pt(p, pt + 1, p->w.pttmp[1].x, p->w.pttmp[1].y);
 
 	//範囲 (選択範囲があるなら、その範囲)
 
 	drawSel_getFullDrawRect(p, &rc);
+
+	rc.x1 = rc.y1 = 0;
+	rc.x2 = p->imgw - 1, rc.y2 = p->imgh - 1;
 
 	//描画
 
 	drawOpSub_setDrawInfo(p, TOOL_GRADATION, 0);
 	drawOpSub_beginDraw_single(p);
 
-	(drawfunc[p->tool.subno[TOOL_GRADATION]])(p->w.dstimg,
+	(drawfunc[p->w.optool_subno])(p->w.dstimg,
 		pt[0].x, pt[0].y, pt[1].x, pt[1].y, &rc, &info);
 
 	mFree(info.buf);
@@ -221,38 +221,34 @@ void drawOpDraw_gradation(DrawData *p)
 //=================================
 
 
-/** 離し */
+/* 離し */
 
-static mBool _fill_release(DrawData *p)
+static mlkbool _fill_release(AppDraw *p)
 {
 	DrawFill *draw;
 	LayerItem *item;
 	mPoint pt;
-	int type,diff,opacity;
+	int type,diff,density,reflayer;
 	uint32_t val;
-	mBool disable_ref;
 
-	//設定値
+	//パラメータ値取得
 
 	if(p->w.optoolno == TOOL_FILL)
 	{
 		//通常塗りつぶし
-		
-		val = p->tool.opt_fill;
 
-		type = FILL_GET_TYPE(val);
-		diff = FILL_GET_COLOR_DIFF(val);
-		opacity = FILL_GET_OPACITY(val);
-
-		//+Ctrl でタイプをアンチエイリアス自動に
-
-		if(p->w.press_state & M_MODS_CTRL)
-			type = DRAWFILL_TYPE_AUTO_ANTIALIAS;
-
-		if(p->w.press_state & M_MODS_SHIFT) //+Shift : 判定元無効
-			disable_ref = TRUE;
+		if(p->w.is_toollist_toolopt)
+			val = p->w.toollist_toolopt;
 		else
-			disable_ref = FILL_IS_DISABLE_REF(val);
+			val = p->tool.opt_fill;
+
+		type = TOOLOPT_FILL_GET_TYPE(val);
+		diff = TOOLOPT_FILL_GET_DIFF(val);
+		density = TOOLOPT_FILL_GET_DENSITY(val);
+		reflayer = TOOLOPT_FILL_GET_LAYER(val);
+
+		if(type == DRAWFILL_TYPE_CANVAS)
+			reflayer = 1;
 	}
 	else
 	{
@@ -260,19 +256,20 @@ static mBool _fill_release(DrawData *p)
 
 		type = DRAWFILL_TYPE_OPAQUE;
 		diff = 0;
-		opacity = 100;
-		disable_ref = TRUE;
+		density = 100;
+		reflayer = 1;
 	}
 
-	//判定元イメージリンクセット & 先頭を取得
+	//参照レイヤのリンクをセット
+	// :参照レイヤがなければ、カレントレイヤ
 
-	item = LayerList_setLink_filltool(p->layerlist, p->curlayer, disable_ref);
+	item = LayerList_setLink_filltool(p->layerlist, p->curlayer, reflayer);
 
 	//初期化
 
 	drawOpSub_getImagePoint_int(p, &pt);
 
-	draw = DrawFill_new(p->curlayer->img, item->img, &pt, type, diff, opacity);
+	draw = DrawFill_new(p->curlayer->img, item->img, &pt, type, diff, density);
 	if(!draw) return TRUE;
 
 	//描画
@@ -280,7 +277,7 @@ static mBool _fill_release(DrawData *p)
 	drawOpSub_setDrawInfo(p, p->w.optoolno, 0);
 	drawOpSub_beginDraw_single(p);
 
-	DrawFill_run(draw, &p->w.rgbaDraw);
+	DrawFill_run(draw, &p->w.drawcol);
 
 	DrawFill_free(draw);
 
@@ -291,9 +288,9 @@ static mBool _fill_release(DrawData *p)
 
 /** 押し */
 
-mBool drawOp_fill_press(DrawData *p)
+mlkbool drawOp_fill_press(AppDraw *p)
 {
-	if(drawOpSub_canDrawLayer_mes(p))
+	if(drawOpSub_canDrawLayer_mes(p, 0))
 		//描画不可
 		return FALSE;
 	else
@@ -309,16 +306,16 @@ mBool drawOp_fill_press(DrawData *p)
 //=============================
 
 
-/** 範囲内イメージをスタンプ画像にセット (範囲選択後) */
+/** 範囲決定後、スタンプ画像にセット */
 
-void drawOp_setStampImage(DrawData *p)
+void drawOp_setStampImage(AppDraw *p)
 {
 	TileImage *img;
 	mRect rc;
 
-	//選択範囲イメージ作成
+	//選択範囲イメージ (A1) 作成
 
-	img = drawOpSub_createSelectImage_byOpType(p, &rc);
+	img = drawOpSub_createSelectImage_forStamp(p, &rc);
 	if(!img)
 	{
 		drawStamp_clearImage(p);
@@ -333,47 +330,51 @@ void drawOp_setStampImage(DrawData *p)
 
 	p->stamp.size.w = rc.x2 - rc.x1 + 1;
 	p->stamp.size.h = rc.y2 - rc.y1 + 1;
+	p->stamp.bits = p->imgbits;
 
 	TileImage_free(img);
 
 	//カーソル変更
 
-	MainWinCanvasArea_setCursor(APP_CURSOR_STAMP);
+	MainCanvasPage_setCursor(APPCURSOR_STAMP);
 
 	//プレビュー更新
 
-	DockOption_changeStampImage();
+	PanelOption_changeStampImage();
 }
 
 /** スタンプイメージ貼り付け */
 
-static mBool _stamp_cmd_paste(DrawData *p)
+static mlkbool _stamp_press_paste(AppDraw *p)
 {
 	mPoint pt;
+	int fcur,trans;
 
-	if(drawOpSub_canDrawLayer_mes(p)) return FALSE;
+	if(drawOpSub_canDrawLayer_mes(p, 0)) return FALSE;
+
+	trans = TOOLOPT_STAMP_GET_TRANS(p->tool.opt_stamp);
+
+	fcur = (trans == 5);
 
 	//貼り付け位置
 
 	drawOpSub_getImagePoint_int(p, &pt);
 
-	if(!STAMP_IS_LEFTTOP(p->tool.opt_stamp))
-	{
-		pt.x -= p->stamp.size.w / 2;
-		pt.y -= p->stamp.size.h / 2;
-	}
-
 	//描画
+
+	if(fcur) drawCursor_wait();
 
 	drawOpSub_setDrawInfo(p, TOOL_STAMP, 0);
 	drawOpSub_beginDraw(p);
 
-	TileImage_pasteStampImage(p->w.dstimg, pt.x, pt.y, p->stamp.img,
-		p->stamp.size.w, p->stamp.size.h);
+	TileImage_pasteStampImage(p->w.dstimg, pt.x, pt.y, trans,
+		p->stamp.img, p->stamp.size.w, p->stamp.size.h);
 
 	drawOpSub_finishDraw_single(p);
 
-	//
+	if(fcur) drawCursor_restore();
+
+	//離されるまでグラブ
 
 	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL, NULL, NULL, 0);
 
@@ -382,24 +383,24 @@ static mBool _stamp_cmd_paste(DrawData *p)
 
 /** 押し */
 
-mBool drawOp_stamp_press(DrawData *p,int subno)
+mlkbool drawOp_stamp_press(AppDraw *p,int subno)
 {
 	//+Ctrl : イメージをクリアして範囲選択へ
 
-	if(p->w.press_state & M_MODS_CTRL)
+	if(p->w.press_state & MLK_STATE_CTRL)
 		drawStamp_clearImage(p);
 
-	//イメージがあれば貼付け、なければ範囲選択
+	//イメージがあれば貼り付け、なければ範囲選択
 	
 	if(p->stamp.img)
-		return _stamp_cmd_paste(p);
+		return _stamp_press_paste(p);
 	else
 	{
 		//----- 範囲選択
 
-		//カレントレイヤがフォルダの場合は無効
+		//読み込みが可能な状態なら有効
 
-		if(drawOpSub_canDrawLayer(p) == CANDRAWLAYER_FOLDER)
+		if(drawOpSub_canDrawLayer_mes(p, CANDRAWLAYER_F_ENABLE_READ))
 			return FALSE;
 
 		//各図形
@@ -408,7 +409,7 @@ mBool drawOp_stamp_press(DrawData *p,int subno)
 		{
 			//四角形
 			case 0:
-				return drawOpXor_boximage_press(p, DRAW_OPSUB_SET_STAMP);
+				return drawOpXor_rect_image_press(p, DRAW_OPSUB_SET_STAMP);
 			//多角形
 			case 1:
 				return drawOpXor_polygon_press(p, DRAW_OPSUB_SET_STAMP);
@@ -426,127 +427,143 @@ mBool drawOp_stamp_press(DrawData *p,int subno)
 /*
 	pttmp[0]  : 移動開始時の先頭レイヤのオフセット位置
 	pttmp[1]  : オフセット位置の総相対移動数
-	ptd_tmp[0] : 総相対移動 px 数 (キャンバス座標)
-	rctmp[0]  : 現在の、対象レイヤすべての表示イメージ範囲
-	rcdraw    : 更新範囲
-	ptmp   : 移動対象レイヤアイテム (NULL ですべて)
+	ptd_tmp[0] : 総相対移動数 (キャンバス座標値, px (double))
+	rctmp[0]  : 現在の、対象レイヤすべての表示範囲 (px)
+	rcdraw    : 更新範囲 (タイマーにより更新されるとクリア)
+	layer     : リンクの先頭
 
 	- フォルダレイヤ選択時は、フォルダ下すべて移動。
-	- 移動対象のレイヤは DrawData::w.layer を先頭に LayerItem::link でリンクされている。
-	  (フォルダ、ロックレイヤは含まれない)
+	- 移動対象のレイヤは AppDraw::w.layer を先頭に LayerItem::link でリンクされている。
+	  (フォルダ/ロックレイヤは含まれない)
 */
 
 
-/** 移動 */
+/* 移動 */
 
-static void _movetool_motion(DrawData *p,uint32_t state)
+static void _movetool_motion(AppDraw *p,uint32_t state)
 {
 	mPoint pt;
 	mRect rc;
 	LayerItem *pi;
 
+	//+Shift/+Ctrl でX/Y移動
+
 	if(drawCalc_moveImage_onMotion(p, p->w.layer->img, state, &pt))
 	{
-		//オフセット位置移動
+		//各レイヤのオフセット位置移動
 
 		for(pi = p->w.layer; pi; pi = pi->link)
 			TileImage_moveOffset_rel(pi->img, pt.x, pt.y);
 
 		//更新範囲
-		/* rctmp[0] と、rctmp[0] を pt 分相対移動した範囲を合わせたもの */
+		// :rctmp[0] と、rctmp[0] を pt 分相対移動した範囲を合わせたもの
 
 		drawCalc_unionRect_relmove(&rc, p->w.rctmp, pt.x, pt.y);
 
-		//現在のイメージ範囲移動
+		//全体の範囲を移動
 
-		mRectRelMove(p->w.rctmp, pt.x, pt.y);
+		mRectMove(p->w.rctmp, pt.x, pt.y);
 
 		//更新
-		/* タイマーで更新が行われると、rcdraw が空になる */
+		// :タイマーで更新が行われると、rcdraw が空になる。
 
 		mRectUnion(&p->w.rcdraw, &rc);
 
-		MainWinCanvasArea_setTimer_updateMove();
+		MainCanvasPage_setTimer_updateMove();
 	}
 }
 
-/** 離し */
+/* 離し */
 
-static mBool _movetool_release(DrawData *p)
+static mlkbool _movetool_release(AppDraw *p)
 {
+	LayerItem *pi;
 	mRect rc;
+	mPoint ptmov;
 
-	if(p->w.pttmp[1].x || p->w.pttmp[1].y)
+	//タイマークリア
+
+	MainCanvasPage_clearTimer_updateMove();
+
+	//残っている範囲を更新
+
+	drawUpdateRect_canvas(p, &p->w.rcdraw);
+
+	//最終的な相対移動数が 0 の場合は、処理なし
+
+	ptmov = p->w.pttmp[1];
+
+	if(ptmov.x || ptmov.y)
 	{
+		//各レイヤのテキストの位置を移動
+
+		for(pi = p->w.layer; pi; pi = pi->link)
+			LayerItem_moveTextPos_all(pi, ptmov.x, ptmov.y);
+	
 		//undo
 
-		Undo_addLayerMoveOffset(p->w.pttmp[1].x, p->w.pttmp[1].y, LAYERITEM(p->w.ptmp));
-
-        //タイマークリア
-
-        MainWinCanvasArea_clearTimer_updateMove();
-
-        //未更新の範囲を処理
-
-        drawUpdate_rect_imgcanvas_fromRect(p, &p->w.rcdraw);
+		Undo_addLayerMoveOffset(ptmov.x, ptmov.y, p->w.layer);
 
         //キャンバスビュー更新
-        /* 移動前の範囲 (p->w.rctmp[0] を総相対移動数分戻す)
-         *  + 移動後の範囲 (p->w.rctmp[0]) */
+        // :移動前の範囲 (p->w.rctmp[0] を総移動数分戻す)
+        // : + 移動後の範囲 (p->w.rctmp[0])
 
-        drawCalc_unionRect_relmove(&rc, p->w.rctmp, -(p->w.pttmp[1].x), -(p->w.pttmp[1].y));
+        drawCalc_unionRect_relmove(&rc, p->w.rctmp, -(ptmov.x), -(ptmov.y));
 
-        drawUpdate_canvasview(p, &rc);
+        drawUpdateRect_canvasview(p, &rc);
 	}
 
 	return TRUE;
 }
 
-/** 押し */
+/* 押し */
 
-mBool drawOp_movetool_press(DrawData *p)
+mlkbool drawOp_movetool_press(AppDraw *p,int subno)
 {
 	LayerItem *pi;
-	int target;
 	mPoint pt;
 
-	target = p->tool.opt_move;
+	//対象レイヤのリンクをセット
 
-	//対象レイヤ (pi)
-
-	if(target == 0)
-		//カレントレイヤ
-		pi = p->curlayer;
-	else if(target == 2)
-		//すべてのレイヤ
-		pi = NULL;
-	else
+	switch(subno)
 	{
-		//掴んだレイヤ
+		//カレントレイヤ
+		case 0:
+			pi = LayerList_setLink_movetool_single(p->layerlist, p->curlayer);
+			break;
+		//つかんだレイヤ
+		case 1:
+			drawOpSub_getImagePoint_int(p, &pt);
 
-		drawOpSub_getImagePoint_int(p, &pt);
-
-		pi = LayerList_getItem_topPixelLayer(p->layerlist, pt.x, pt.y);
-		if(!pi) return FALSE;
+			pi = LayerList_getItem_topPixelLayer(p->layerlist, pt.x, pt.y);
+			if(!pi) return FALSE;
+			
+			pi = LayerList_setLink_movetool_single(p->layerlist, pi);
+			break;
+		//チェックレイヤ
+		case 2:
+			pi = LayerList_setLink_checked_nolock(p->layerlist);
+			break;
+		//すべてのレイヤ
+		default:
+			pi = LayerList_setLink_movetool_all(p->layerlist);
+			break;
 	}
 
-	//移動対象レイヤ
+	if(!pi) return FALSE;
 
-	p->w.ptmp = pi;
+	//リンクの先頭
 
-	//レイヤのリンクセット & 先頭のレイヤ取得
-
-	p->w.layer = LayerList_setLink_movetool(p->layerlist, pi);
-	if(!p->w.layer) return FALSE;
+	p->w.layer = pi;
 
 	//
 
 	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL,
 		_movetool_motion, _movetool_release, 0);
 
-	//全体の表示イメージ範囲
+	//対象レイヤ全体の範囲
 
-	LayerItem_getVisibleImageRect_link(p->w.layer, &p->w.rctmp[0]);
+	LayerItem_getVisibleImageRect_link(pi, &p->w.rctmp[0]);
 
 	//作業用値、初期化
 
@@ -564,35 +581,37 @@ mBool drawOp_movetool_press(DrawData *p)
 */
 
 
-/** 移動 */
+/* 移動 */
 
-static void _canvasmove_motion(DrawData *p,uint32_t state)
+static void _canvasmove_motion(AppDraw *p,uint32_t state)
 {
 	mPoint pt;
 
-	pt.x = p->w.pttmp[0].x + (int)(p->w.dptAreaPress.x - p->w.dptAreaCur.x);
-	pt.y = p->w.pttmp[0].y + (int)(p->w.dptAreaPress.y - p->w.dptAreaCur.y);
+	pt.x = p->w.pttmp[0].x + (int)(p->w.dpt_canv_press.x - p->w.dpt_canv_cur.x);
+	pt.y = p->w.pttmp[0].y + (int)(p->w.dpt_canv_press.y - p->w.dpt_canv_cur.y);
 
 	if(pt.x != p->w.pttmp[0].x || pt.y != p->w.pttmp[0].y)
 	{
-		p->ptScroll = pt;
+		p->canvas_scroll = pt;
 
-		MainWinCanvas_setScrollPos();
+		MainCanvas_setScrollPos();
 
-		MainWinCanvasArea_setTimer_updateArea(5);
+		drawCanvas_update_scrollpos(p, FALSE);
+
+		MainCanvasPage_setTimer_updatePage(5);
 	}
 }
 
 /** 押し */
 
-mBool drawOp_canvasMove_press(DrawData *p)
+mlkbool drawOp_canvasMove_press(AppDraw *p)
 {
 	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL,
 		_canvasmove_motion, _common_release_canvas, 0);
 
 	p->w.opflags |= DRAW_OPFLAGS_MOTION_POS_INT;
-	p->w.pttmp[0] = p->ptScroll;
-	p->w.drag_cursor_type = APP_CURSOR_HAND_DRAG;
+	p->w.pttmp[0] = p->canvas_scroll;
+	p->w.drag_cursor_type = APPCURSOR_HAND_GRAB;
 
 	drawCanvas_lowQuality();
 
@@ -605,29 +624,29 @@ mBool drawOp_canvasMove_press(DrawData *p)
 //==============================
 /*
 	ntmp[0] : 現在の回転角度
-	ntmp[1] : 前のキャンバス上の角度
+	ntmp[1] : 前回の角度
 */
 
 
-/** カーソルとキャンバス中央の角度取得 */
+/* カーソル位置とキャンバス中央から、角度を取得 */
 
-static int _get_canvasrotate_angle(DrawData *p)
+static int _canvasrotate_get_angle(AppDraw *p)
 {
 	double x,y;
 
-	x = p->w.dptAreaCur.x - p->szCanvas.w * 0.5;
-	y = p->w.dptAreaCur.y - p->szCanvas.h * 0.5;
+	x = p->w.dpt_canv_cur.x - p->canvas_size.w * 0.5;
+	y = p->w.dpt_canv_cur.y - p->canvas_size.h * 0.5;
 
-	return (int)(atan2(y, x) * 18000 / M_MATH_PI);
+	return (int)(atan2(y, x) * 18000 / MLK_MATH_PI);
 }
 
-/** 移動 */
+/* 移動 */
 
-static void _canvasrotate_motion(DrawData *p,uint32_t state)
+static void _canvasrotate_motion(AppDraw *p,uint32_t state)
 {
 	int angle,n;
 
-	angle = _get_canvasrotate_angle(p);
+	angle = _canvasrotate_get_angle(p);
 
 	//前回の角度からの移動分を加算
 
@@ -639,77 +658,84 @@ static void _canvasrotate_motion(DrawData *p,uint32_t state)
 	p->w.ntmp[0] = n;
 	p->w.ntmp[1] = angle;
 
-	//45度補正
+	//+Shift: 45度単位
 
-	if(state & M_MODS_SHIFT)
+	if(state & MLK_STATE_SHIFT)
 		n = n / 4500 * 4500;
 
 	//更新
 
 	if(n != p->canvas_angle)
 	{
-		drawCanvas_setZoomAndAngle(p, 0, n, 2 | DRAW_SETZOOMANDANGLE_F_NO_UPDATE, FALSE);
+		drawCanvas_update(p, 0, n, DRAWCANVAS_UPDATE_ANGLE | DRAWCANVAS_UPDATE_NO_CANVAS_UPDATE);
 
-		MainWinCanvasArea_setTimer_updateArea(5);
+		MainCanvasPage_setTimer_updatePage(5);
 	}
 }
 
 /** 押し */
 
-mBool drawOp_canvasRotate_press(DrawData *p)
+mlkbool drawOp_canvasRotate_press(AppDraw *p)
 {
 	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL,
 		_canvasrotate_motion, _common_release_canvas, 0);
 
 	p->w.opflags |= DRAW_OPFLAGS_MOTION_POS_INT;
 	p->w.ntmp[0] = p->canvas_angle;
-	p->w.ntmp[1] = _get_canvasrotate_angle(p);
-	p->w.drag_cursor_type = APP_CURSOR_ROTATE;
+	p->w.ntmp[1] = _canvasrotate_get_angle(p);
+	p->w.drag_cursor_type = APPCURSOR_ROTATE;
 
 	drawCanvas_lowQuality();
-	drawCanvas_setScrollReset_update(p, NULL);
+	drawCanvas_update(p, 0, 0, DRAWCANVAS_UPDATE_RESET_SCROLL | DRAWCANVAS_UPDATE_NO_CANVAS_UPDATE);
 
 	return TRUE;
 }
 
 
 //===============================
-// 上下ドラッグでの表示倍率変更
+// 上下ドラッグで表示倍率変更
 //===============================
-/*
-	ntmp[0] : 開始時の表示倍率
-*/
 
 
-/** 移動 */
+/* 移動 */
 
-static void _canvaszoom_motion(DrawData *p,uint32_t state)
+static void _canvaszoom_motion(AppDraw *p,uint32_t state)
 {
-	int n;
+	int n,cur;
 
-	n = p->w.ntmp[0] + (int)(p->w.dptAreaPress.y - p->w.dptAreaCur.y) * 10;
+	if(p->w.dpt_canv_cur.y == p->w.dpt_canv_last.y)
+		return;
 
-	if(n != p->canvas_zoom)
+	cur = p->canvas_zoom;
+
+	if(p->w.dpt_canv_cur.y < p->w.dpt_canv_last.y)
 	{
-		drawCanvas_setZoomAndAngle(p, n, 0, 1 | DRAW_SETZOOMANDANGLE_F_NO_UPDATE, FALSE);
-
-		MainWinCanvasArea_setTimer_updateArea(5);
+		n = (int)(cur * 1.1);
+		if(n == cur) n = cur + 1;
 	}
+	else
+	{
+		n = (int)(cur * 0.9);
+		if(n == cur) n = cur - 1;
+	}
+
+	drawCanvas_update(p, n, 0, DRAWCANVAS_UPDATE_ZOOM | DRAWCANVAS_UPDATE_NO_CANVAS_UPDATE);
+
+	MainCanvasPage_setTimer_updatePage(5);
 }
 
 /** 押し */
 
-mBool drawOp_canvasZoom_press(DrawData *p)
+mlkbool drawOp_canvasZoom_press(AppDraw *p)
 {
 	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL,
 		_canvaszoom_motion, _common_release_canvas, 0);
 
 	p->w.opflags |= DRAW_OPFLAGS_MOTION_POS_INT;
-	p->w.ntmp[0] = p->canvas_zoom;
-	p->w.drag_cursor_type = APP_CURSOR_ZOOM_DRAG;
+	p->w.drag_cursor_type = APPCURSOR_ZOOM_DRAG;
 
 	drawCanvas_lowQuality();
-	drawCanvas_setScrollReset_update(p, NULL);
+	drawCanvas_update(p, 0, 0, DRAWCANVAS_UPDATE_RESET_SCROLL | DRAWCANVAS_UPDATE_NO_CANVAS_UPDATE);
 
 	return TRUE;
 }
@@ -720,173 +746,71 @@ mBool drawOp_canvasZoom_press(DrawData *p)
 //===============================
 
 
-/** 押し
- *
- * @param enable_alt +Alt を有効にする (ブラシツールの +Alt 時は無効にする) */
+/* カレントレイヤ上で、クリックした色を描画色 or 透明に置き換える */
 
-mBool drawOp_spoit_press(DrawData *p,mBool enable_alt)
+static mlkbool _press_spoit_replace(AppDraw *p,int x,int y,mlkbool rep_tp)
 {
-	mPoint pt;
-	RGBAFix15 pix;
-	uint32_t col;
+	RGBA8 src8,dst8;
+	RGBA16 src16,dst16;
+	void *psrc,*pdst;
+	int is_src_tp;
 
-	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL, NULL, NULL, 0);
+	if(drawOpSub_canDrawLayer_mes(p, 0)) return FALSE;
 
-	drawOpSub_getImagePoint_int(p, &pt);
-
-	if(pt.x >= 0 && pt.x < p->imgw && pt.y >= 0 && pt.y < p->imgh)
+	if(p->imgbits == 8)
 	{
-		//----- 色取得
+		//---- 8bit
+		
+		TileImage_getPixel(p->curlayer->img, x, y, &src8);
 
-		if(p->w.press_state & M_MODS_CTRL)
-		{
-			//+Ctrl : カレントレイヤ (フォルダの場合は除く)
-
-			if(drawOpSub_isFolder_curlayer()) return TRUE;
-
-			TileImage_getPixel(p->curlayer->img, pt.x, pt.y, &pix);
-		}
+		if(rep_tp)
+			dst8.v32 = 0;
 		else
-			//全レイヤ合成後
-			drawImage_getBlendColor_atPoint(p, pt.x, pt.y, &pix);
+			RGB8_to_RGBA8(&dst8, &p->col.drawcol.c8, 255);
 
-		col = RGBAFix15toRGB(&pix);
+		//同じ色か
 
-		//----- セット
+		if((src8.a == 0 && dst8.a == 0)
+			|| (src8.a && dst8.a && src8.r == dst8.r && src8.g == dst8.g && src8.b == dst8.b))
+			return FALSE;
 
-		if(enable_alt && (p->w.press_state & M_MODS_ALT))
-		{
-			//+Alt : 色マスクに追加
-
-			drawColorMask_addColor(p, col);
-			DockColor_changeColorMask();
-		}
-		else if(p->w.press_state & M_MODS_SHIFT)
-		{
-			//+Shift : 色マスクにセット
-
-			drawColorMask_setColor(p, col);
-			DockColor_changeColorMask();
-		}
-		else
-		{
-			//描画色にセット
-
-			drawColor_setDrawColor(col);
-			DockColor_changeDrawColor();
-		}
-	}
-
-	return TRUE;
-}
-
-
-//===============================
-// 中間色作成
-//===============================
-/*
- * ntmp[0..2] : 最初の色 (RGB)
- */
-
-
-/** 押し */
-
-mBool drawOp_intermediateColor_press(DrawData *p)
-{
-	mPoint pt;
-	mNanoTime nt;
-	RGBAFix15 pix;
-	int i,rgb[3],c;
-
-	//スポイト
-
-	drawOpSub_getImagePoint_int(p, &pt);
-	drawImage_getBlendColor_atPoint(p, pt.x, pt.y, &pix);
-
-	//
-
-	mNanoTimeGet(&nt);
-
-	if(p->w.sec_midcol == 0 || nt.sec > p->w.sec_midcol + 5)
-	{
-		//最初の色 (前回押し時から5秒以上経った場合は初期化)
-
-		p->w.ntmp[0] = pix.r;
-		p->w.ntmp[1] = pix.g;
-		p->w.ntmp[2] = pix.b;
-
-		p->w.sec_midcol = nt.sec;
+		psrc = &src8;
+		pdst = &dst8;
+		is_src_tp = (src8.a == 0);
 	}
 	else
 	{
-		//中間色作成
+		//---- 16bit
 
-		for(i = 0; i < 3; i++)
-		{
-			c = (p->w.ntmp[i] - pix.c[i]) / 2 + pix.c[i];
-			rgb[i] = RGBCONV_FIX15_TO_8(c);
-		}
+		TileImage_getPixel(p->curlayer->img, x, y, &src16);
 
-		drawColor_setDrawColor(M_RGB(rgb[0], rgb[1], rgb[2]));
+		if(rep_tp)
+			dst16.v64 = 0;
+		else
+			RGB16_to_RGBA16(&dst16, &p->col.drawcol.c16, 0x8000);
 
-		DockColor_changeDrawColor();
+		//同じ色か
 
-		p->w.sec_midcol = 0;
+		if((src16.a == 0 && dst16.a == 0)
+			|| (src16.a && dst16.a && src16.r == dst16.r && src16.g == dst16.g && src16.b == dst16.b))
+			return FALSE;
+
+		psrc = &src16;
+		pdst = &dst16;
+		is_src_tp = (src16.a == 0);
 	}
-
-	//
-
-	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL, NULL, NULL, 0);
-
-	return TRUE;
-}
-
-
-//===============================
-// 色置換え
-//===============================
-
-
-/** カレントレイヤ上で、クリックした色を描画色 or 透明に置き換える */
-
-mBool drawOp_replaceColor_press(DrawData *p,mBool rep_tp)
-{
-	mPoint pt;
-	RGBAFix15 pixsrc,pixdst;
-
-	if(drawOpSub_canDrawLayer_mes(p)) return FALSE;
-
-	//スポイト
-
-	drawOpSub_getImagePoint_int(p, &pt);
-
-	TileImage_getPixel(p->curlayer->img, pt.x, pt.y, &pixsrc);
-
-	//置き換える色
-
-	if(rep_tp)
-		pixdst.v64 = 0;
-	else
-		drawColor_getDrawColor_rgbafix(&pixdst);
-
-	//同じ色の場合、何もしない
-	/* 透明->透明、または不透明->不透明で色が同じの場合 */
-
-	if((pixdst.a == 0 && pixsrc.a == 0)
-		|| (pixdst.a && pixsrc.a && pixsrc.r == pixdst.r && pixsrc.g == pixdst.g && pixsrc.b == pixdst.b))
-		return FALSE;
 
 	//処理
 
 	drawOpSub_setDrawInfo_overwrite();
 	drawOpSub_beginDraw_single(p);
 
-	if(pixsrc.a == 0)
-		//透明->指定色
-		TileImage_replaceColor_fromTP(p->w.dstimg, &pixdst);
+	if(is_src_tp)
+		//透明 -> 指定色
+		TileImage_replaceColor_tp_to_col(p->w.dstimg, pdst);
 	else
-		//不透明->指定色 or 透明
-		TileImage_replaceColor_fromNotTP(p->w.dstimg, &pixsrc, &pixdst);
+		//不透明 -> 指定色 or 透明
+		TileImage_replaceColor_col_to_col(p->w.dstimg, psrc, pdst);
 
 	drawOpSub_endDraw_single(p);
 	
@@ -897,265 +821,149 @@ mBool drawOp_replaceColor_press(DrawData *p,mBool rep_tp)
 	return TRUE;
 }
 
+/* 中間色作成
+ *
+ * return: TRUE で色をセット */
 
-//===============================
-// テキスト描画
-//===============================
-/*
- * tileimgTmp : プレビュー描画用
- * pttmp[0]   : 描画位置 (イメージ座標)
- * rcdraw     : プレビューの前回の描画範囲
- */
-
-
-/** フォント作成 */
-
-void drawText_createFont()
+static mlkbool _press_spoit_middle(AppDraw *p,int x,int y,RGBcombo *dst)
 {
-	DrawTextData *pt = &APP_DRAW->drawtext;
-	mFontInfo info;
+	RGBcombo col;
+	mNanoTime nt;
 
-	DrawFont_free(pt->font);
+	//キャンバス色
 
-	//------ mFontInfo セット
+	ImageCanvas_getPixel_combo(p->imgcanvas, x, y, &col);
 
-	mMemzero(&info, sizeof(mFontInfo));
+	//
 
-	info.mask = MFONTINFO_MASK_SIZE | MFONTINFO_MASK_RENDER;
+	mNanoTimeGet(&nt);
 
-	//フォント名
-
-	if(!mStrIsEmpty(&pt->strName))
+	if(p->w.midcol_sec == 0 || nt.sec > p->w.midcol_sec + 5)
 	{
-		info.mask |= MFONTINFO_MASK_FAMILY;
-		mStrCopy(&info.strFamily, &pt->strName);
-	}
+		//最初の色 (前回押し時から5秒以上経った場合は初期化)
 
-	//スタイル
+		p->w.midcol_col = col;
+		p->w.midcol_sec = nt.sec;
 
-	if(!mStrIsEmpty(&pt->strStyle))
-	{
-		info.mask |= MFONTINFO_MASK_STYLE;
-		mStrCopy(&info.strStyle, &pt->strStyle);
+		return FALSE;
 	}
 	else
 	{
-		//太字
+		//中間色作成
+
+		*dst = p->w.midcol_col;
+
+		RGBcombo_createMiddle(dst, &col);
 		
-		info.mask |= MFONTINFO_MASK_WEIGHT;
-		info.weight = (pt->weight == 0)? MFONTINFO_WEIGHT_NORMAL: MFONTINFO_WEIGHT_BOLD;
+		p->w.midcol_sec = 0;
 
-		//斜体
-
-		info.mask |= MFONTINFO_MASK_SLANT;
-		info.slant = pt->slant;
+		return TRUE;
 	}
-
-	//サイズ
-
-	info.size = pt->size * 0.1;
-
-	if(pt->flags & DRAW_DRAWTEXT_F_SIZE_PIXEL)
-		info.size = -info.size;
-
-	//レンダリング
-
-	info.render = (pt->flags & DRAW_DRAWTEXT_F_ANTIALIAS)
-		? MFONTINFO_RENDER_GRAY: MFONTINFO_RENDER_MONO;
-
-	//------ フォント作成
-
-	pt->font = DrawFont_create(&info,
-		(pt->flags & DRAW_DRAWTEXT_F_DPI_MONITOR)? 0: APP_DRAW->imgdpi);
-
-	mFontInfoFree(&info);
-
-	//dpi を記録
-
-	pt->create_dpi = APP_DRAW->imgdpi;
 }
 
-/** ヒンティング変更 */
+/* 色のスポイト */
 
-void drawText_setHinting(DrawData *p)
+static mlkbool _press_spoit_color(AppDraw *p,int subno,int x,int y,uint32_t state)
 {
-	DrawFont_setHinting(p->drawtext.font, p->drawtext.hinting);
-}
+	RGBAcombo rgba;
+	RGBcombo rgb;
 
-/** テキスト描画情報セット */
-
-static void _drawtext_set_info(DrawFontInfo *dst,DrawTextData *src,TileImage *img)
-{
-	dst->char_space = src->char_space;
-	dst->line_space = src->line_space;
-	dst->dakuten_combine = src->dakuten_combine;
-
-	dst->flags = 0;
-	if(src->flags & DRAW_DRAWTEXT_F_VERT) dst->flags |= DRAWFONT_F_VERT;
-
-	dst->param = img;
-}
-
-/** 点描画関数 (プレビュー用) */
-
-static void _drawtext_setpixel_prev(int x,int y,int a,void *param)
-{
-	APP_DRAW->w.rgbaDraw.a = RGBCONV_8_TO_FIX15(a);
-
-	TileImage_setPixel_subdraw((TileImage *)param, x, y, &APP_DRAW->w.rgbaDraw);
-}
-
-/** プレビュー描画 */
-
-void drawText_drawPreview(DrawData *p)
-{
-	DrawTextData *pdat = &p->drawtext;
-	DrawFontInfo info;
-	mRect rc;
-
-	rc = p->w.rcdraw;
-
-	//前回のイメージと範囲をクリア
-
-	if(!mRectIsEmpty(&rc))
+	if(subno == TOOLSUB_SPOIT_MIDDLE)
 	{
-		TileImage_freeAllTiles(p->tileimgTmp);
+		//--- 中間色
 
-		mRectEmpty(&p->w.rcdraw);
+		if(!_press_spoit_middle(p, x, y, &rgb))
+			return FALSE;
 	}
-
-	//プレビューなし、または空文字列の場合、前回の範囲を更新して終了
-
-	if(!(pdat->flags & DRAW_DRAWTEXT_F_PREVIEW)
-		|| mStrIsEmpty(&pdat->strText))
+	else
 	{
-		drawUpdate_rect_imgcanvas_canvasview_fromRect(p, &rc);
-		return;
+		//---- 通常スポイト
+
+		//+Ctrl : カレントレイヤ
+
+		if(state & MLK_STATE_CTRL) subno = 1;
+		
+		//色取得
+
+		if(subno == 1)
+		{
+			//カレントレイヤ (フォルダは除く)
+			
+			if(drawOpSub_canDrawLayer_mes(p, CANDRAWLAYER_F_ENABLE_READ | CANDRAWLAYER_F_ENABLE_TEXT))
+				return FALSE;
+
+			TileImage_getPixel_combo(p->curlayer->img, x, y, &rgba);
+
+			RGBAcombo_to_RGBcombo(&rgb, &rgba);
+		}
+		else
+		{
+			//キャンバス色
+			// :背景がチェック柄の場合は、その色となる。
+			// :ピクセル単位で合成する場合、トーン化レイヤが問題になるので、そのまま取得する。
+
+			ImageCanvas_getPixel_combo(p->imgcanvas, x, y, &rgb);
+		}
 	}
 
-	//描画
+	//----- セット
 
-	_drawtext_set_info(&info, pdat, p->tileimgTmp);
+	if(state & MLK_STATE_SHIFT)
+	{
+		//+Shift : 色マスクの1番目にセット
 
-	info.setpixel = _drawtext_setpixel_prev;
+		p->col.maskcol[0].r = rgb.c8.r;
+		p->col.maskcol[0].g = rgb.c8.g;
+		p->col.maskcol[0].b = rgb.c8.b;
 
-	g_tileimage_dinfo.funcColor = TileImage_colfunc_normal;
+		PanelColor_changeColorMask_color1();
+	}
+	else
+	{
+		//描画色にセット
 
-	TileImageDrawInfo_clearDrawRect();
+		p->col.drawcol = rgb;
+		
+		PanelColor_changeDrawColor();
+	}
 
-	DrawFont_drawText(pdat->font, p->w.pttmp[0].x, p->w.pttmp[0].y,
-		pdat->strText.buf, &info);
+	//グラブは行う
 
-	//更新 (前回の範囲と結合)
+	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL, NULL, NULL, 0);
 
-	mRectUnion(&rc, &g_tileimage_dinfo.rcdraw);
-
-	drawUpdate_rect_imgcanvas_fromRect(p, &rc);
-
-	//範囲を記録
-
-	p->w.rcdraw = g_tileimage_dinfo.rcdraw;
+	return TRUE;
 }
 
-/** 点描画関数 (確定時) */
+/** 押し */
 
-static void _drawtext_setpixel_draw(int x,int y,int a,void *param)
+mlkbool drawOp_spoit_press(AppDraw *p,int subno,mlkbool enable_state)
 {
-	APP_DRAW->w.rgbaDraw.a = RGBCONV_8_TO_FIX15(a);
+	mPoint pt;
+	uint32_t state;
 
-	TileImage_setPixel_draw_direct((TileImage *)param, x, y, &APP_DRAW->w.rgbaDraw);
-}
+	state = (enable_state)? p->w.press_state: 0;
 
-/** 描画処理 */
+	drawOpSub_getImagePoint_int(p, &pt);
 
-static void _drawtext_draw(DrawData *p)
-{
-	DrawFontInfo info;
+	//イメージ範囲外
 
-	//描画準備
-
-	drawOpSub_setDrawInfo(p, TOOL_TEXT, 0);
-
-	//描画情報
-
-	_drawtext_set_info(&info, &p->drawtext, p->w.dstimg);
-
-	info.setpixel = _drawtext_setpixel_draw;
-
-	//描画
-
-	drawOpSub_beginDraw_single(p);
-
-	DrawFont_drawText(p->drawtext.font, p->w.pttmp[0].x, p->w.pttmp[0].y,
-		p->drawtext.strText.buf, &info);
-
-	drawOpSub_endDraw_single(p);
-}
-
-/** 押し (グラブはしない) */
-
-mBool drawOp_drawtext_press(DrawData *p)
-{
-	mBool ret;
-
-	//描画可能か
-
-	if(drawOpSub_canDrawLayer_mes(p))
+	if(pt.x < 0 || pt.y < 0 || pt.x >= p->imgw || pt.y >= p->imgh)
 		return FALSE;
 
-	//描画位置
+	//
 
-	drawOpSub_getImagePoint_int(p, &p->w.pttmp[0]);
+	if(subno == TOOLSUB_SPOIT_REPLACE_DRAWCOL
+		|| subno == TOOLSUB_SPOIT_REPLACE_TP)
+	{
+		//色置き換え
 
-	//プレビュー用イメージ作成
+		return _press_spoit_replace(p, pt.x, pt.y, (subno == TOOLSUB_SPOIT_REPLACE_TP));
+	}
+	else
+	{
+		//色のスポイト
 
-	if(!drawOpSub_createTmpImage_same_current_imgsize(p))
-		return FALSE;
-
-	//初期化
-
-	mRectEmpty(&p->w.rcdraw);
-
-	drawColor_getDrawColor_rgbafix(&p->w.rgbaDraw);
-
-	//ダイアログ
-
-	p->drawtext.in_dialog = TRUE;
-
-	ret = DrawTextDlg_run(M_WINDOW(APP_WIDGETS->mainwin));
-
-	p->drawtext.in_dialog = FALSE;
-
-	//----------
-
-	//プレビュー用イメージ削除
-
-	drawOpSub_freeTmpImage(p);
-
-	//プレビュー範囲を元に戻す
-	/* [!] ダイアログ表示中にメインウィンドウのサイズを変更した場合、
-	 *     キャンバスビューパレット上のイメージが、プレビューが適用された状態になっているので、
-	 *     念のためキャンバスビューの範囲も戻す。 */
-
-	drawUpdate_rect_imgcanvas_canvasview_fromRect(p, &p->w.rcdraw);
-
-	//描画
-
-	if(ret && !mStrIsEmpty(&p->drawtext.strText))
-		_drawtext_draw(p);
-
-	return FALSE;
+		return _press_spoit_color(p, subno, pt.x, pt.y, state);
+	}
 }
 
-/** ダイアログ中にキャンバス上がクリックされた時 */
-
-void drawText_setDrawPoint_inDialog(DrawData *p,int x,int y)
-{
-	//位置
-
-	drawCalc_areaToimage_pt(p, &p->w.pttmp[0], x, y);
-
-	//プレビュー
-
-	drawText_drawPreview(p);
-}

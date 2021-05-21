@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,88 +18,80 @@
 $*/
 
 /**********************************
- * DrawData 操作関数
+ * AppDraw 各操作の関数
  **********************************/
 
-#ifndef DRAW_OP_FUNC_H
-#define DRAW_OP_FUNC_H
+/* brush/dot */
 
-/* brush */
+mlkbool drawOp_brush_free_press(AppDraw *p);
+mlkbool drawOp_dotpen_free_press(AppDraw *p);
 
-mBool drawOp_brush_free_press(DrawData *p,mBool registered,mBool pressure_max);
-mBool drawOp_dotpen_free_press(DrawData *p,mBool registered);
-mBool drawOp_finger_free_press(DrawData *p,mBool registered);
+void drawOpDraw_brushdot_line(AppDraw *p);
+void drawOpDraw_brushdot_rect(AppDraw *p);
+void drawOpDraw_brushdot_ellipse(AppDraw *p);
+void drawOpDraw_brushdot_lineSuccConc(AppDraw *p);
 
-void drawOpDraw_brush_line(DrawData *p);
-void drawOpDraw_brush_box(DrawData *p);
-void drawOpDraw_brush_ellipse(DrawData *p);
-void drawOpDraw_brush_lineSuccConc(DrawData *p);
-void drawOpDraw_brush_spline(DrawData *p);
-
-mBool drawOp_xorline_to_bezier(DrawData *p);
-
-mBool drawOp_dragBrushSize_press(DrawData *p,mBool registered);
+mlkbool drawOp_xorline_to_bezier(AppDraw *p);
+mlkbool drawOp_dragBrushSize_press(AppDraw *p);
 
 /* func1 */
 
-mBool drawOp_common_norelease(DrawData *p);
+mlkbool drawOp_common_release_none(AppDraw *p);
 
-void drawOpDraw_fillBox(DrawData *p);
-void drawOpDraw_fillEllipse(DrawData *p);
-void drawOpDraw_fillPolygon(DrawData *p);
-void drawOpDraw_gradation(DrawData *p);
+void drawOpDraw_fillRect(AppDraw *p);
+void drawOpDraw_fillEllipse(AppDraw *p);
+void drawOpDraw_fillPolygon(AppDraw *p);
+void drawOpDraw_gradation(AppDraw *p);
 
-mBool drawOp_fill_press(DrawData *p);
-mBool drawOp_movetool_press(DrawData *p);
+mlkbool drawOp_fill_press(AppDraw *p);
+mlkbool drawOp_movetool_press(AppDraw *p,int subno);
 
-mBool drawOp_stamp_press(DrawData *p,int subno);
-void drawOp_setStampImage(DrawData *p);
+mlkbool drawOp_stamp_press(AppDraw *p,int subno);
+void drawOp_setStampImage(AppDraw *p);
 
-mBool drawOp_canvasMove_press(DrawData *p);
-mBool drawOp_canvasRotate_press(DrawData *p);
-mBool drawOp_canvasZoom_press(DrawData *p);
+mlkbool drawOp_canvasMove_press(AppDraw *p);
+mlkbool drawOp_canvasRotate_press(AppDraw *p);
+mlkbool drawOp_canvasZoom_press(AppDraw *p);
 
-mBool drawOp_spoit_press(DrawData *p,mBool enable_alt);
-
-mBool drawOp_intermediateColor_press(DrawData *p);
-mBool drawOp_replaceColor_press(DrawData *p,mBool rep_tp);
-
-mBool drawOp_drawtext_press(DrawData *p);
+mlkbool drawOp_spoit_press(AppDraw *p,int subno,mlkbool enable_state);
 
 /* func2 */
 
-void drawOp_setSelect(DrawData *p,int type);
+void drawOp_setSelect(AppDraw *p,int type);
 
-mBool drawOp_magicwand_press(DrawData *p);
-mBool drawOp_selmove_press(DrawData *p);
-mBool drawOp_selimgmove_press(DrawData *p,mBool cut);
+mlkbool drawOp_selectFill_press(AppDraw *p);
+mlkbool drawOp_selectMove_press(AppDraw *p);
+mlkbool drawOp_selimgmove_press(AppDraw *p,mlkbool cut);
 
-void drawOp_boxedit_nograb_motion(DrawData *p);
-mBool drawOp_boxedit_press(DrawData *p);
+mlkbool drawOp_cutpaste_press(AppDraw *p);
+
+void drawOp_boxsel_nograb_motion(AppDraw *p);
+mlkbool drawOp_boxsel_press(AppDraw *p);
+
+/* text */
+
+mlkbool drawOp_drawtext_press(AppDraw *p);
+void drawOp_drawtext_press_rbtt(AppDraw *p);
+void drawOp_drawtext_dblclk(AppDraw *p);
 
 /* xor */
 
-mBool drawOpXor_line_press(DrawData *p,int opsubtype);
-mBool drawOpXor_boxarea_press(DrawData *p,int opsubtype);
-mBool drawOpXor_boximage_press(DrawData *p,int opsubtype);
-mBool drawOpXor_ellipse_press(DrawData *p,int opsubtype);
-mBool drawOpXor_sumline_press(DrawData *p,int opsubtype);
-mBool drawOpXor_polygon_press(DrawData *p,int opsubtype);
-mBool drawOpXor_lasso_press(DrawData *p,int opsubtype);
-mBool drawOpXor_rulepoint_press(DrawData *p);
+mlkbool drawOpXor_line_press(AppDraw *p,int sub);
+mlkbool drawOpXor_rect_canv_press(AppDraw *p,int sub);
+mlkbool drawOpXor_rect_image_press(AppDraw *p,int sub);
+mlkbool drawOpXor_ellipse_press(AppDraw *p,int sub);
+mlkbool drawOpXor_sumline_press(AppDraw *p,int sub);
+mlkbool drawOpXor_polygon_press(AppDraw *p,int sub);
+mlkbool drawOpXor_lasso_press(AppDraw *p,int sub);
+mlkbool drawOpXor_rulepoint_press(AppDraw *p);
 
-void drawOpXor_drawline(DrawData *p);
-void drawOpXor_drawBox_area(DrawData *p);
-void drawOpXor_drawBox_image(DrawData *p);
-void drawOpXor_drawEllipse(DrawData *p);
-void drawOpXor_drawBezier(DrawData *p,mBool erase);
-void drawOpXor_drawPolygon(DrawData *p);
-void drawOpXor_drawLasso(DrawData *p,mBool erase);
-void drawOpXor_drawCrossPoint(DrawData *p);
-void drawOpXor_drawBrushSizeCircle(DrawData *p,mBool erase);
+void drawOpXor_drawline(AppDraw *p);
+void drawOpXor_drawRect_canv(AppDraw *p);
+void drawOpXor_drawRect_image(AppDraw *p);
+void drawOpXor_drawEllipse(AppDraw *p);
+void drawOpXor_drawBezier(AppDraw *p,mlkbool erase);
+void drawOpXor_drawPolygon(AppDraw *p);
+void drawOpXor_drawLasso(AppDraw *p,mlkbool erase);
+void drawOpXor_drawCrossPoint(AppDraw *p);
+void drawOpXor_drawBrushSizeCircle(AppDraw *p,mlkbool erase);
 
-/* spline */
-
-mBool drawOp_spline_press(DrawData *p);
-
-#endif

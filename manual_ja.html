@@ -1,439 +1,724 @@
 <!DOCTYPE html>
 <html><head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AzPainter マニュアル</title>
 <style type="text/css">
-body{ font-family:sans-serif; font-size:11pt; background-color:white;
- color:#404040; margin:20px; line-height:100%; }
+html{ font-size:62.5% }
+body{ font-family:sans-serif; font-size:1.46em; background-color:white;
+ color:#303030; margin:2em; line-height:100%; }
 a:link,a:visited{ color:blue }
-a:hover{ color:#0066ff }
+a:hover{ color:#07f }
 th{ white-space:nowrap; }
 
-.menu{ padding:10px; border:solid 1px #ccc; font-size:10pt; margin-bottom:3em; }
-.menu ul{ margin-top:0; margin-bottom:0; }
-.menu li{ line-height:160%; }
+ul{ margin:0; padding:0; }
+li{ padding:0; margin-left:2em; margin-bottom:5px; line-height:170%; }
 
-.ct_main{ border:solid 1px #888; }
-.ct_h{ background-color:#666; padding:4px 10px; color:white; font-weight:bold; }
-.ct_txt{ padding:13px; line-height:140%; }
-.ct_footer{ margin-bottom:2.5em; text-align:right; margin-top:2px; }
-.ct_txt ul{ line-height:150%; margin-top:0; margin-bottom:0; padding:0; }
-.ct_txt li{ margin-left:2em; margin-bottom:8px; padding:0; }
+.menu{ padding:1em; border:solid 1px #999; font-size:1.4rem; margin-bottom:3em; }
+.menu li{ line-height:140% }
 
-.subb_main{ line-height:100%; margin-top:2em; }
-.subb_h{ font-weight:bold; border-bottom:3px solid #009; padding:4px 5px; color:#008; }
-.subb_txt{ padding:12px 0px 12px 10px; margin-left:20px; line-height:140%;
- border:solid #009; border-width:0px 0px 1px 1px; background-color:#fafafa; }
+.ct_main{ margin-bottom:3em; }
+.ct_h{ background-color:#F0FAF5; padding:7px 20px; font-size:110%; font-weight:bold; color:#355E51;
+ border:double #449479; border-width:5px 0; }
+.ct_txt{ padding:2.5em 1em 1em 1em; line-height:140%; }
+
+.subb_main{ line-height:100%; margin-top:2.5em; }
+.subb_h{ font-weight:bold; padding:7px 15px; background-color:#585885; color:white; border-radius:6px 0 0 6px; }
+.subb_txt{ margin-left:20px; padding-top:1.5em; line-height:150%; }
+
+.subh{ font-size:130%; font-weight:bold; color:#795799; margin:0.5em 0 1em 0; }
+.subh::before{ content:'■ ' }
 
 em{ font-style:normal; color:red; }
+.c1{ color:#225B87; font-weight:bold; }
 .ctl{ color:#E48102; font-weight:bold; padding:0 4px; }
-.item{ color:#05008C; font-weight:bold; padding:0 3px; background-color:#E2E1FF; }
-.li{ color:#FF3398; font-weight:bold; }
 
 table{ border-collapse:collapse; background-color:white; }
-td,th{ padding:4px 5px; line-height:140%; border:solid 1px #888; }
+td,th{ padding:4px 5px; line-height:150%; border:solid 1px #666; }
 th{ background-color:#ddd; text-align:left; }
-.tbl_header{ background-color:#999; color:white; text-align:center; font-weight:bold;
- line-height:100%; padding:2px 5px; } 
+.tblh{ background-color:#666; color:white; text-align:center; font-weight:bold; padding:3px 5px; }
 
-.subh{ font-size:13pt; font-weight:bold; color:#c6f; margin-bottom:1em; }
-.subh:before{ content:"■ " }
+#scroll_button{ position:fixed; bottom:4px; right:4px; width:40px; height:40px;
+ background-color:#3382FF; opacity:0.5; display:inline-block; color:white; border-radius:6px; }
+#scroll_button::before{ content:''; width:15px; height:15px; display:block;
+ border-top:solid 3px; border-right:solid 3px; transform:rotate(-45deg);
+ position:absolute; top:10px; bottom:0; left:0; right:0; margin:auto; }
+
 </style>
 </head>
 <body>
-
+<div id="scroll_button" onclick="window.scrollTo(0,0);"></div>
 <a name="menu"></a>
 <div class="menu"><ul>
-<li><a href="#link1">基本情報</a></li>
-<li><a href="#link2">画像形式</a></li>
-<li><a href="#link3">ブラシ/テクスチャ画像について</a></li>
+<li><a href="#link1">画像形式</a></li>
+<li><a href="#link2">ブラシ/テクスチャ画像について</a></li>
+<li><a href="#link3">ウィジェット操作</a></li>
 <li><a href="#link4">操作一覧</a></li>
 <li><a href="#link5">ツール</a></li>
 <li><a href="#link6">ツール補足</a></li>
 <li><a href="#link7">パネルについて</a></li>
-<li><a href="#link8">[パネル] オプション</a></li>
-<li><a href="#link9">[パネル] レイヤ</a></li>
-<li><a href="#link10">[パネル] ブラシ</a></li>
-<li><a href="#link11">[パネル] カラー</a></li>
-<li><a href="#link12">[パネル] カラーパレット</a></li>
-<li><a href="#link13">[パネル] キャンバスビュー</a></li>
-<li><a href="#link14">[パネル] イメージビューア</a></li>
-<li><a href="#link15">グラデーション編集</a></li>
-<li><a href="#link16">メインメニュー</a></li>
-<li><a href="#link17">フィルタ</a></li>
-<li><a href="#link18">[設定] 環境設定</a></li>
-<li><a href="#link19">[設定] ショートカットキー設定</a></li>
-<li><a href="#link20">[設定] キャンバスキー設定</a></li>
-<li><a href="#link21">FAQ</a></li>
+<li><a href="#link8">[パネル] ツールリスト</a></li>
+<li><a href="#link9">[パネル] ブラシ設定</a></li>
+<li><a href="#link10">[パネル] オプション</a></li>
+<li><a href="#link11">[パネル] レイヤ</a></li>
+<li><a href="#link12">[パネル] カラー</a></li>
+<li><a href="#link13">[パネル] カラーパレット</a></li>
+<li><a href="#link14">[パネル] キャンバスビュー</a></li>
+<li><a href="#link15">[パネル] イメージビューア</a></li>
+<li><a href="#link16">テキスト</a></li>
+<li><a href="#link17">グラデーション編集</a></li>
+<li><a href="#link18">メインメニュー</a></li>
+<li><a href="#link19">フィルタ</a></li>
+<li><a href="#link20">環境設定</a></li>
+<li><a href="#link21">キー設定</a></li>
+<li><a href="#link22">FAQ</a></li>
 </ul></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link1">基本情報</a></div>
-<div class="ct_txt">
-<ul>
-<li>16bit (15bit 固定少数点数) カラーで処理されます。<br>
-色の精度を保てる分、消費するメモリが多くなるので注意してください。
-<li>編集可能なイメージの最大サイズは <b>20000 x 20000</b> px です。<br>
-ただし、イメージサイズが大きいほどメモリを消費するので、注意してください。
-<li>数値表示とスピンが付いたバー上では、<span class="ctl">Ctrl+左ボタンの左右ドラッグ</span>で、-1/+1 ずつ移動できます。
-<li>ブラシ/テクスチャ画像の選択バーでは、パス名部分を左クリックで画像選択ダイアログを開きます。<br>
-また、<span class="ctl">右クリック</span>または<span class="ctl">Ctrl＋左クリック</span>で、ブラシ画像の場合は「通常円形」、テクスチャ画像の場合は「なし」または「なし (強制)」にセットします。
-</ul>
-</div>
-</div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
-
-<div class="ct_main">
-<div class="ct_h"><a name="link2">画像形式</a></div>
-<div class="ct_txt">読み込みは、<b>APD (v1-v3)、ADW (v1-v2)、PSD、BMP、PNG、JPEG、GIF</b> に対応しています。<br>
-書き込みは、<b>APD (v3)、PSD、BMP、PNG、JPEG</b> に対応しています。<br>
+<a name="link1"></a><div class="ct_main">
+<div class="ct_h">画像形式</div>
+<div class="ct_txt"><b>APD (v1-v4)/ADW (v1-v2)/PSD/BMP/PNG/JPEG/GIF/TIFF/WebP</b> に対応しています。<br>
 <br>
 <table class="tbl1">
-<tr><th>APD<td>AzPainter 用のフォーマットです。<br>
-現在、ver 1〜3 までのフォーマットが存在します。<br>
+<tr><th>APD<td>AzPainter 用の独自フォーマットです。<br>
 <br>
-<b>ver 1</b> : AzPainter (Windows) で保存されたもの<br>
-<b>ver 2</b> : AzPainter (Linux) ver 1.x で保存されたもの<br>
-<b>ver 3</b> : AzPainter (Linux) ver 2.x、AzPainterB (Linux) で保存されたもの
-<tr><th>ADW<td>AzDrawing 用のフォーマットです。
+現在は、ver 1〜4 までのフォーマットが存在します。<br>
+すべてのバージョンの APD を読み込むことができますが、保存時は常に ver 4 となります。<br>
+<br>
+<b>ver 1</b> : AzPainter (Windows) で保存されたもの。<br>
+<b>ver 2</b> : AzPainter (Linux) ver 1.x で保存されたもの。<br>
+<b>ver 3</b> : AzPainter (Linux) ver 2.x、または、AzPainterB (Linux) で保存されたもの。<br>
+<b>ver 4</b> : AzPainter (Linux) ver 3.x で保存されたもの。</td>
+<tr><th>ADW<td>AzDrawing 用の独自フォーマットです。<br>
+読み込みのみ可能で、書き込みはできません。</td>
 <tr><th>PSD<td>PhotoShop 用のフォーマットです。<br>
-読み込みは、<b>[1bit] [8bit グレイスケール] [8bit RGB]</b> の形式のみ対応しています。<br>
-<br>
-書き込み時は、レイヤを維持して保存する場合、レイヤフォルダは書き込まれません。<br>
-一枚絵で保存する場合、すべてのレイヤを合成して一つのイメージとします。レイヤは含まれません。
-</table>
+<b>モノクロ2階調・グレイスケール・RGB</b> のカラータイプ (1bit/8bit/16bit) のみ読み込めます。</td>
+<tr><th>GIF<td>256色までの色数しか使えないため、イメージの色数が 256 色を超える場合は、保存できません。</td>
+<tr><th>WebP<td>画像サイズは 16383 px までに制限されているため、このサイズを超えている場合は、保存できません。</td>
+</table></div>
 </div>
-</div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link3">ブラシ/テクスチャ画像について</a></div>
-<div class="ct_txt">ブラシの形状やテクスチャの画像は、インストールしたディレクトリにデフォルトの画像がいくつか用意されていますが、自分で画像を用意して使うことも出来ます。<br>
+<a name="link2"></a><div class="ct_main">
+<div class="ct_h">ブラシ/テクスチャ画像について</div>
+<div class="ct_txt">ブラシの形状やテクスチャの画像は、デフォルトでいくつかファイルが用意されていますが、自分で画像を用意して使うことも出来ます。<br>
 <br>
 <ul>
-<li>画像を置くディレクトリは環境設定で変更できます。<br>
-指定したディレクトリ以下 (サブディレクトリもすべて含む) にある画像ファイルを使用できます。
-<li>読み込み可能な画像形式は、<b>BMP,PNG,JPEG,GIF</b> です。<br>
-画像サイズの制限はありません。<br>
-また、カラーはフルカラーでもパレットカラーでも構いません。<br>
-アルファ付き PNG の場合は、アルファ値がそのまま濃度として読み込まれます。
-<li>グレイスケール (白〜黒) のイメージで作成してください。<br>
-白 (透明) ... 黒 (完全不透明) となります。
-<li>ブラシ画像は縦横を同じサイズ（正方形）で作成してください。<br>
-正方形でない場合は、読み込み時に正方形として変換されます。<br>
-ブラシ画像の中心が、描画時の中心位置となります。<br>
-ブラシ画像では、ブラシの形を黒色で描画してください。<br>
-透明（白色）な部分は基本的に描画されません。灰色な部分は濃度が下がります。
-<li>テクスチャ画像は縦横のサイズは自由です。<br>
-画像が縦横にタイル状に並べられる形となります。<br>
-背景を白として、色を置きたい部分は黒色で描画します。灰色な部分は濃度が下がります。
-</ul>
+<li>自分で画像を用意する場合は、ユーザー用の画像ディレクトリにファイルを置いてください。<br>
+各ディレクトリは、環境設定で指定できます。
+<li>指定されたディレクトリ下にあるファイルは、サブディレクトリ下にあるものも含めて、すべて使用できます。
+<li>読み込み可能な画像形式は、<b>BMP/PNG/JPEG/GIF</b> です。<br>
+画像サイズは 20000 px まで読み込み可能です。
+<li>ブラシ画像の場合は、カラー画像として扱うこともできますが、基本的には、白〜黒のグレイスケール画像として作成してください。<br>
+（画像自体のカラータイプは自由です）<br>
+グレイスケール画像の場合は、白 (R 255 G 255 B 255) が透明、黒 (R 0 G 0 B 0) が完全不透明として扱われます。<br>
+背景を白にして、色を付けたい部分を黒で塗ってください。<br>
+灰色の色は、黒から白に行くほど、不透明から透明になります。
+<li>ブラシ画像は、基本的に正方形のサイズで作成してください。<br>
+（正方形でない場合は、幅・高さの大きい方のサイズで、自動的に正方形サイズに変換されます）<br>
+画像の中心位置が、描画時の中心位置となります。
+<li>テクスチャ画像においては、画像の縦・横のサイズは自由です。<br>
+原寸のサイズのままで、タイル状に並ぶような形となります。
+<li>ブラシ画像において、画像の色をそのまま描画させたい場合は、アルファ付きのカラー画像で作成してください（基本的に PNG を使用します）。<br>
+その場合は、<em>画像のファイル名の先頭を、"<b>_c_</b>" にしてください。</em><br>
+(例) _c_brush.png<br>
+先頭に "_c_" がない場合は、通常のグレイスケール画像として読み込まれます。</ul>
 </div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link4">操作一覧</a></div>
+<a name="link3"></a><div class="ct_main">
+<div class="ct_h">ウィジェット操作</div>
+<div class="ct_txt">
+<ul>
+<li>数値表示とスピンが付いたバー上では、<span class="ctl">Ctrl＋左ボタンの左右ドラッグ</span>で、現在位置を基準にして、-1/+1 ずつ移動できます。<br>
+また、バーの上でホイールを上下に操作すると、+1/-1 できます。
+<li>ブラシ/テクスチャ画像の選択ウィジェットでは、パス名部分を左クリックで、画像選択ダイアログを開きます。<br>
+また、<span class="ctl">右クリック</span>または<span class="ctl">Ctrl＋左クリック</span>で、ブラシ画像の場合は「通常円形」、テクスチャ画像の場合は「なし」または「なし(強制)」にセットします。</ul>
+</div>
+</div>
+
+<a name="link4"></a><div class="ct_main">
+<div class="ct_h">操作一覧</div>
 <div class="ct_txt">
 <table class="tbl1">
 <tr><th>キャンバス<td><span class="ctl">Space＋左ドラッグ</span> : キャンバススクロール<br>
 <span class="ctl">Space＋Ctrl＋左ドラッグ</span> : キャンバス回転<br>
-<span class="ctl">Space＋Shift＋左ドラッグ</span> : 上下ドラッグで、表示倍率変更
-<tr><td colspan="2" class="tbl_header">ツール
-<tr><th>塗りつぶし<br>自動選択<td><span class="ctl">+Shift</span> : 判定元レイヤ無効<br>
-<span class="ctl">+Ctrl</span> : 「透明 (アンチエイリアス自動)」で判定
-<tr><th>移動<td><span class="ctl">+Shift</span> : 水平方向のみ移動<br>
-<span class="ctl">+Ctrl</span> : 垂直方向のみ移動
-<tr><th>選択範囲<td>図形選択時、ドラッグ開始時に<span class="ctl">+Ctrl</span>で範囲を削除。<br>
-イメージ移動/コピー時、ドラッグ開始時に<span class="ctl">+Shift</span>で上書き貼り付け。ドラッグ開始時に<span class="ctl">+Ctrl</span>で、ドラッグ中は選択範囲の枠を非表示。<br>
-範囲移動時、<span class="ctl">+Shift</span>で水平移動、<span class="ctl">+Ctrl</span>で垂直移動。
-<tr><th>スタンプ<td>ドラッグ開始時<span class="ctl">+Ctrl</span> : 現在の貼り付けイメージをクリアして、新しくイメージ範囲を選択する。
-<tr><th>キャンバス回転<td><span class="ctl">+Shift</span> : 45度単位
+<span class="ctl">Space＋Shift＋左ドラッグ</span> : 上下ドラッグで、表示倍率変更</td>
+<tr><td colspan="2" class="tblh">ツール</td>
+<tr><th>テキスト<td>(テキストレイヤ時)<br>
+<span class="ctl">左クリック</span> : 押した位置にテキストがなければ、新規作成。テキストがあれば、その描画範囲を枠で表示。<br>
+<span class="ctl">左ダブルクリック</span> : 押した位置のテキストを編集<br>
+<span class="ctl">右クリック</span> : メニュー<br>
+<span class="ctl">Ctrl＋左ドラッグ</span> : テキストの位置を移動</td>
+<tr><th>移動<td><span class="ctl">+Shift</span> : 水平方向に移動<br>
+<span class="ctl">+Ctrl</span> : 垂直方向に移動</td>
+<tr><th>選択範囲<td>(図形の選択時)<br>
+ドラッグ開始時に<span class="ctl">+Ctrl</span>で、指定範囲を削除。<br>
+(イメージ移動/コピー時)<br>
+ドラッグ開始時に<span class="ctl">+Ctrl</span>で、ドラッグ中は選択範囲の枠を非表示。<br>
+(選択範囲の位置移動時)<br>
+<span class="ctl">+Shift</span>で水平移動、<span class="ctl">+Ctrl</span>で垂直移動。</td>
+<tr><th>切り貼り<td>(貼り付けの移動中)<br>
+<span class="ctl">+Shift</span>で水平移動、<span class="ctl">+Ctrl</span>で垂直移動。</td>
+<tr><th>スタンプ<td>ドラッグ開始時に<span class="ctl">+Ctrl</span>で、現在の貼り付けイメージをクリアして、新しくイメージ範囲を選択する。</td>
+<tr><th>キャンバス回転<td><span class="ctl">+Shift</span> : 45度単位</td>
 <tr><th>スポイト<td><span class="ctl">+Ctrl</span> : カレントレイヤ上の色を取得<br>
-<span class="ctl">+Shift</span> : 取得した色を色マスクにセット (1色のみにする)<br>
-<span class="ctl">+Alt</span> : 取得した色を色マスクに追加
-<tr><td colspan="2" class="tbl_header">ブラシ描画
-<tr><th>フリーハンド<td><span class="ctl">Shift＋左ドラッグ</span> : 左右ドラッグでブラシサイズ変更<br>
+<span class="ctl">+Shift</span> : 取得した色を、色マスクの１番目にセット</td>
+<tr><td colspan="2" class="tblh">描画タイプ</td>
+<tr><th>フリーハンド<td><span class="ctl">Shift＋左ドラッグ</span> :<br>
+ (ブラシ時) 左右ドラッグで、ブラシサイズ変更<br>
+ (ドット線/ドット線消しゴム時) ドラッグで、1px 消しゴムによる描画<br>
 <span class="ctl">Ctrl＋左クリック/ドラッグ</span> : 定規の形状設定<br>
-<span class="ctl">Alt＋左クリック</span> : スポイト
-<tr><th>直線<td><span class="ctl">+Shift</span> : 45度単位
-<tr><th>四角形<td><span class="ctl">+Shift</span> : 正方形
-<tr><th>円<td><span class="ctl">+Shift</span> : 正円
-<tr><th>連続直線<td><span class="ctl">右クリック/左ダブルクリック/Enter/ESC</span> : 描画終了<br>
-<span class="ctl">BackSpace</span> : 始点と結んで終了
-<tr><th>集中線<td><span class="ctl">右クリック/左ダブルクリック/Enter/ESC</span> : 描画終了
-<tr><th>ベジェ曲線<td><span class="ctl">右クリック/ESC</span> : キャンセル<br>
-<span class="ctl">BackSpace</span> : 制御点２の指定時、制御点１に戻る
-<tr><th>スプライン曲線<td><span class="ctl">左クリック</span>で通過点を追加 (<span class="ctl">+Ctrl</span>でその点の筆圧を０にする)<br>
-<span class="ctl">BackSpace</span> : 現在のポイントを削除し、一つ前のポイントに戻る。<br>
-<span class="ctl">右クリック/左ダブルクリック/Enter</span> : 描画<br>
-<span class="ctl">ESC</span> : キャンセル<br>
-マウスポインタがキャンバス外に出るとスクロールします。
-<tr><td colspan="2" class="tbl_header">図形
+<span class="ctl">Alt＋左クリック</span> : スポイト (キャンバス色)</td>
+<tr><th>直線<td><span class="ctl">+Shift</span> : 45度単位</td>
+<tr><th>四角形<td><span class="ctl">+Shift</span> : 正方形</td>
+<tr><th>円<td><span class="ctl">+Shift</span> : 正円<br>
+<span class="ctl">+Ctrl</span> : 矩形による指定 (左上と右下の位置)。ただし、定規：楕円の指定時は無効。</td>
+<tr><th>連続直線<td><span class="ctl">+Shift</span> : 45度単位<br>
+<span class="ctl">右クリック/左ダブルクリック/Enter/ESC</span> : 終了<br>
+<span class="ctl">BackSpace</span> : 現在の位置と最初の点を結んで、終了</td>
+<tr><th>集中線<td><span class="ctl">+Shift</span> : 45度単位<br>
+<span class="ctl">右クリック/左ダブルクリック/Enter/ESC</span> : 終了</td>
+<tr><th>ベジェ曲線<td><span class="ctl">+Shift</span> : 45度単位<br>
+<span class="ctl">右クリック/ESC</span> : キャンセル<br>
+<span class="ctl">BackSpace</span> : 制御点２の指定時、制御点１に戻る</td>
+<tr><td colspan="2" class="tblh">図形</td>
 <tr><th>多角形<td><span class="ctl">右クリック/左ダブルクリック/Enter</span> : 確定<br>
-<span class="ctl">ESC</span> : キャンセル
-</table>
+<span class="ctl">ESC</span> : キャンセル</td>
+</table></div>
 </div>
-</div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link5">ツール</a></div>
-<div class="ct_txt">
-<table class="tbl1">
-<tr><th>ブラシ<td>現在選択されているブラシで描画します。
-<tr><th>図形塗りつぶし<br>図形消しゴム<td>図形の描画を行います。
-<tr><th>塗りつぶし<td>クリックした位置を開始点とし、その位置の色と同じ色の範囲を塗りつぶします。<br>
-<br>
-<span class="item">判定</span><br>
-<br>
-塗りつぶす範囲の判定方法を選択します。<br>
-<br>
-<ul>
-<li><span class="li">RGB</span><br>
-RGB の色で判定します。<br>
-<em>判定元レイヤを使う場合は、一番先頭のレイヤのみ有効です。複数レイヤで判定はできません。</em>
-<li><span class="li">アルファ値</span><br>
-色のアルファ値で判定します。
-<li><span class="li">透明 (アンチエイリアス自動)</span><br>
-透明部分を塗りつぶします。<br>
-線のアンチエイリアス部分は自動で判定して、なるべく綺麗になるように塗りつぶします。<br>
-ただし、範囲が狭くなっている部分は完全には塗りつぶせません。
-<li><span class="li">透明 (A=0)</span><br>
-透明部分を塗りつぶします。<br>
-アルファ値が 0 以外の部分は塗りつぶされません。
-</ul>
-<br>
-<span class="item">許容色差</span><br>
-<br>
-「RGB」または「アルファ値」で判定する場合、「クリックされた位置の色」と「判定対象の色」の差の絶対値が指定値以下であれば、同じ色とみなします。<br>
-値が大きいほど、色が離れていても同色とみなします。<br>
-0 なら、完全に同じ色のみ同色として扱います。<br>
-<br>
-<span class="item">判定元レイヤについて</span><br>
-<br>
-レイヤ一覧上で、各レイヤの「塗りつぶし判定元」 (バケツのアイコン) にチェックを入れると、指定したレイヤのイメージを、塗りつぶす範囲の判定用として使うことができます。<br>
-「アルファ値」または「透明」で判定する場合は、複数のレイヤを判定元に指定できます。<br>
-その場合、各レイヤのアルファ値を合成したものを判定値として使います。
-<tr><th>不透明範囲消去<td>クリックした位置を開始点とし、不透明な (透明でない) 範囲を、塗りつぶしと同じ要領で判定して消去します。<br>
-<br>
-繋がっている線や塗られた範囲をまとめて消去するのに使えます。
-<tr><th>グラデーション<td>グラデーションを描画します。<br>
-直線と同じやり方で、左ドラッグして始点と終点を指定すると、ボタンを離した瞬間に描画されます。<br>
-<br>
-<span class="item">反転</span> : パターンを左右反転します。<br>
-<span class="item">くり返す</span> : 範囲外の部分は色を繰り返して描画します。
-<tr><th>テキスト<td>テキストを描画します。<br>
-<br>
-左クリックで描画位置を指定すると、テキスト入力ダイアログが出るので、テキストとフォントの詳細を設定して「OK」を押すと描画されます。<br>
-<br>
-ダイアログ表示中にキャンバス上を左クリックすると、描画位置を変更できます。<br>
-テキスト入力欄にカーソルがある時に<span class="ctl">Ctrl＋上下左右キー</span>を押すと、描画位置をその方向に 1px 移動させることができます。<br>
-<br>
-<span class="item">濁点合成</span><br>
-<br>
-「゛」(濁点: U+309B) と「゜」 (半濁点: U+309C) の文字をどう処理するか。<br>
-「あ」など、濁点付きの文字がないものに対して、濁点を付けたい時に使います。<br>
-フォントによってレイアウト情報が異なるので、見栄えの良い方を使ってください。<br>
-また、フォントによっては、私用領域に濁点付きの文字が収録されている場合があります。<br>
-<br>
-<b>合成しない</b>: 文字を置き換えず、そのままにします。<br>
-<b>合成文字に置換</b>: 合成用の文字 (U+3099/U+309A) に置き換えて、横書きなら横書き、縦書きなら縦書きのレイアウトで描画します。<br>
-IPA フォントなど、フォントが合成文字の縦書きレイアウトに対応している場合は、こちらを使います。<br>
-<b>置換+横書き合成</b>: 縦書き時に有効。合成文字に置き換えて、横書きで合成します。<br>
-縦書きレイアウトの情報がない場合はこちらを使います。<br>
-<br>
-<span class="item">モニタのDPIを使う</span><br>
-<br>
-サイズが pt 単位の場合は、DPI 値を使ってフォントサイズが計算されます。<br>
-デフォルトで作業キャンバスの DPI 値が使われますが、これにチェックを入れると、fontconfig で設定されている、モニタ用の DPI 値が使われます。
-<tr><th>移動<td>レイヤのイメージ位置を移動します。<br>
-<br>
-<span class="item">移動対象レイヤ</span><br>
-<br>
-<ul>
-<li><span class="li">カレントレイヤ</span><br>
-現在選択されているレイヤを移動します。<br>
-レイヤがフォルダの場合は、フォルダ以下のすべてのレイヤが同時に移動します。
-<li><span class="li">つかんだレイヤ</span><br>
-左ボタンを押した位置において点が存在するレイヤのうち、一番前面にあるものを対象に移動します。
-<li><span class="li">すべてのレイヤ</span><br>
-すべてのレイヤを同時に移動します。
-</ul>
-
-<tr><th>自動選択<td>塗りつぶしと同じ要領で、クリックした位置を開始点とし、同じ色の範囲を選択範囲として追加選択します。
-<tr><th>選択範囲<td>選択範囲の選択などを行います。<br>
-<br>
-選択範囲を選択すると、範囲外には描画できなくなります。<br>
-範囲をクリアしたい場合は、メニューの「<b>選択範囲 &gt; 解除</b>」を実行してください。<br>
-<br>
-<span class="item">操作タイプ</span><br>
-<br>
-<ul>
-<li><span class="li">四角形/多角形/フリーハンド</span><br>
-図形で選択範囲の追加/削除を行います。<br>
-通常は範囲の追加となります。<br>
-ドラッグ開始時に<span class="ctl">+Ctrl</span>で、現在の範囲から指定図形の範囲を削除します。
-<li><span class="li">イメージ移動/コピー</span><br>
-カレントレイヤ上の、現在選択されている範囲のイメージを、移動またはコピーします。<br>
-選択範囲がない場合は何もしません。<br>
-ドラッグ開始後、ボタンが離された時点で移動/コピーは確定して、イメージが貼り付けられます。<br>
-貼り付け時、通常はイメージが合成されますが、ドラッグ開始時に<span class="ctl">+Shift</span>で、上書き貼り付けが出来ます。<br>
-ドラッグ開始時に<span class="ctl">+Ctrl</span>で、ドラッグ中、選択範囲の枠を非表示にすることが出来ます。
-<li><span class="li">範囲移動</span><br>
-現在選択されている範囲を、形はそのままで位置だけ移動します。<br>
-左ドラッグで移動できます。
-</ul>
-
-<tr><th>矩形編集<td>四角形の範囲を選択し、その範囲のイメージを編集します。<br>
-左ドラッグで範囲を選択した後、ツールパネルのボタンから、実行したい処理を選んで押してください。<br>
-<br>
-範囲が選択されている状態で四隅にマウスポインタを乗せるとカーソルが変化するので、その状態でドラッグすると範囲のサイズを変更できます。<br>
-<br>
-<span class="item">処理タイプ</span><br>
-<br>
-<ul>
-<li><span class="li">左右反転/上下反転</span><br>
-イメージを左右反転、または上下反転します。
-<li><span class="li">左/右に90度回転</span><br>
-イメージを左右に90度回転します。
-<li><span class="li">変形</span><br>
-「拡大縮小・回転・平行移動」、または「遠近」での変形を行います。<br>
-ボタンを押すとダイアログが出るので、変形したい形を指定してください。<br>
-<br>
-※ 選択範囲がある場合は、矩形内のイメージの中で選択範囲外の部分は変形元のイメージとして扱いません (変形元のイメージでは、選択範囲外を透明にします)。<br>
-<br>
-「<b>通常</b>」時は平行移動、拡大縮小、回転が同時に行えます。<br>
-「<b>遠近</b>」時は、四隅の位置を移動して、その形に合うように変形します。平行移動も行えます。<br>
-<br>
-<span class="ctl">Ctrl＋左ドラッグ</span>または<span class="ctl">中ボタンドラッグ</span>で、キャンバスのスクロール位置の移動が行えます。<br>
-<span class="ctl">Shift＋上下ドラッグ</span>で、キャンバスの拡大縮小が行なえます。
-<li><span class="li">トリミング</span><br>
-範囲外を切り取り、イメージサイズを変更します。
-</ul>
-
-<tr><th>スタンプ<td>選択されているイメージを、左クリックで連続して複数貼り付けることができます。<br>
-<br>
-選択されているイメージがない場合は、指定図形で範囲を選択し、カレントレイヤ上のイメージを貼り付け用に取得します。<br>
-選択されているイメージがある場合は、左クリックでその位置にイメージを貼り付けます。<br>
-(通常は、クリックした位置＝貼り付けイメージの中心位置となります)<br>
-<br>
-スタンプ用イメージが存在する場合は常に左クリックで貼り付けとなるので、新しいイメージを選択したい場合は、ツールオプションの「<b>クリア</b>」ボタンでイメージを空にできます。<br>
-<br>
-ファイルからイメージを用意したい場合は、ツールオプションの「<b>画像読込</b>」ボタンで画像ファイルを読み込めます。<br>
-<br>
-<span class="item">ツールオプション</span><br>
-<br>
-スタンプ用イメージのプレビュー部分に画像ファイルを D&amp;D すると、そのファイルを読み込めます。<br>
-「<b>クリア</b>」ボタンで、現在のイメージをクリアして空の状態にします。<br>
-「<b>画像読込</b>」ボタンで、画像ファイルからイメージを読み込みます。<br>
-「<b>左上を基準に貼り付け</b>」を ON にすると、クリックした位置＝スタンプ用イメージの左上位置となります。
-<tr><th>キャンバス移動<td>左ドラッグで、キャンバス内をスクロールします。
-<tr><th>キャンバス回転<td>左ドラッグで、キャンバスの表示を回転させます。
-<tr><th>スポイト<td>左クリックで、その位置の色を取得して描画色にします。
-</table>
-</div>
-</div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
-
-<div class="ct_main">
-<div class="ct_h"><a name="link6">ツール補足</a></div>
+<a name="link5"></a><div class="ct_main">
+<div class="ct_h">ツール</div>
 <div class="ct_txt">
 <div class="subb_main" style="margin-top:0">
-<div class="subb_h">ブラシの描画タイプ</div>
-<div class="subb_txt">ブラシツールでは、描画タイプを選択することが出来ます。<br>
+<div class="subb_h">ツールリスト</div>
+<div class="subb_txt">パネル [ツールリスト] で選択されているアイテムの動作を行います。<br>
+<br>
+選択アイテムが [ツール] の場合は、各ツールの操作となります。<br>
+ツールが [ドット線] [ドット線消しゴム] [指先] の場合は、各ツールで現在選択されている描画タイプによって、描画されます。<br>
+<br>
+選択アイテムが [ブラシ] の場合は、ブラシ描画となります。<br>
+ツールリストで現在選択されている描画タイプによって、描画されます。<br>
+<br>
+ただし、<em>現在の選択レイヤが [テキストレイヤ] の場合は、常にテキストツールの操作となります。</em></div></div>
+<div class="subb_main">
+<div class="subb_h">ドット線/ドット線消しゴム</div>
+<div class="subb_txt">ドットの線、またはドットの消しゴムの線を描画します。<br>
+<br>
+<span class="c1">細線</span>: 細い線になるように、描画を調整します。</div></div>
+<div class="subb_main">
+<div class="subb_h">指先</div>
+<div class="subb_txt">なぞった位置の色を伸ばすように描画します。</div></div>
+<div class="subb_main">
+<div class="subb_h">図形塗りつぶし/図形消しゴム</div>
+<div class="subb_txt">塗りつぶされた図形の描画を行います。<br>
+ツールリストに登録した場合は、現在の図形タイプも記録されます。</div></div>
+<div class="subb_main">
+<div class="subb_h">塗りつぶし</div>
+<div class="subb_txt">クリックした位置を開始点として、その位置の色と同じ色の範囲を塗りつぶします。<br>
+<br>
+<table class="tbl1">
+<tr><th>塗りつぶす範囲<td><span class="c1">[レイヤ上の同色]</span><br>
+レイヤ上の RGB 色で判定します。<br>
+<em>※色で判定する場合、参照レイヤは一つしか使用できません。そのため、参照レイヤが複数ある場合は、先頭のレイヤのみ有効となります。</em><br>
+<br>
+<span class="c1">[透明部分(アンチエリアス自動判定)]</span><br>
+透明部分を塗りつぶします。<br>
+線にアンチエイリアスがかかっている部分は、アルファ値が一番濃い部分を境界として、内側の薄い部分も塗りつぶします。<br>
+ただし、範囲が狭くなっている部分では、塗り残しが出る場合もあります。<br>
+<br>
+<span class="c1">[透明部分(A=0)]</span><br>
+透明部分 (アルファ値が 0) の範囲のみ塗りつぶします。<br>
+<br>
+<span class="c1">[アルファ値が同じ範囲]</span><br>
+アルファ値が、開始位置と同じ値の範囲を塗りつぶします。<br>
+<br>
+<span class="c1">[キャンバス上の同色]</span><br>
+キャンバス上の RGB 色で判定します。<br>
+<em>※現在キャンバスで見えている色がそのまま取得されます。<br>
+　チェック柄背景の場合は、チェック柄とレイヤが合成された色が、そのまま判定色となるので、注意してください。</em></td>
+<tr><th>許容誤差<td>[レイヤ/キャンバスの同色(RGB)] または [アルファ値が同じ範囲] で判定する場合に有効です。<br>
+「開始位置の色」と「判定色」の差の絶対値が、指定値以下であれば、同じ色とみなします。<br>
+<br>
+値は％で指定します。<br>
+0 なら誤差なし (完全に同じ色の場合のみ塗りつぶし)。<br>
+それ以外は、RGB の値がそれぞれ、色の最大値 x N (%) の差以内であれば、同じ色として扱います。</td>
+<tr><th>色を参照するレイヤ<td>塗りつぶす範囲をレイヤの色から判定する場合、どのレイヤを対象とするかを指定します。<br>
+※対象となるレイヤがない場合は、現在のレイヤが対象となります。<br>
+<br>
+アルファ値で判定する場合は、複数の参照レイヤを使用できます。<br>
+その場合、各レイヤのアルファ値を合成したものが値として使われます。<br>
+<br>
+<em>※色(RGB) で判定する場合、複数のレイヤを対象にはできないため、一番最初のレイヤのみが対象となります。</em><br>
+<br>
+<span class="c1">[塗りつぶし参照レイヤ]</span><br>
+各レイヤで、[塗りつぶし参照レイヤ] として指定されているものを使用します。<br>
+<br>
+<span class="c1">[現在のレイヤ]</span><br>
+常に、現在選択されているレイヤを対象にします。<br>
+<br>
+<span class="c1">[すべての表示レイヤ]</span><br>
+現在表示されているすべてのレイヤを対象にします。</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">不透明範囲消去</div>
+<div class="subb_txt">クリックした位置を開始点として、不透明な (透明ではない) 範囲を、塗りつぶしと同じ要領で判定して、消去します。<br>
+繋がっている線や図形などをまとめて消去するのに使えます。<br>
+<br>
+参照レイヤは無効となり、常に現在のレイヤを対象にして判定します。</div></div>
+<div class="subb_main">
+<div class="subb_h">グラデーション</div>
+<div class="subb_txt">グラデーションを描画します。<br>
+左ドラッグで、始点と終点を指定すると、描画されます。<br>
+<br>
+<table class="tbl1">
+<tr><th>タイプ<td>始点と終点の色を指定します。<br>
+[カスタム] の場合は、下のカスタムグラデーションのリストで選択されているものが使用されます。</td>
+<tr><th>反転<td>グラデーションのパターンを左右反転します</td>
+<tr><th>繰り返す<td>範囲外の部分では、色が繰り返されるようにして、描画します</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">テキスト</div>
+<div class="subb_txt">テキストを描画します。<br>
+<br>
+現在のレイヤが [テキストレイヤ] でない場合は、直接イメージを描画します。<br>
+<br>
+現在のレイヤが [テキストレイヤ] の場合は、テキストを描画すると、その情報が保存されるので、後から編集することができます。<br>
+一つのテキストレイヤに、複数のテキストを描画できます。<br>
+(テキストレイヤでは、テキスト以外は描画できません)<br>
+<br>
+※現在のレイヤが [テキストレイヤ] で、ツールの選択が [ツールリスト] になっている場合は、常にテキストツールの動作となります。<br>
+<br>
+<table class="tbl1">
+<tr><th>通常レイヤ<td>左クリックすると、テキストダイアログが出るので、各情報をセットして「OK」ボタンを押すと、その位置にテキストが描画されます。<br>
+後からテキストを編集することはできません。</td>
+<tr><th>テキストレイヤ<td><span class="ctl">左クリック</span>:<br>
+ (クリック位置にテキストがない) その位置に新しいテキストを追加。<br>
+ (クリック位置にテキストがある) ボタンが押されている間、テキストの範囲を、枠で表示する。<br>
+<span class="ctl">左ダブルクリック</span>: その位置のテキストを編集。<br>
+<span class="ctl">右クリック</span>: メニュー。<br>
+<span class="ctl">Ctrl＋左ドラッグ</span>: 押した位置にあるテキストの位置を移動。</table><br>
+テキストの設定項目の詳細については、「テキスト」の項目をご覧ください。</div></div>
+<div class="subb_main">
+<div class="subb_h">移動</div>
+<div class="subb_txt">レイヤのイメージ位置を移動します。<br>
+※レイヤがロック状態の場合、対象外となります。<br>
+<br>
+テキストレイヤの場合は、テキストすべての位置を移動します。<br>
+<br>
+<table class="tbl1">
+<tr><th>現在のレイヤ<td>現在選択されているレイヤのみを移動します。<br>
+フォルダレイヤの場合は、フォルダ下のすべてのレイヤが対象となります。</td>
+<tr><th>つかんだレイヤ<td>左ボタンを押した時、すべての表示レイヤ上で、その位置に不透明な色 (A != 0) があるかどうかを判定し、色が存在する場合は、その一番前面にあるレイヤを移動対象とします。</td>
+<tr><th>チェックレイヤ<td>各レイヤでチェックが ON になっているものを対象とします。</td>
+<tr><th>すべてのレイヤ<td>非表示レイヤも含む、すべてのレイヤを対象にします</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">自動選択</div>
+<div class="subb_txt">塗りつぶしと同じ要領で、クリックした位置を開始点として、同じ色の範囲を、選択範囲として追加選択します。</div></div>
+<div class="subb_main">
+<div class="subb_h">選択範囲</div>
+<div class="subb_txt">選択範囲の選択などを行います。<br>
+<br>
+選択範囲を選択すると、選択されていない部分には描画できなくなります。<br>
+範囲をクリアしたい場合は、メニューの「<b>選択範囲 &gt; 解除</b>」を実行してください。<br>
+<br>
+<table class="tbl1">
+<tr><th>四角形<br>
+多角形<br>
+フリーハンド<td>指定した図形で、選択範囲の追加または削除を行います。<br>
+通常は、範囲の追加となります。<br>
+ドラッグ開始時に<span class="ctl">+Ctrl</span>で、現在の範囲から、指定図形の範囲を削除します。</td>
+<tr><th>イメージ移動<br>
+イメージコピー<td>現在のレイヤにおいて、選択範囲内のイメージを、移動またはコピーします。<br>
+選択範囲がない場合は、何もしません。<br>
+<br>
+範囲内を左ドラッグすると、移動またはコピーを開始します。<br>
+ボタンを離すと、その位置にイメージが貼り付けられます。<br>
+<br>
+ドラッグ開始時に<span class="ctl">+Ctrl</span>で、ドラッグ中は、選択範囲の枠を非表示にすることが出来ます。</td>
+<tr><th>選択範囲の移動<td>現在選択されている範囲を、形はそのままで位置だけ移動します。<br>
+左ドラッグで移動できます。<br>
+移動中、<span class="ctl">+Shift</span>で水平移動、<span class="ctl">+Ctrl</span>で垂直移動できます。</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">切り貼り</div>
+<div class="subb_txt">四角形の範囲で、イメージをコピーして貼り付けたりできます。<br>
+<br>
+選択範囲ツールでも、イメージの移動/コピーはできますが、貼り付け位置の微調整や、上書きでの貼り付けは行えないため、主に画像編集としての切り貼りを行いたい時に使います。<br>
+<br>
+<div class="subh">操作</div>
+左ドラッグすると、四角形の範囲を選択できます。<br>
+範囲選択後、ツール上の各ボタンを押してください。<br>
+<br>
+範囲が選択されている時に、範囲外を左クリック (結果として 1 x 1 px の範囲を選択) した場合、範囲がクリアされます。<br>
+<br>
+選択された範囲内を左ドラッグすると、その範囲をコピーして、貼り付けを開始します。<br>
+<br>
+<div class="subh">ボタン</div>
+<table class="tbl1">
+<tr><th>コピー<td>現在選択されている範囲のイメージをコピーします。<br>
+<em>※コピーしたイメージは、切り貼りツールが選択されている間のみ維持されます。<br>
+　ツールを切り替えると、イメージは破棄されるので、注意してください。</em></td>
+<tr><th>切り取り<td>現在選択されている範囲のイメージを、コピーした後、消去します</td>
+<tr><th>貼り付け<td>切り貼りツール内で現在コピーされているイメージを、貼り付けます。<br>
+<br>
+ボタンを押した後、コピーされているイメージが貼り付けられて、移動可能な状態になるので、範囲内を左ドラッグして、貼り付けたい位置へ移動させてください。<br>
+貼り付け移動中は、<span class="ctl">+Shift</span>で水平移動、<span class="ctl">+Ctrl</span>で垂直移動ができます。<br>
+範囲外を左クリックすると、位置が確定し、実際にその位置に貼り付けられます。<br>
+<br>
+貼り付け中は枠の色が変わるので、現在の状態は枠で判別してください。</td>
+<tr><th>画像から貼り付け<td>画像ファイルからイメージを読み込み、それを貼り付けます。</td>
+</table><br>
+<div class="subh">オプション</div>
+<table class="tbl1">
+<tr><th>上書き貼り付け<td>貼り付け時、イメージを上書きします。<br>
+※貼り付け移動中については、イメージは常に合成された状態で表示されます。</td>
+<tr><th>貼り付け時、マスク類を適用<td>貼り付け時、選択範囲や色マスク、レイヤのアルファマスクなどの処理を有効にします</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">矩形編集</div>
+<div class="subb_txt">四角形の範囲を選択し、その範囲内のイメージを編集します。<br>
+左ドラッグで範囲を選択した後、ツールのボタン、またはオプションの項目から、実行したい処理を選択してください。<br>
+<br>
+範囲が選択されている状態で、枠にカーソルを乗せると、カーソル形状が変化するので、その状態で左ドラッグすると、範囲のサイズを変更できます。<br>
+<br>
+<table class="tbl1">
+<tr><td colspan="2" class="tblh">ツールのタイプ</td>
+<tr><th>左右反転<br>
+上下反転<td>イメージを左右反転、または上下反転します。</td>
+<tr><th>左に90度回転<br>
+右に90度回転<td>イメージを左右に90度回転します。</td>
+<tr><th>変形<td>「拡大縮小・回転・平行移動」または「遠近」での変形を行います。<br>
+ボタンを押すとダイアログが出るので、そこで編集してください。<br>
+<br>
+※選択範囲がある場合、範囲外の部分は透明として扱われます。</td>
+<tr><th>トリミング<td>範囲外を切り取って、イメージサイズを変更します。</td>
+<tr><td colspan="2" class="tblh">オプション</td>
+<tr><th>拡大(補間なし)<td>指定倍率で、拡大します。<br>
+補間なし (ニアレストネイバー) で、単純な拡大となります。</td>
+<tr><th>タイル状に並べる(全体)<br>
+タイル状に並べる(横一列)<br>
+タイル状に並べる(縦一列)<td>範囲内のイメージを、レイヤ全体にタイル状に並べます</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">スタンプ</div>
+<div class="subb_txt">レイヤ上で選択したイメージを、左クリックで、連続して複数回貼り付けることができます。<br>
+<br>
+スタンプ用のイメージが選択されていない場合は、指定された図形で範囲を選択すると、現在のレイヤ上の範囲内のイメージが、スタンプ用のイメージとしてコピーされます。<br>
+<br>
+スタンプ用のイメージがある場合は、左クリックで、その位置にイメージが貼り付けられます。<br>
+(クリックした位置＝スタンプイメージの中心位置となります)<br>
+<br>
+新しいイメージを選択したい場合は、ツールオプションの「<b>クリア</b>」ボタンで、イメージを空にできます。<br>
+<br>
+イメージがある時に、<span class="ctl">+Ctrl</span>を押しながら左ドラッグすると、イメージをクリアして、範囲の選択を開始します。<br>
+<br>
+<div class="subh">ツールオプション</div>
+<table class="tbl1">
+<tr><th>プレビュー<td>現在のスタンプ用イメージが表示されます。<br>
+ここに画像ファイルを D&amp;D すると、そのファイルを読み込めます。</td>
+<tr><th>読み込み<td>画像ファイルから、イメージを読み込みます。</td>
+<tr><th>クリア<td>現在のイメージをクリアして、空の状態にします。</td>
+<tr><th>変形<td>貼り付け時に、画像を選択した形に変形できます。</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">キャンバス移動/キャンバス回転</div>
+<div class="subb_txt">左ドラッグで、キャンバスのスクロール位置の移動や、キャンバスの回転を行います。</div></div>
+<div class="subb_main">
+<div class="subb_h">スポイト</div>
+<div class="subb_txt">左クリックで、キャンバスやレイヤから色を取得したり、取得した色で処理を行います。<br>
+<br>
+<table class="tbl1">
+<tr><th>キャンバス上の色<td>キャンバスから色を取得します。<br>
+現在見えている色がそのまま取得されるので、チェック柄背景の場合も、その色がそのまま取得されます。</td>
+<tr><th>現在のレイヤ上の色<td>現在のレイヤ上における色を取得します。<br>
+アルファ値は関係なく、直接 RGB 値が取得されます。</td>
+<tr><th>中間色作成(2点をクリック)<td>キャンバス上で、間をおかずに（数秒以内に）２回クリックすると、キャンバス上からその２点の色を取得し、２色の間の中間色を作成して、描画色にセットします。</td>
+<tr><th>レイヤ上でスポイトした色を描画色に置換<td>現在のレイヤのイメージ全体において、クリックした位置の色を、現在の描画色に置き換えます。<br>
+この時、アルファ値は変化しません。<br>
+透明な部分がクリックされた場合は、透明色を描画色 (アルファ値最大) に置き換えます。</td>
+<tr><th>レイヤ上でスポイトした色を透明に置換<td>現在のレイヤのイメージ全体において、クリックした位置の色を、透明に置き換えます。</td>
+</table></div></div>
+</div>
+</div>
+
+<a name="link6"></a><div class="ct_main">
+<div class="ct_h">ツール補足</div>
+<div class="ct_txt">
+<div class="subb_main" style="margin-top:0">
+<div class="subb_h">描画タイプ</div>
+<div class="subb_txt">ブラシでの描画や、ドット線ツールなどでは、描画タイプを選択することが出来ます。<br>
 <br>
 <table class="tbl1">
 <tr><th>フリーハンド<td>左ボタンが押されている間、フリーハンドで線を描画します。<br>
-オプションパネルで「<b>定規</b>」が有効になっている場合は、その形に沿うように描画されます。
-<tr><th>直線<td>左ドラッグで始点と終点を指定し (押した位置が始点、離した位置が終点)、直線を描画します。
-<tr><th>四角形<td>左ドラッグで四角形を指定し、四角形の枠を描画します。
-<tr><th>円<td>左ドラッグで円の中心と半径を指定し、円の枠を描画します。
-<tr><th>連続直線<td>左クリックで、連続した直線を描画します。<br>
-左クリックするごとに、一つ前にクリックした位置との間で直線が引かれます。
-<tr><th>集中線<td>一つの点に集中する直線を描画します。<br>
-まず、左クリックで中心となる位置を指定します。<br>
-その後は、左クリックするごとに、中心位置と指定した位置との間で直線が引かれます。
-<tr><th>ベジェ曲線<td>４点からなるベジェ曲線を描画します。<br>
+オプションパネルで「<b>定規</b>」が有効になっている場合は、その形に沿うように描画されます。</td>
+<tr><th>直線<td>左ドラッグで始点と終点を指定し、直線を描画します。<br>
+押した位置が始点、離した位置が終点です。</td>
+<tr><th>四角形<td>左ドラッグで四角形を指定し、四角形の枠を描画します。</td>
+<tr><th>円<td>左ドラッグで、円の中心と半径、または、Ctrl を押しながら指定した場合は、円が内接する四角形を指定し、円の枠を描画します。</td>
+<tr><th>連続直線<td>左クリックで複数回点を指定して、各点の間を直線で描画します。<br>
+<span class="ctl">右ボタン/左ダブルクリック/Enter/ESC</span> で、終了します。<br>
+<span class="ctl">BackSpace</span> キーを押した場合、現在の始点（最後に押された位置）と、一番最初に押した位置との間を直線で描画して、終了します。</td>
+<tr><th>集中線<td>最初に左クリックした点を中心として固定し、２回目以降のクリック時は、中心位置から指定位置への直線を描画します。<br>
+<span class="ctl">右ボタン/左ダブルクリック/Enter/ESC</span>で、終了します。</td>
+<tr><th>ベジェ曲線<td>４点を指定することで、３次ベジェ曲線を描画します。<br>
 <br>
-(1) 直線を引く時と同じように、左ドラッグで曲線の始点と終点を指定します。<br>
-(2) 一つ目の制御点 (始点側) を左クリックで指定します。<br>
-(3) 二つ目の制御点 (終点側) を左クリックで指定します。<br>
-(4) 曲線が描画されます。
-<tr><th>スプライン曲線<td>通過点を複数指定し、すべての点を通る曲線を描画します。
-</table>
-</div></div>
+(1) 直線を引く時と同じように、左ドラッグで、曲線の始点と終点を指定します。<br>
+(2) 一つ目の制御点 (始点側) を、左クリックで指定します。<br>
+(3) 二つ目の制御点 (終点側) を、左クリックで指定します。<br>
+　この時、<span class="ctl">BackSpace</span>キーを押すと、一つ目の制御点の指定に戻ります。<br>
+(4) 曲線が描画されます。<br>
+<br>
+<span class="ctl">右ボタン/ESC</span>で、キャンセルとなります。</td>
+</table></div></div>
 <div class="subb_main">
 <div class="subb_h">ツールの塗りタイプについて</div>
 <div class="subb_txt">
 <table class="tbl1">
-<tr><th>重ね塗り<td>描画先と色を重ねます
-<tr><th>A値比較上書き<td>描画先のアルファ値よりも、描画する色の濃度の方が大きい場合、色を上書きします。<br>
-濃度が小さい場合は何もしません。
-<tr><th>上書き<td>描画先の色に関係なく、描画する色をそのまま上書きします
-</table>
-</div></div>
+<tr><th>重ね塗り<td>描画先と色を合成して、重ねます</td>
+<tr><th>A値比較上書き<td>描画する色の濃度と描画先のアルファ値を比較して、描画する色の濃度の方が大きい場合のみ、色を上書きします。</td>
+<tr><th>上書き<td>描画先の色に関係なく、描画する色をそのまま上書きします</td>
+</table></div></div>
 </div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link7">パネルについて</a></div>
+<a name="link7"></a><div class="ct_main">
+<div class="ct_h">パネルについて</div>
 <div class="ct_txt">ツールやオプション、レイヤなどの各コントロールを、「<b>パネル</b>」と呼びます。<br>
-パネルは、メインウィンドウ内の左右のサイドバーに配置させるか、独立したウィンドウにさせることができます。<br>
+パネルは、メインウィンドウ内のペインに配置させるか、独立したウィンドウにして表示することができます。<br>
 <br>
-メインウィンドウ内に配置する場合は、メニューの「<b>パネル配置設定</b>」で指定された順に配置されます。<br>
-ウィンドウモードから埋め込みモードに変更した際も、その順番通りに再配置されます。</div>
+ペイン内での配置順は、メニューから「<b>パネル配置設定</b>」で設定してください。<br>
+ウィンドウ状態に切り離したり、再度ペインに格納しても、ペイン内での配置順は、常に設定された順番で固定されます。</div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link8">[パネル] オプション</a></div>
-<div class="ct_txt">
+<a name="link8"></a><div class="ct_main">
+<div class="ct_h">[パネル] ツールリスト</div>
+<div class="ct_txt">ツールやブラシのアイテムの一覧です。<br>
+ツールで [ツールリスト] が選択されている場合、キャンバス上での操作は、このリストで選択されているアイテムの動作となります。
+<div class="subb_main">
+<div class="subb_h">アイテムリスト</div>
+<div class="subb_txt">アイテムは常にグループに格納されます。<br>
+<br>
 <table class="tbl1">
-<tr><th>ツール<td>現在選択されているツールに関するオプションが表示されます。
-<tr><th>定規<td>定規機能を有効にすると、ブラシツールのフリーハンド描画時に、指定した形に沿うように線を描画することができます。<br>
+<tr><th>ヘッダの左クリック<td>開く/閉じるの切り替え</td>
+<tr><th>ヘッダの右クリック<br>
+リストの末尾の空白部分を右クリック<td>グループのメニューを表示</td>
+<tr><th>アイテムの左クリック<td>アイテムを選択する。<br>
+選択時、現在のツールが [ツールリスト] 以外の場合は、自動でツールリストに変更されます。</td>
+<tr><th>アイテムの右クリック<br>
+グループ内の空白部分を右クリック<td>アイテムのメニューを表示</td>
+<tr><th>アイテムの左ダブルクリック<td>アイテムの設定</td>
+<tr><th>アイテムをD&amp;D<td>位置の移動。<br>
+ただし、現在選択されているアイテムをドラッグした場合のみ有効です。<br>
+未選択状態のアイテムをドラッグしても移動できません。</td>
+</table><br>
+<div class="subh">アイテムメニュー</div>
+<table class="tbl1">
+<tr><th>現在のツールを挿入<td>現在選択されているツールと、ツールのオプション値を、アイテムとして新規挿入します。<br>
+ツールによっては、ツールのサブタイプも記録されます。</td>
+<tr><th>ツールオプションの値を上書き<td>ツールアイテム時、アイテムのツールオプション値 (オプションパネルで設定されている値) を、現在の値で上書きします。</td>
+<tr><th>設定値を表示<td>ツールアイテム時、アイテムに設定されている値を表示します</td>
+<tr><th>登録<td>アイテムは、tool1〜tool5 に登録することができます。<br>
+アイテムを登録すると、キー操作によって描画することができるため、よく使うアイテムなどを登録して使ってください。<br>
 <br>
-まずは、定規のタイプを選択します。<br>
-そして、フリーハンドを描画可能な状態で、キャンバス上を<span class="ctl">Ctrl＋左ドラッグ/クリック</span>し、各定規タイプに応じた形状の指定を行います。<br>
-例えば、「平行線」タイプなら、直線を引いて線の角度を指定します。<br>
-指定が終わったら、実際に線を描画していきます。<br>
+「すべて解除」で、すべての登録アイテムを解除します。</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">リストの下</div>
+<div class="subb_txt">
+<table class="tbl1">
+<tr><th>保存ボタン<td>下にある、ブラシのサイズ・濃度の値を、アイテムに保存します。</td>
+<tr><th>ウィンドウボタン<td>ブラシ設定パネルを表示/非表示にします</td>
+<tr><th>アイテム名<td>現在選択されているアイテムの名前が表示されます</td>
+<tr><th>編集ボタン<td>アイテムのリストを編集します</td>
+<tr><th>サイズ・濃度<td>現在のブラシのサイズと濃度を設定します。<br>
+「常に保存」が OFF の場合は、手動で保存ボタンを押さないと、一時的な値の変更となります。</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">ブラシサイズリスト</div>
+<div class="subb_txt">ブラシのサイズを登録して、呼び出すことができます。<br>
 <br>
-「呼出」「記録」のボタンでは、現在の形状のパラメータを記録したり、呼び出すことができます。<br>
+<table class="tbl1">
+<tr><th>左クリック<td>サイズを呼び出す</td>
+<tr><th>右クリック<td>メニュー</td>
+<tr><th>Shift+左クリック<td>クリックした位置のサイズを削除</td>
+</table><br>
+サイズは、値の小さい順に並びます。<br>
+右クリックメニューの「追加」から、サイズを追加してください。<br>
 <br>
-<span class="item">定規タイプ</span><br>
+※ブラシサイズは px/mm の単位がありますが、ブラシリストでは、常に px 単位のサイズとしてプレビューされます。</div></div>
+</div>
+</div>
+
+<a name="link9"></a><div class="ct_main">
+<div class="ct_h">[パネル] ブラシ設定</div>
+<div class="ct_txt">選択されているブラシアイテムの設定項目が表示されます。<br>
+<br>
+<table class="tbl1">
+<tr><th>保存ボタン<td>現在の設定値を、アイテムに保存します。<br>
+「常に保存」が OFF の場合、変更した値は一時的なものとなり、アイテムを切り替えると元の値に戻ります。<br>
+設定値を記録したい場合は、手動で保存ボタンを押してください。</td>
+<tr><th>常に保存<td>ON にすると、各項目の値が変更された時は、常にアイテムに値を保存します。<br>
+OFF の場合、変更された値は一時的なものとなり、「保存」ボタンで保存しない限り、記録されません。</td>
+<tr><td colspan="2" class="tblh">メイン</td>
+<tr><th>タイプ<td>ブラシのタイプを選択します。</td>
+<tr><th>サイズ(直径)<td>ブラシの直径サイズを指定します。<br>
+単位は、px/mm から選択できます。<br>
+「設定」ボタンで、サイズの最小値と最大値を設定できます。</td>
+<tr><th>濃度<td>描画濃度を指定します。</td>
+<tr><th>手ブレ補正<td>線の手ぶれ補正の設定を行います。<br>
+タイプと強さを指定してください。<br>
+強さは、０で補正なしとなります。<br>
+<br>
+「平均」は、過去の点を適用して、平均にならすような方法です。<br>
+「一定距離」は、一定距離間に入力された座標を捨てて、少ない点でその間を補間することで、滑らかにする方法です。<br>
+一定距離の場合は、基本的に、曲線補間を ON にして使います。</td>
+<tr><th>塗りタイプ<td>各ピクセルの色をどのように処理するかを指定します。<br>
 <br>
 <ul>
-<li><span class="li">OFF</span><br>
-定規機能を無効にします。
-<li><span class="li">平行線</span><br>
-指定した角度の直線を描画します。<br>
-<span class="ctl">Ctrl＋左ドラッグ</span>で直線を引いて角度を指定します。
-<li><span class="li">平行線 (グリッド)</span><br>
-指定した角度の直線か、その角度に対して直角な直線を描画します。<br>
-<span class="ctl">Ctrl＋左ドラッグ</span>で直線を引いて角度を指定します。
-<li><span class="li">集中線</span><br>
-指定した中心位置に集まる直線を描画します。<br>
-<span class="ctl">Ctrl＋左クリック</span>で中心位置を指定します。
-<li><span class="li">同心円 (正円)</span><br>
-円の中心を指定して、正円を描画します。<br>
-<span class="ctl">Ctrl＋左クリック</span>で円の中心位置を指定します。
-<li><span class="li">同心円 (楕円)</span><br>
-円の中心と扁平率を指定して、楕円を描画します。<br>
-<span class="ctl">Ctrl＋左ドラッグ</span>で円の中心と楕円の形を指定します。
-</ul>
+<li><span class="c1">ピクセル重ね塗り</span><br>
+各ピクセルごとに重ね塗りします。
+<li><span class="c1">ストローク重ね塗り</span><br>
+重ね塗りしますが、描画を開始してから終了するまでの間（１ストロークの間）は、濃度を一定にします。<br>
+主に線画を描く時などに使います。
+<li><span class="c1">A値比較上書き</span><br>
+描画する色の濃度と、描画先のアルファ値を比較して、描画する色の濃度の方が大きい場合のみ、色を上書きします。<br>
+線画やテクスチャでの描画時など、濃度を常に一定にしたい場合に使います。
+<li><span class="c1">形状上書き</span><br>
+ブラシ形状において、透明な部分以外の色を上書きします。<br>
+テクスチャを上書き描画したい時などに使います。
+<li><span class="c1">矩形上書き</span><br>
+ブラシ形状を矩形として、透明な部分も含めて、その矩形全体で色を上書きします。<br>
+形状の矩形全体をイメージとして扱って、上書きしたい時に使います。
+<li><span class="c1">覆い焼き</span><br>
+描画先の色を明るくします。色は白で固定されます。
+<li><span class="c1">焼き込み</span><br>
+描画先の色を暗くします。白は白で固定されます。
+<li><span class="c1">加算</span><br>
+描画先の RGB 値に、描画色の RGB 値を加算します。</ul>
+</td>
+<tr><th>点の間隔<td>ブラシの線は、いくつもの連続した点を並べることで、結果として線として見えるような形になっています。<br>
+その点と点の間の距離を、ブラシサイズに対する倍率で指定します。<br>
+1.0 で、ブラシサイズの半径と同じ距離になります。<br>
+<br>
+線画用であれば 0.15 前後、塗り用であれば 0.20 程度を目安にして調整してください。<br>
+<br>
+値が小さいと、その分描画する点が増えるので、点の密度が高くなり、処理が重くなります。<br>
+値が大きいと、逆に描画する点が減り、処理が軽くなります。</td>
+<tr><th>ブラシサイズのランダム幅<td>一つ一つの点のサイズを、ランダムで変更する場合の、ランダム幅を指定します。<br>
+値は、その位置でのブラシサイズの最大値に対する％で指定します。<br>
+０で常にランダムなし。<br>
+100.0 で、サイズは 0 〜 その位置における最大サイズまでの間で変化します。<br>
+20.0 の場合、サイズは、最大の 80% 〜 最大サイズまでで変化します。</td>
+<tr><th>点の位置のランダム幅<td>一つ一つの点の位置を、ランダムで移動する場合の、最大距離を指定します。<br>
+値は、その位置でのブラシサイズに対する倍率で指定します。<br>
+0.00 で、無効。<br>
+値が大きいほど、ランダムの範囲が大きくなり、本来の位置からの距離が遠くなります。</td>
+<tr><th>テクスチャ<td>描画時に適用されるテクスチャを指定します。<br>
+<br>
+<span class="c1">オプションのテクスチャを使う</span>:<br>
+オプションパネルの「テクスチャ」で指定されているテクスチャを使います。<br>
+<span class="c1">強制的に無効</span>:<br>
+強制的にテクスチャを無効にします。<br>
+オプションパネルでテクスチャが選択されている場合でも、テクスチャを適用しません。</td>
+<tr><th>アンチエイリアス<td>ON にすると、濃度が滑らかな線になります。<br>
+OFF にすると、濃度が２値の状態 (０か、濃度最大) となります。</td>
+<tr><th>曲線補間<td>フリーハンドの描画時、入力座標の間を、曲線で補間するかどうか。<br>
+OFF の場合、線形補間となります。<br>
+OFF の場合は、マウスで描画した時や、素早く描画した時 (入力座標が少ない場合) に、線がカクカクする場合があります。</td>
+<tr><td colspan="2" class="tblh">筆圧</td>
+<tr><th>筆圧0のサイズ<td>筆圧が０の時の、ブラシサイズを、サイズに対する％で指定します。<br>
+100.0 で、サイズは常に一定となります。</td>
+<tr><th>筆圧0の濃度<td>筆圧が０の時の、ブラシ濃度を、濃度に対する％で指定します。<br>
+100.0 で、濃度は常に一定となります。</td>
+<tr><th>共通の筆圧カーブを使う<td>ON の場合、共通用として設定された筆圧カーブを使います。<br>
+OFF の場合、アイテム個別の筆圧カーブを使います。</td>
+<tr><th>筆圧カーブ編集<td>筆圧のカーブを編集します。<br>
+「共通の筆圧カーブを使う」が OFF の場合は、アイテム個別の筆圧カーブを設定します。<br>
+ON の場合は、全体で共通の筆圧カーブを設定します。<br>
+<br>
+グラフは、X 方向が入力、Y 方向が出力となります。<br>
+点のない部分で左クリックまたはドラッグすると、点を追加します。<br>
+点のある部分で左ドラッグすると、点を移動します。<br>
+（端の２つの点も、Y 方向の位置のみ移動できます）<br>
+<span class="ctl">右クリック/Ctrl＋左クリック</span>で、その位置の点を削除します。<br>
+<br>
+グラフが左上方向に行くほど筆圧が柔らかくなり、右下方向に行くほど筆圧が硬くなります。</td>
+<tr><td colspan="2" class="tblh">水彩</td>
+<tr><th>プリセット<td>よく使う値を保存して、呼び出すことができます</td>
+<tr><th>描画色の量<td>描画色を混ぜる割合を指定します</td>
+<tr><th>延ばす量<td>前回の混色した結果の色をどれだけ適用するか</td>
+<tr><th>背景を白色として扱う<td>混色時、背景の色を取得する時に、透明部分を白色として扱うかどうか</td>
+<tr><td colspan="2" class="tblh">ブラシ形状</td>
+<tr><th>形状画像<td>ブラシ形状の画像を選択します。<br>
+ブラシ形状は、グレイスケールまたはカラーで取り扱うことができます。</td>
+<tr><th>硬さ<td>形状が「通常円形」の場合、円の硬さを指定します。<br>
+値が大きいほど硬くなります。</td>
+<tr><th>砂化の強さ<td>ランダムで、形状内の各ピクセルの濃度を変化させます。<br>
+値が大きいほど、密度が低い状態になります。</td>
+<tr><th>回転のベース角度<td>形状を回転する時の基本角度を指定します。</td>
+<tr><th>ランダム回転の幅<td>一つ一つの点ごとに、回転角度をランダムで変化させる時の、角度のランダム幅を指定します。<br>
+-N 〜 +N の範囲内で角度が変化します。</td>
+<tr><th>進行方向に回転<td>描画する線の進行方向に向けて、形状を回転させます。</td>
+</table></div>
+</div>
 
-<tr><th>テクスチャ<td>描画時に適用されるテクスチャ画像を選択します。
-<tr><th>入り抜き<td>ブラシツールで、描画タイプが「直線」「連続直線」「集中線」「ベジェ曲線」時の筆圧の状態を設定します。<br>
+<a name="link10"></a><div class="ct_main">
+<div class="ct_h">[パネル] オプション</div>
+<div class="ct_txt">
+<div class="subb_main" style="margin-top:0">
+<div class="subb_h">ツール</div>
+<div class="subb_txt">現在選択されているツールに関するオプションが表示されます。</div></div>
+<div class="subb_main">
+<div class="subb_h">定規</div>
+<div class="subb_txt">定規機能を有効にすると、ブラシなどのフリーハンド描画時に、指定した形に沿うように線を描画することができます。<br>
 <br>
-<span class="item">直線</span> は「直線」「連続直線」「集中線」時、<br>
-<span class="item">曲線</span> は「ベジェ曲線」時の設定です。<br>
+<div class="subh">使い方</div>
+まずは、描画タイプからフリーハンドを選択して、オプションパネル:定規から、タイプを選択します。<br>
+デフォルトでは、現在の定規形状のガイドが表示されます。<br>
 <br>
-<span class="item">入り</span> は、線の始点から指定した位置までを「筆圧０〜最大」の間で変化させます。<br>
-<span class="item">抜き</span> は、線の終点から指定した位置までを「筆圧０〜最大」の間で変化させます。<br>
+定規の形状を変更する場合は、オプションパネル:定規の「設定」ボタンを ON にして、キャンバス上で、各形状に合わせた操作を行うか、(設定ボタンの ON/OFF に関わらず) <span class="ctl">Ctrl</span>を押しながらキャンバス上で操作してください。<br>
+(+Ctrl による定規形状設定は、定規タイプが OFF 以外で、かつフリーハンド時のみ有効です)<br>
 <br>
-入り抜きに指定する値は「0.0～100.0」で、描画する線の長さに対する％で指定します。<br>
-「0.0」で入り抜きなし、「100.0」は描画する線の最大位置です。<br>
+形状を設定できたら、「設定」ボタンを OFF にしてください。後は普通に描画するだけです。<br>
+設定された形状に沿うような形で、描画位置が補正されます。<br>
+<br>
+「読込」「保存」のボタンでは、現在の形状のパラメータを記録したり、記録した形状を呼び出すことができます。<br>
+<br>
+<div class="subh">定規タイプ</div>
+<table class="tbl1">
+<tr><th>OFF<td>定規機能を無効にします。</td>
+<tr><th>平行線<td>描画開始位置を基準に、常に、指定した角度の直線を描画します。<br>
+形状設定時：左ドラッグで直線を引いて、角度を指定します。</td>
+<tr><th>平行線 (グリッド)<td>描画開始位置を基準に、指定した角度の直線、または、指定角度に対して直角な直線を描画します。<br>
+描画開始から数 px 移動した時点での角度により、どちらを描画するかが決定されます。<br>
+(指定角度に近い場合はその角度。90度に近い場合は、直角な角度になります)<br>
+形状設定時：左ドラッグで直線を引いて、角度を指定します。</td>
+<tr><th>集中線<td>描画開始位置を基準に、指定した中心位置に向かうような角度の直線を描画します。<br>
+形状設定時：左クリックで、中心位置を指定します。</td>
+<tr><th>同心円 (正円)<td>円の中心を指定し、正円を描画します。<br>
+描画開始時に円の半径が決定され、同じ半径の正円になるように補正されます。<br>
+形状設定時：左クリックで、円の中心位置を指定します。</td>
+<tr><th>同心円 (楕円)<td>円の中心と扁平率を指定して、楕円を描画します。<br>
+描画開始時に円の半径が決定されます。<br>
+形状設定時：左ドラッグで、円の中心と楕円の形を指定します。</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">テクスチャ</div>
+<div class="subb_txt">ツールなどでの描画時に適用される、テクスチャ画像を選択します。<br>
+指定した画像が、原寸のままタイル状に並べられるような描画結果となります。</div></div>
+<div class="subb_main">
+<div class="subb_h">入り抜き</div>
+<div class="subb_txt">ブラシ描画で、描画タイプが [直線] [連続直線] [集中線] [ベジェ曲線] 時の、筆圧の状態を設定します。<br>
+<br>
+<b>直線</b> は [直線] [連続直線] [集中線] 時。<br>
+<b>曲線</b> は [ベジェ曲線] 時の設定です。<br>
+<br>
+<b>入り</b> は、線の始点から、指定した位置までを、「筆圧０〜最大」の間で変化させます。<br>
+<b>抜き</b> は、線の終点から、指定した位置までを、「筆圧０〜最大」の間で変化させます。<br>
+<br>
+入り抜きに指定する値は「0.0〜100.0」で、描画する線全体の長さに対する％で指定します。<br>
+「0.0」で入り抜きなし、「100.0」で描画する線全体の長さと同じになります。<br>
 <br>
 <b>&lt;例&gt;</b><br>
 「<b>入り 0 : 抜き 0</b>」 で、入り抜きなし (筆圧は常に最大)。<br>
@@ -441,341 +726,164 @@ IPA フォントなど、フォントが合成文字の縦書きレイアウト�
 「<b>入り 0 : 抜き 100</b>」 で、始点が筆圧最大、終点が筆圧０となります。<br>
 「<b>入り 20 : 抜き 30</b>」 で、始点が筆圧０... 始点から 20% の位置が筆圧最大 ... 終点から 30% の位置が筆圧最大 ... 終点が筆圧０ となります。<br>
 <br>
-「呼出」「記録」のボタンでは、現在の設定値を記録したり、呼び出したりすることができます。
-</table>
+「読込」「保存」のボタンでは、現在の値を記録したり、呼び出したりすることができます。</div></div>
 </div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link9">[パネル] レイヤ</a></div>
+<a name="link11"></a><div class="ct_main">
+<div class="ct_h">[パネル] レイヤ</div>
 <div class="ct_txt">レイヤの一覧が表示されます。<br>
 一覧上で上にあるレイヤほど、キャンバス上で前面に表示されます。<br>
 <br>
-レイヤのプレビューイメージは、描画後すぐに更新されるわけではありません。<br>
-カレントレイヤを変更したりした時などに更新されます。<br>
-手動で更新したい場合は、カレントレイヤ上を左クリックしてください。
+レイヤのプレビューイメージは、描画後すぐには更新されません。<br>
+レイヤの選択を変更した時などに更新されます。<br>
+手動で更新したい場合は、現在のレイヤ上を左クリックしてください。
 <div class="subb_main">
-<div class="subb_h">操作</div>
+<div class="subb_h">一覧上の操作</div>
 <div class="subb_txt">
 <table class="tbl1">
-<tr><th>左クリック<td>編集するレイヤの選択、または各チェックの ON/OFF。<br>
-選択されているレイヤをさらに左クリックすると、レイヤのプレビューイメージが更新されます。
-<tr><th>左ダブルクリック<td>レイヤの設定ダイアログを開きます。
+<tr><th>左クリック<td>レイヤの選択、または、各ボタンなどの操作。<br>
+選択されているレイヤをさらに左クリックすると、レイヤのプレビューイメージが更新されます。</td>
+<tr><th>左ダブルクリック<td>レイヤの設定ダイアログを開きます。<br>
+レイヤタイプのアイコンの上でダブルクリックすると、レイヤの色を選択できます。</td>
 <tr><th>左ドラッグ<td>レイヤの位置を移動します。<br>
-レイヤフォルダの上に移動させると、レイヤはそのフォルダの中に入ります。
-<tr><th>右クリック<td>メニューを表示します。
-<tr><th>Ctrl＋左クリック<td>指定したレイヤのみ表示し、他のレイヤを非表示にします。
-<tr><th>プレビューイメージ内で左ダブルクリック<td>カラータイプが「アルファ値のみ」の場合、レイヤの線の色の変更ダイアログを表示します。
-<tr><th>プレビューイメージ内で Shift＋左クリック<td>カラータイプが「アルファ値のみ」の場合、現在の描画色をレイヤの線の色に設定します。
-<tr><th>一覧上に画像ファイルを D&amp;D<td>複数ファイルの画像をレイヤとして読み込むことができます。
-</table>
+レイヤフォルダの上に移動させると、レイヤはそのフォルダの中に入ります。</td>
+<tr><th>右クリック<td>メニューを表示します。</td>
+<tr><th>Ctrl＋左クリック<td>指定したレイヤのみを表示状態にし、他のすべてのレイヤを非表示にします。</td>
+<tr><th>一覧上に画像ファイルを D&amp;D<td>複数の画像ファイルをレイヤとして読み込むことができます。</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">フォルダレイヤについて</div>
+<div class="subb_txt">フォルダレイヤを使うと、複数のレイヤをグループとしてまとめることができます。<br>
+<br>
+フォルダレイヤが選択された状態で新規レイヤを作成した場合、作成したレイヤは、フォルダの子になります。<br>
+既存のレイヤをフォルダに格納したい場合は、レイヤを左ドラッグして、フォルダの上に移動させてください。<br>
+<br>
+<ul>
+<li>[移動] ツールでは、フォルダレイヤが選択されている場合、そのフォルダ下のすべてのレイヤが移動対象となります。
+<li>フォルダで指定された表示濃度は、フォルダ下のすべてのレイヤに適用されます。
+<li>フォルダの「描画ロック」が ON の場合、フォルダ下のすべてのレイヤで、描画ロックが ON になります。
+<li>フォルダに対しては、何も描画することが出来ません。</ul>
 </div></div>
 <div class="subb_main">
-<div class="subb_h">右クリックメニュー</div>
-<div class="subb_txt">
+<div class="subb_h">レイヤタイプについて</div>
+<div class="subb_txt">レイヤイメージのタイプは、以下の中から選択できます。<br>
+<br>
 <table class="tbl1">
-<tr><th>このフォルダの上に新規レイヤ作成<td>右クリックした位置のフォルダの真上に新しいレイヤを作成します。<br>
-通常は、フォルダ上でレイヤを作成するとそのレイヤはフォルダの中に置かれるので、フォルダの外にレイヤを作りたい場合に使います。
-<tr><th>チェックレイヤをこのフォルダに移動<td>チェックアイコンが ON になっているすべてのレイヤを、まとめて右クリックした位置のフォルダの中に移動させます。<br>
-レイヤは、フォルダ内の一番上に順番に置かれます。<br>
-なお、移動後はすべてのレイヤのチェックが OFF になります。
-</table>
-</div></div>
-<div class="subb_main">
-<div class="subb_h">レイヤフォルダについて</div>
-<div class="subb_txt">レイヤフォルダを使うと、複数のレイヤをグループとしてまとめることができます。<br>
-フォルダが選択された状態で新規レイヤを作ると、作成したレイヤはフォルダの子になります。<br>
-既存のレイヤをフォルダに格納したい場合は、レイヤを左ドラッグしてフォルダの上に移動させてください。<br>
+<tr><th>フルカラー<td>色とアルファ値が含まれます。<br>
+R,G,B,A の４つの値があります。</td>
+<tr><th>グレイスケール<td>色が一つと、アルファ値が含まれます。<br>
+R,G,B がぞれぞれ同じ値の、グレイスケール色となります。</td>
+<tr><th>アルファ値のみ<td>アルファ値のみが含まれます。<br>
+色はレイヤで指定し、その色＋アルファ値で表現されます。</td>
+<tr><th>アルファ値のみ(1bit)<td>アルファ値のみ、1px = 1bit のデータとなります。<br>
+透明 (0) か完全不透明 (最大値) の２通りしか表現できません。<br>
+色はレイヤで指定します。</td>
+<tr><th>テキストレイヤ<td>テキストを描画するだけのレイヤです。<br>
+描画したテキストの情報は保存され、後から編集することができます。<br>
+テキストレイヤは、テキストの情報が保存される以外は、「アルファ値のみ」のレイヤと同じなので、イメージのタイプも指定します。<br>
 <br>
-<ul>
-<li>「移動」ツールでは、レイヤフォルダが選択されている場合、そのフォルダ下のすべてのレイヤが同時に移動します。
-<li>フォルダで指定された表示濃度は、フォルダ下のすべてのレイヤにも適用されます。
-<li>フォルダの「描画ロック」が ON の場合、フォルダ下のすべてのレイヤで描画ロックが ON になります。
-<li>フォルダに対しては何も描画することは出来ません。
-</ul>
-</div></div>
-<div class="subb_main">
-<div class="subb_h">カラータイプについて</div>
-<div class="subb_txt">レイヤイメージのカラータイプは４つの中から選択できます。<br>
+単色の漫画のセリフ等で使うことを想定しているため、色の情報があるレイヤタイプでは使えません。</td>
+<tr><th>トーンレイヤ<td>[グレイスケール] または [アルファ値のみ(1bit)] のタイプ時、レイヤの色を元に網トーン化することができます。<br>
+トーンレイヤは、レイヤのタイプとして別途存在しているわけではないので、トーン化の ON/OFF はレイヤ設定で変更できます。<br>
 <br>
-<ul>
-<li><span class="li">フルカラー</span><br>
-通常カラー。メモリを多く消費しますが、一番一般的なタイプです。<br>
-R+G+B+A (各16bit)。一つの点は 8byte です。
-<li><span class="li">グレイスケール</span><br>
-グレイスケールの色＋アルファ値 (各16bit)。一つの点は 4byte です。<br>
-色を白〜黒しか使わない場合、データを 1/2 に削減できます。
-<li><span class="li">アルファ値のみ</span><br>
-アルファ値のみ (16bit) で、色データは含みません。一つの点は 2byte です。<br>
-イメージ内に色データがない代わりに、レイヤに色を指定することができます。<br>
-線画など、色を１色しか使わない場合、データを 1/4 に削減できます。
-<li><span class="li">アルファ値のみ (1bit)</span><br>
-アルファ値のみ (1bit) で、色データは含みません。一つの点は 1bit です。<br>
-イメージ内に色データがない代わりに、レイヤに色を指定することができます。<br>
-透明か完全不透明かの２つの値しか表現できません。<br>
-アンチエイリアスの必要のない線や塗りつぶしなどで、色を１色しか使わない場合に、データを 1/64 に削減できます。
-</ul>
-</div></div>
+トーンレイヤの場合は、レイヤ色を設定して、トーンの色を変更することができます。</td>
+</table></div></div>
 <div class="subb_main">
-<div class="subb_h">描画ロック</div>
-<div class="subb_txt">鍵アイコンを左クリックで、描画ロックを ON/OFF することができます。<br>
-描画ロックが ON の場合、レイヤイメージを編集するような処理は行うことができなくなります。<br>
-レイヤイメージを現状のまま変更させたくない場合に ON にしてください。</div></div>
+<div class="subb_h">テクスチャ</div>
+<div class="subb_txt">レイヤに対して、テクスチャ画像を指定できます。<br>
+キャンバスイメージへの合成時に、イメージのアルファ値に適用されます。<br>
+<br>
+<div class="subh">[TEX] のウィジェット</div>
+テクスチャ画像が設定されている場合、色が変わります。<br>
+<br>
+テクスチャ画像が設定されていない場合、左クリックで、画像を選択します。<br>
+テクスチャ画像が設定されている場合、左クリックで、メニューが表示されます。<br>
+<span class="ctl">右クリック/Ctrl＋左クリック</span>で、常に画像選択となります。</div></div>
 <div class="subb_main">
-<div class="subb_h">塗りつぶし判定元</div>
-<div class="subb_txt">「塗りつぶし」と「自動選択」ツール時、このチェックが ON になっているレイヤを塗りつぶし範囲の判定用として使うことが出来ます。<br>
+<div class="subb_h">アルファマスク</div>
+<div class="subb_txt">レイヤにアルファマスクを指定すると、アルファ値を元にしたマスクを適用できます。<br>
+<br>
+<table class="tbl1">
+<tr><th>OFF<td>アルファマスクを無効にします</td>
+<tr><th>アルファ値維持<td>現在のアルファ値を、常に維持します。<br>
+描画時は、色だけが変化し、アルファ値は元の値のまま変化しません。</td>
+<tr><th>透明色保護<td>現在のイメージで、透明な部分は変更されないようにします。</td>
+<tr><th>不透明色保護<td>現在のイメージで、不透明な部分 (透明ではないすべての色) は変更されないようにします。<br>
+透明部分のみに描画したい時に使います。</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">塗りつぶし参照</div>
+<div class="subb_txt">[塗りつぶし] [自動選択] ツール時、このチェックが ON になっているレイヤを、塗りつぶし範囲の判定用として使うことが出来ます。<br>
 複数レイヤで指定できます。</div></div>
 <div class="subb_main">
-<div class="subb_h">レイヤマスク</div>
-<div class="subb_txt">指定したレイヤのアルファ値を、描画時のマスクとして使用します。<br>
-他のグラフィックソフトでは、レイヤマスクといえば表示のマスクですが、ここでは描画時に適用されるマスクとなります。<br>
+<div class="subb_h">描画ロック</div>
+<div class="subb_txt">描画ロックが ON の場合、描画や編集など、イメージ内容が変化するような処理を行うことができなくなります。<br>
+(メニューからの編集などは一部対象外)<br>
+誤って描画することを防ぎたい場合に使ってください。</div></div>
+<div class="subb_main">
+<div class="subb_h">チェック</div>
+<div class="subb_txt">レイヤの編集時や、フィルタなどで、任意のレイヤを指定する時に使います。</div></div>
+<div class="subb_main">
+<div class="subb_h">すべてのトーンレイヤをグレイスケール表示</div>
+<div class="subb_txt">トーンレイヤを、トーンではなく、グレイスケールで表示します。<br>
+塗り残しの確認や、グレイスケールで画像を保存したい時に使ってください。<br>
 <br>
-レイヤマスクが適用された状態でレイヤを描画した時、マスクレイヤのアルファ値より大きな値にはならなくなります。<br>
-描画する色のアルファ値がマスクレイヤの値より小さい場合はそのまま描画されますが、アルファ値が大きくなった場合は、マスクレイヤのアルファ値を最大値として、色 (RGB) はそのままでアルファ値を制限します。<br>
-マスクレイヤ上で透明な部分は、元の色のままとなります。<br>
+トーンが固定濃度ではない場合は、元々のレイヤの色がそのまま表示されます。<br>
+トーンが固定濃度の場合は、その濃度をグレイスケールに変換した色で表示されます。<br>
+(10% なら、色の最大値 x 90%)<br>
 <br>
-<span class="item">レイヤマスク</span><br>
+<em>※トーン濃度の濃いレイヤほど前面に配置されていないと、正しく表示できません。</em></div></div>
+<div class="subb_main">
+<div class="subb_h">マスクレイヤ</div>
+<div class="subb_txt">指定したレイヤのアルファ値を、描画時のマスクとして使用することができます。<br>
+他のグラフィックソフトでは、レイヤマスクといえば、表示時に適用されるマスクですが、ここでは、描画時に適用されるマスクとなります。<br>
 <br>
-アイコンを左クリックで、指定レイヤをレイヤマスクとして指定できます。<br>
-レイヤマスクに指定できるのは一つだけです。<br>
+<div class="subh">処理</div>
+マスクレイヤが指定されている状態で描画した場合、同じ位置のマスクレイヤのアルファ値がマスク値として適用され、そのアルファ値が最大値となるように制限されます。<br>
+<br>
+描画する色のアルファ値が、マスクレイヤの値より小さい場合は、そのまま描画されますが、アルファ値がそれを超えた場合は、色はそのままで、アルファ値をマスクレイヤの値と同じにします。<br>
+<br>
+<div class="subh">マスクレイヤの指定</div>
+レイヤ一覧上の●アイコンを左クリックすると、そのレイヤをマスクレイヤとして指定できます。<br>
+マスクレイヤに指定できるのは、一つだけです。<br>
 任意のレイヤをマスクとして使いたい場合に指定してください。<br>
 <br>
-<span class="item">下レイヤでマスク</span><br>
+<div class="subh">下レイヤでマスク</div>
+●アイコンを<span class="ctl">左ダブルクリック</span>または<span class="ctl">Shift＋左クリック</span>すると、一つ下のレイヤをマスクとして使います。<br>
+下レイヤでのマスクは、複数レイヤで指定可能ですが、実際の処理時にマスクとして使えるのは、一つのレイヤのみです。<br>
 <br>
-アイコンを<span class="ctl">左ダブルクリック</span>、または<span class="ctl">Shift＋左クリック</span>で、常に一つ下のレイヤをマスクとして使います。<br>
-複数レイヤで指定可能ですが、実際にマスクとして使えるのは一つのレイヤのみです。<br>
-<br>
-一つ下のレイヤでさらに「下レイヤでマスク」が ON になっている場合は、さらにその下のレイヤを参照し、一番最後に「下レイヤでマスク」が OFF になっているレイヤをマスクとして使います。<br>
+一つ下のレイヤで、さらに「下レイヤでマスク」が ON になっている場合は、さらにその下のレイヤを参照し、最終的に一番最後に「下レイヤでマスク」が OFF になっているレイヤをマスクとして使います。<br>
 <br>
 <b>&lt;例&gt;</b><br>
 layer2 : ON<br>
 layer1 : ON<br>
 layer0 : OFF<br>
 <br>
-この場合、layer1 と layer2 ともに、layer0 がマスクレイヤとなります。</div></div>
+この場合、layer1 と layer2 では、layer0 がマスクレイヤとなります。</div></div>
 <div class="subb_main">
-<div class="subb_h">チェック</div>
-<div class="subb_txt">チェックのアイコンは、フィルタのアルファ操作や複数レイヤ結合時などにレイヤを選択するのに使います。</div></div>
-<div class="subb_main">
-<div class="subb_h">アルファマスク</div>
-<div class="subb_txt">上部のレイヤパラメータ設定部分で、１段目の右にあるアイコンでは、レイヤのアルファマスクの設定を変更できます。<br>
-<br>
-<span class="ctl">左クリック</span> : 選択メニューの表示。<br>
-<span class="ctl">右クリック/Ctrl＋左クリック</span> : OFF にする。<br>
-<span class="ctl">Shift＋左クリック</span> : 「アルファ値維持」の ON/OFF。<br>
-<br>
-<ul>
-<li><span class="li">アルファマスク OFF</span><br>
-アルファマスクを無効にします。
-<li><span class="li">アルファ値維持</span><br>
-現在のアルファ値をそのまま維持します。<br>
-描画後にアルファ値が変化する場合、RGB はそのままでアルファ値が元の値に置き換わります。<br>
-色だけ変えたい場合などに使います。
-<li><span class="li">透明色保護</span><br>
-現在のイメージで透明な部分は変更されないようにします。
-<li><span class="li">不透明色保護</span><br>
-現在のイメージで不透明な部分 (透明でないすべての色) は変更されないようにします。<br>
-透明部分のみに描画したい時に使います。
-</ul>
-</div></div>
-<div class="subb_main">
-<div class="subb_h">テクスチャ</div>
-<div class="subb_txt">レイヤに対してテクスチャ画像を指定できます。<br>
-描画時に適用されるのではなく、キャンバスの表示時にレイヤイメージのアルファ値に適用されます。</div></div>
-</div>
-</div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
-
-<div class="ct_main">
-<div class="ct_h"><a name="link10">[パネル] ブラシ</a></div>
-<div class="ct_txt">上から順に、「ブラシのサイズリスト」「ブラシリスト」「ブラシの項目設定」が並びます。
-<div class="subb_main">
-<div class="subb_h">ブラシのサイズリスト</div>
-<div class="subb_txt">ブラシの半径サイズのリストを登録して、左クリックで呼び出すことができます。<br>
-<br>
-<span class="ctl">左クリック</span> : サイズを呼び出して現在のブラシの半径にセット。<br>
-<span class="ctl">右クリック</span> : メニュー表示。<br>
-<span class="ctl">Shift＋左クリック</span> : その位置のサイズを削除。</div></div>
-<div class="subb_main">
-<div class="subb_h">ブラシリスト</div>
-<div class="subb_txt">ブラシの一覧が表示されます。<br>
-<br>
-<span class="item">操作</span><br>
-<br>
-<span class="ctl">左クリック</span> : ブラシ選択。<br>
-<span class="ctl">右クリック</span> : メニュー表示。<br>
-<span class="ctl">左ドラッグ</span> : ブラシアイテムの位置を移動。<br>
-<span class="ctl">左ダブルクリック</span> : ブラシの名前を変更。<br>
-<br>
-<span class="item">グループ</span><br>
-<br>
-ブラシにはグループが存在し、グループの下にブラシを作成します。<br>
-「グループヘッダの矢印部分をクリック」でグループの開閉、「メニューボタン上をクリック」でグループのメニューを表示します。<br>
-<br>
-グループ内のブラシアイテムは、グループごとに、横に指定された数だけ並べることができます。<br>
-横に並べる数は、グループの設定で変更してください。<br>
-<br>
-<span class="item">グループメニュー</span><br>
-<br>
-<ul>
-<li><span class="li">新規ブラシ</span><br>
-このグループの最後に、新しいブラシを作成します。<br>
-「デフォルト」は、デフォルトのブラシ値となります。<br>
-「複製」は、現在のブラシ値を複製します。<br>
-「貼り付け」は、コピーされたブラシを貼り付けます。
-<li><span class="li">新規グループ</span><br>
-新しいグループを追加します。
-<li><span class="li">グループの設定</span><br>
-グループの設定を変更します。
-<li><span class="li">リストの編集</span><br>
-グループとブラシのリスト全体を編集します。<br>
-ここで行うすべての動作は、一度実行すると元の状態に戻すことはできません。
-</ul>
-<br>
-<span class="item">ブラシメニュー</span><br>
-<br>
-<ul>
-<li><span class="li">テキスト形式でコピー</span><br>
-ブラシを、テキスト形式でクリップボードにコピーします。<br>
-テキストエディタなどに貼り付けてブラシを保存しておくことができます。
-<li><span class="li">上書き貼り付け</span><br>
-コピーされたブラシを、現在のブラシに上書きして貼り付けます。
-<li><span class="li">登録ブラシに登録</span><br>
-ブラシを、登録ブラシとして登録します。<br>
-登録ブラシに登録できるのは一つだけです。<br>
-すでに他のブラシが登録されている場合は、その登録が解除されて、指定ブラシが登録されます。<br>
-「キャンバスキー設定」で「登録ブラシで自由線描画」にキーを設定すると、キャンバス上で<span class="ctl">指定キー＋左ドラッグ</span>で、登録されたブラシで自由線の描画が出来ます。
-<li><span class="li">登録ブラシ解除</span><br>
-ブラシが登録ブラシに登録されている場合、その登録を解除します。
-</ul>
-</div></div>
-<div class="subb_main">
-<div class="subb_h">ブラシ項目</div>
-<div class="subb_txt">選択されているブラシの設定項目が表示されます。<br>
-<br>
+<div class="subb_h">トーンレイヤの項目</div>
+<div class="subb_txt">
 <table class="tbl1">
-<tr><th>保存ボタン<td>現在の項目の状態を、ブラシに保存します。<br>
-保存ボタンを押さずに別のブラシを選択すると、変更した値が元に戻ってしまうので、注意してください。
-<tr><th>詳細設定ボタン<td>ブラシの詳細設定を行います。<br>
+<tr><th>線数<td>幅1インチ内の点の数</td>
+<tr><th>濃度固定<td>チェックが OFF の場合、レイヤの色からトーン濃度を取得します。<br>
+(白いほど濃度は低く、黒いほど濃度は高くなります)<br>
+チェックが ON の場合、レイヤの色に関係なく、常に指定したトーン濃度にします。<br>
 <br>
-<ul>
-<li><span class="li">値が変化したら常に保存する</span><br>
-各項目の値が変化したら、すぐにブラシにデータを保存します。<br>
-保存ボタンを押す必要がなくなります。
-<li><span class="li">半径設定</span><br>
-半径サイズの、バーの値の最小値と最大値を設定します。
-</ul>
-
-<tr><td colspan="2" class="tbl_header">メイン
-<tr><th>タイプ<td>ブラシのタイプを選択します。
-<tr><th>半径<td>ブラシの半径サイズを指定します。
-<tr><th>濃度<td>描画濃度を指定します。
-<tr><th>塗り<td>各ピクセルの色をどのように処理するかを指定します。<br>
-<br>
-<ul>
-<li><span class="li">ピクセル重ね塗り</span><br>
-各ピクセルごとに重ね塗りします。
-<li><span class="li">ストローク重ね塗り</span><br>
-重ね塗りしますが、描画を開始してから終了するまでの間は濃度を一定にします。<br>
-フリーハンドの場合は、ボタンを押してから離すまでの間です。<br>
-主に線画を描く場合などに使います。
-<li><span class="li">A値比較上書き</span><br>
-描画する色のアルファ値が、描画先のアルファ値よりも大きい場合、色を上書きします。<br>
-線画やテクスチャでの描画など、濃度を一定にしたい場合に使います。
-<li><span class="li">形状上書き</span><br>
-色を上書きしますが、ブラシ形状において透明な部分は何もしません。<br>
-テクスチャを上書き描画したい場合などに使います。
-<li><span class="li">矩形上書き</span><br>
-ブラシを描画する矩形範囲全体で色を上書きします。<br>
-ブラシ形状で透明な部分も透明として上書きします。<br>
-ブラシ形状の矩形全体を上書き描画したい時に使います。
-<li><span class="li">覆い焼き</span><br>
-描画先の色を明るくします。
-<li><span class="li">焼き込み</span><br>
-描画先の色を暗くします。
-<li><span class="li">加算</span><br>
-描画先の色に、描画する色の RGB 値を加算します。<br>
-RGB の値が小さいと適用量も小さくなるので、効果を軽くしたい場合は、濃度を下げるか、色を暗めにしてください。
-</ul>
-
-<tr><th>補正<td>手ブレ補正の設定を行います。<br>
-タイプと強さを指定してください。
-<tr><td colspan="2" class="tbl_header">最小＆間隔
-<tr><th>サイズ最小<td>筆圧が０の時の半径サイズの最小値を、最大半径に対する％で指定します。
-<tr><th>濃度最小<td>筆圧が０の時の濃度の最小値を、最大濃度に対する％で指定します。
-<tr><th>点の間隔<td>ブラシの線は、いくつもの連続した点を並べることで、線として描画しています。<br>
-その一つの点と点の間の距離を、半径に対する倍率で指定します。<br>
-<br>
-「1.00」で、間隔は半径と同じ距離になります。<br>
-「0.20」程度を目安にして、調整してください。<br>
-<br>
-間隔が狭くなると、その分描画する点が増えて密度が高くなり、処理が重くなります。<br>
-逆に広くすると、描画する点が減り、処理が軽くなるので、濃度の密度を下げたい時や、大きいサイズで描画する際は少し大きめにしておくと良いでしょう。
-<tr><td colspan="2" class="tbl_header">ランダム
-<tr><th>サイズ最小<td>一つ一つの点の半径サイズをランダムで変更します。<br>
-ランダムで変更する半径サイズの最小値を、最大半径に対する％で指定します。<br>
-「100.0」ならランダムサイズ無効、「0.0」で半径を０〜最大半径の間でランダムに変化させます。
-<tr><th>位置・最大距離<td>一つ一つの点の位置を、ランダムで移動させます。<br>
-ランダムに変更する位置の最大距離を、最大半径に対する倍率で指定します。<br>
-「0.00」でランダム位置無効。それ以外で、値が大きいほどランダム幅が大きくなります。
-<tr><td colspan="2" class="tbl_header">水彩混色
-<tr><th>プリセット<td>よく使う値を５つ保存して呼び出すことができます。
-<tr><th>色の補充<td>描画色を補充する割合を指定します。
-<tr><th>キャンバス色の割合<td>キャンバス上の色をどれだけ適用するかの割合を指定します。
-<tr><th>描画色の割合<td>前回の色に描画色を補充色した色を、どれだけの割合で適用するかを指定します。
-<tr><td colspan="2" class="tbl_header">ブラシ形状
-<tr><th>硬さ<td>通常円形の場合の円の硬さを指定します。<br>
-値が大きいほど硬くなります。
-<tr><th>荒さ<td>ランダムで各ピクセルの濃度を変化させます。<br>
-値が大きいほどスカスカな状態になります。
-<tr><td colspan="2" class="tbl_header">形状回転 (ブラシ形状の回転)
-<tr><th>進行方向<td>描画する線の進行方向に回転させます。
-<tr><th>角度<td>回転の基本角度を指定します。
-<tr><th>角度ランダム幅<td>一つ一つの点ごとに、回転角度をランダムで変化させます。<br>
-角度のランダムの幅を指定します。<br>
-指定値の「−ｎ 〜 ＋ｎ」の範囲内で角度が変化します。
-<tr><td colspan="2" class="tbl_header">筆圧
-<tr><th>タイプ<td>筆圧の入力値を補正するタイプを指定します。<br>
-<br>
-<ul>
-<li><span class="li">曲線</span><br>
-曲線で補正。
-<li><span class="li">線形１点</span><br>
-一つの点を指定し、線形補間します。
-<li><span class="li">線形２点</span><br>
-二つの点を指定し、線形補間します。
-</ul>
-
-<tr><th>グラフ<td>グラフ上を左ドラッグで、曲線の変更、または点の移動を行います。<br>
-横の軸が入力で、縦の軸が出力となります。<br>
-線が左上方向に行くほど筆圧が柔らかくなり、右下方向に行くほど筆圧が硬くなります。<br>
-<br>
-タイプが「曲線」の場合、<span class="ctl">右クリックまたは Ctrl＋左クリック</span>で値を 1.00 にリセットします。
-<tr><td colspan="2" class="tbl_header">その他
-<tr><th>テクスチャ<td>描画時のテクスチャを指定します。<br>
-<br>
-<ul>
-<li><span class="li">オプションのテクスチャを使う</span><br>
-オプションパネルの「テクスチャ」タブで指定されているテクスチャを使います。
-<li><span class="li">なし (強制)</span><br>
-常にテクスチャをなしにします。<br>
-オプションパネルのテクスチャが選択されている場合でも、テクスチャを使いません。<br>
-
-</ul>
-
-<tr><th>アンチエイリアス<td>ON にすると濃度が滑らかな線になり、<br>
-OFF にすると濃度が２値の状態 (０か濃度最大) となります。
-<tr><th>曲線補間<td>フリーハンドの描画時、入力座標の点と点の間を、曲線で補間するかどうか。<br>
-OFF の場合、線形補間となります。マウスで描画した場合や素早く描画した場合 (入力座標が少ない場合)、線がカクカクする場合があります。
-</table>
-</div></div>
+[アルファ値のみ(1bit)] の場合、レイヤの色は常に固定であるため、濃度固定を ON にして使うことが前提となります。</td>
+<tr><th>背景を白にする<td>レイヤの不透明な部分において、トーンの背景を白色にします。<br>
+レイヤで透明な部分は、常に透明となります。<br>
+下のレイヤと重なる部分を、白で上書きしたい場合に使います。</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">テンプレート</div>
+<div class="subb_txt">よく使うレイヤ設定を、テンプレートに登録して、その内容で新規作成したり、各項目をセットすることができます。<br>
+テンプレートは、レイヤの新規作成時、またはレイヤ設定時に、追加・編集できます。</div></div>
 </div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link11">[パネル] カラー</a></div>
+<a name="link12"></a><div class="ct_main">
+<div class="ct_h">[パネル] カラー</div>
 <div class="ct_txt">描画する色の選択や、色マスクの設定を行います。
 <div class="subb_main">
 <div class="subb_h">描画色/背景色</div>
@@ -785,479 +893,518 @@ OFF の場合、線形補間となります。マウスで描画した場合や�
 左クリックで、描画色と背景色を入れ替えることができます。</div></div>
 <div class="subb_main">
 <div class="subb_h">色マスク</div>
-<div class="subb_txt">色でマスクを行います。<br>
-レイヤイメージ上で、指定した色の上には描画できないようにしたり、指定した色の上にしか描画できないようにすることができます。<br>
+<div class="subb_txt">描画時、レイヤ上の色を元にマスクを行います。<br>
+レイヤ上で、指定した色の上には描画できないようにしたり、指定した色の上にしか描画できないようにしたりすることができます。<br>
 <br>
-「<b>MASK</b>」「<b>REV</b>」のボタンでは、マスクのタイプを選択します。<br>
-その右部分では、マスク色が表示されます。<br>
-「<b>＋</b>」「<b>−</b>」のボタンは、マスク色の追加と削除を行います。<br>
+※16bit カラーの場合、色は常に 8bit カラーの値に変換して比較されます。<br>
 <br>
-<span class="item">マスクタイプ</span><br>
+<div class="subh">マスクタイプ</div>
+<table class="tbl1">
+<tr><th>MASK (マスク)<td>指定されたマスク色の上には描画できないようにします</td>
+<tr><th>REV (逆マスク)<td>指定されたマスク色の上にしか描画できないようにします</td>
+</table><br>
+押された状態のボタンをさらにクリックすると、OFF になります。<br>
+<br>
+<div class="subh">マスク色</div>
+マスク色は、最大で６色まで登録できます。<br>
+また、各色は個別に ON/OFF することができます。<br>
 <br>
 <table class="tbl1">
-<tr><th>MASK (マスク)<td>マスク色に設定された色の上には描画できないようにします
-<tr><th>REV (逆マスク)<td>マスク色に設定された色の上にしか描画できないようにします
-</table>
-<br>
-押された状態のボタンをさらに押すと、色マスクは OFF になります。<br>
-<br>
-<span class="item">マスク色</span><br>
-<br>
-マスク色は、最大で６色まで登録できます。<br>
-マスク色部分で操作をするか、キャンバス上でのスポイト時に ＋Shift or ＋Alt することでマスク色を設定できます。<br>
-<br>
-<ul>
-<li>マスク色部分で<span class="ctl">左クリック</span>すると、現在の描画色がマスク色として登録されます。<br>
-複数のマスク色がある場合は、すべて削除されて１色のみになります。
-<li><span class="ctl">右クリック</span>で、マスク色を編集するメニューが表示されます。
-<li><span class="ctl">Ctrl＋左クリック</span>で、その位置のマスク色が削除されます。
-<li><span class="ctl">Shift＋左クリック</span>で、その位置のマスク色を描画色として取得します。
-</ul>
-<br>
-右の「<b>＋</b>」ボタンを押すと、現在の描画色をマスク色に追加登録できます。<br>
-「<b>−</b>」ボタンを押すと、現在登録されている複数のマスク色のうち、一番右に表示されているマスク色を削除します。</div></div>
+<tr><th>左クリック<td>描画色をセットします。同時に、ON になります。<br>
+ON/OFF のチェック部分を押すと、ON/OFF が切り替わります。</td>
+<tr><th>Ctrl＋左クリック<td>色の ON/OFF を切り替えます</td>
+<tr><th>Shift＋左クリック<td>その位置の色を描画色として取得します</td>
+<tr><th>右クリック<td>メニューを表示します</td>
+</table></div></div>
 </div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link12">[パネル] カラーパレット</a></div>
-<div class="ct_txt">複数の色の中から描画色を選択することができます。
+<a name="link13"></a><div class="ct_main">
+<div class="ct_h">[パネル] カラーパレット</div>
+<div class="ct_txt">複数の色の中から描画色を選択することができます。<br>
+右端のメニューボタンは、現在選択されているタイプの設定などを行います。
 <div class="subb_main">
 <div class="subb_h">パレット</div>
 <div class="subb_txt">よく使う色を登録しておいて、左クリックで色を選択することができます。<br>
 <br>
-<ul>
-<li><span class="ctl">左クリック</span>で、クリックした位置の色を描画色にすることができます。
-<li><span class="ctl">右クリック</span>で、メニューが表示されます。
-<li><span class="ctl">Shift＋左クリック</span>で、現在の描画色をクリックした位置にセットすることができます。
-<li><span class="ctl">Ctrl＋左ドラッグ</span>で、押した位置から離した位置までの間をグラデーションすることができます。
-<li>一覧部分にパレットファイルを D&amp;D すると、そのパレットを読み込むことが出来ます。
-</ul>
+左ボタン/右ボタンを押すと、パレットのリストを前後に移動できます。<br>
 <br>
-パレットファイルは、「AzPainter 用パレットファイル (*.apl)」(Windows 版と共通)、「Adobe パレットファイル (*.aco)」から読み込むことができます。<br>
+<table class="tbl1">
+<tr><th>左クリック<td>色を選択して、描画色にする</td>
+<tr><th>Shift＋左クリック<td>現在の描画色をセットする</td>
+<tr><th>Ctrl＋左ドラッグ<td>ドラッグした間の色をグラデーション化する</td>
+<tr><th>右クリック<td>メニューを表示</td>
+<tr><th>パレットファイルをD&amp;D<td>パレットファイルを読み込み</td>
+</table><br>
+<div class="subh">パレットファイル</div>
+以下のパレットファイルに対応しています。<br>
 <br>
-<div class="subh">表示設定</div>
-「<b>幅、高さ</b>」は、一つの色の大きさを px 単位で指定します。<br>
+「AzPainter 用パレットファイル (*.apl)」(Windows/Linux 版共通)<br>
+「Adobe パレットファイル (*.aco)」<br>
 <br>
-「<b>横の最大表示数</b>」は、横に並べる数の最大数を指定できます。<br>
-横に表示する数は [パレット表示エリアの幅÷一つの色の幅] で計算されますが、最大数を指定した場合は、その数で制限されます。<br>
-表示エリアの幅が最大数分ない場合は、横に表示可能な数だけ表示されます。<br>
-パレットをｎ個単位のブロックで作って表示したい場合などに使ってください。<br>
-<br>
-<div class="subh">パレット編集</div>
-<span class="ctl">Shift＋左クリック</span>で、現在のカーソル位置からクリックした位置までを選択できます。<br>
-D&amp;D で、カーソル位置または選択範囲内の色を、ドロップした位置へ移動できます。<br>
-<br>
-「削除」は、カーソル位置または選択範囲内の色を削除します。<br>
-「グラデーション」は、選択範囲内の先頭と終端の色からグラデーションを作成します。<br>
-「追加」「挿入」は、指定した個数分を終端に追加、またはカーソル位置へ新規挿入します。</div></div>
+<div class="subh">パレット設定</div>
+<table class="tbl1">
+<tr><th>色数<td>パレットの色数を変更します</td>
+<tr><th>色一つの幅<br>
+色一つの高さ<td>パレットの一つの色の表示サイズを、px 単位で指定します</td>
+<tr><th>横の最大表示数<td>パレットの色を横に並べる時の、横の最大数を指定します。<br>
+横に並べる数を固定したい時に使います。<br>
+０で、幅に合わせて、表示できる最大数まで並べます。<br>
+※指定数よりも少ない数しか表示できない場合は、幅に合わせた数で表示されます。</td>
+</table></div></div>
 <div class="subb_main">
 <div class="subb_h">中間色</div>
-<div class="subb_txt">２色間のグラデーションの中から色を選択できます。<br>
-左側と右側では、左クリックで現在の描画色をセットできます。<br>
+<div class="subb_txt">２色間のグラデーションの中から、色を選択できます。<br>
+左側と右側の部分では、左クリックで、現在の描画色をセットできます。<br>
 グラデーション部分で左クリックまたはドラッグすると、その色を選択できます。</div></div>
 </div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link13">[パネル] キャンバスビュー</a></div>
-<div class="ct_txt">現在のキャンバスのイメージを、全体表示したり、拡大表示したりすることができます。<br>
+<a name="link14"></a><div class="ct_main">
+<div class="ct_h">[パネル] キャンバスビュー</div>
+<div class="ct_txt">キャンバスのイメージ全体や、その一部を確認できます。<br>
 <br>
-「<b>ルーペモード</b>」にすると、常にカーソル位置の周辺が表示されます。</div>
+イメージ部分の左上にある小さな黒い部分をクリックすると、ツールバーの表示/非表示を切り替えることができます。<br>
+ツールバーを消して、少しでも大きく表示したい時に使ってください。<br>
+ツールバーを常に表示する設定にした場合、黒いバーは表示されません。</div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link14">[パネル] イメージビューア</a></div>
-<div class="ct_txt">別の画像ファイルのイメージを読み込み、資料として表示させることができます。</div>
+<a name="link15"></a><div class="ct_main">
+<div class="ct_h">[パネル] イメージビューア</div>
+<div class="ct_txt">画像ファイルを資料などとして読み込んで、表示することができます。<br>
+イメージ表示部分にファイルを D&amp;D すると、画像を読み込むことができます。</div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link15">グラデーション編集</a></div>
-<div class="ct_txt">グラデーションツールでは、自分で編集したグラデーションを使用できます。<br>
+<a name="link16"></a><div class="ct_main">
+<div class="ct_h">テキスト</div>
+<div class="ct_txt">テキスト描画時に表示されるダイアログや、テキスト描画に関する説明です。
+<div class="subb_main">
+<div class="subb_h">テキストダイアログ</div>
+<div class="subb_txt"><div class="subh">操作</div>
+<table class="tbl1">
+<tr><th>キャンバス上を左クリック<td>描画位置を変更</td>
+<tr><th>テキスト入力内で、Ctrl＋矢印キー<td>描画位置を上下左右に 1px 移動</td>
+<tr><th>テキスト入力内で右クリック<td>メニュー</td>
+</table><br>
+<div class="subh">上部のボタン</div>
+「コピー」ボタンは、テキスト入力内のすべてのテキストをコピーします。<br>
+「貼り付け」ボタンは、テキスト入力内をクリアして、クリップボードのテキストを貼り付けます。<br>
 <br>
-「色 (RGB)」と「アルファ値」それぞれでグラデーションを設定します。<br>
-上が「色 (RGB)」、下が「アルファ値 (不透明度)」を編集する部分です。
+<div class="subh">フラグボタン</div>
+<table class="tbl1">
+<tr><th>モノクロ2値<td>アンチエイリアスを付けずに、テキストを描画します</td>
+<tr><th>縦書き<td>縦書きで描画します</td>
+<tr><th>特殊表記有効<td>テキスト内で、独自の特殊な記述を行った場合、その効果を有効にします</td>
+<tr><th>太字化<td>アウトラインまたはビットマップを、太字化して描画します。<br>
+フォントに太字のスタイルを指定するものではありません。</td>
+<tr><th>斜体化<td>アウトラインを斜体化して描画します。<br>
+フォントに斜体のスタイルを指定するものではありません。<br>
+ビットマップのグリフでは無効です。</td>
+<tr><th>埋め込みビットマップ有効<td>フォント内にアウトラインとビットマップの両方が含まれる場合、ビットマップを優先します。<br>
+指定フォントサイズでのビットマップがない場合は、アウトラインが使われます。</td>
+</table><br>
+<div class="subh">フォント選択</div>
+<table class="tbl1">
+<tr><th>一覧<td>インストールされているフォントの一覧から選択します</td>
+<tr><th>登録フォント<td>登録したフォントから選択します</td>
+<tr><th>ファイル指定<td>フォントファイルを直接選択します</td>
+</table><br>
+<div class="subh">項目</div>
+<table class="tbl1">
+<tr><th>字間<td>文字と文字の間の間隔です</td>
+<tr><th>行間<td>行と行の間の間隔です。<br>
+0 で通常の行高さとなり、それに追加する値となります。</td>
+<tr><th>DPI<td>フォントサイズが pt の場合の解像度です。<br>
+OFF の場合は、イメージの DPI が使われます。<br>
+ON の場合は、指定値が使われます。</td>
+<tr><th>ヒンティング<td>フォントのサイズが小さい場合でも見栄えが良くなるように、アウトラインを調整する機能です。<br>
+フォントサイズが小さい時に、文字が潰れるなどする場合は、指定してください。<br>
+ある程度大きいサイズであれば、必要ありません。</td>
+<tr><th>オートヒンティング無効<td>FreeType による自動ヒンティング処理を無効にします。<br>
+ヒンティングが none 以外の場合のみ有効です。<br>
+フォントによっては、自動ヒンティングを行った方が綺麗になる場合もありますが、実際に確認の上、使用してください。</td>
+<tr><th>ルビ<td>特殊表記によってルビを描画する場合の、ルビの情報です。<br>
+<br>
+<span class="c1">ルビ用グリフを使わない</span>:<br>
+フォントの GSUB テーブル内に、<b>ruby</b> のルビグリフ置換情報がある場合、それを使ってグリフを置き換えますが、ルビ用のグリフを使いたくない場合は、ON にしてください。</td>
+<tr><th>回転<td>テキストの回転角度を指定します</td>
+</table></div></div>
+<div class="subb_main">
+<div class="subb_h">登録フォント</div>
+<div class="subb_txt">頻繁に使うフォントを登録して使ったり、一部の文字を別のフォントに置き換えて使ったりすることができます。<br>
+<br>
+<div class="subh">設定項目</div>
+<table class="tbl1">
+<tr><th>登録名<td>登録フォントの名前。<br>
+※リストに表示する用の名前です。<br>
+名前を変更しても、同じフォントして識別されます。</td>
+<tr><th>ベースフォント<td>ベースとなるフォントを指定します</td>
+<tr><th>置換フォント1,2<td>一部の文字を別のフォントで置き換えたい場合、フォントを指定します。<br>
+クリアすると、フォントなしとなります。<br>
+そのフォントで置き換えたい文字は、「文字編集」で指定します。</td>
+<tr><th>文字編集<td>テキスト内で指定文字があった場合、そのフォントのグリフに置き換えます。<br>
+文字種、または文字コードで指定できます（両方の指定が有効）。<br>
+<br>
+コード指定の場合、Unicode か CID を選択できます。<br>
+Unicode の場合は16進数の数値 (大文字小文字区別なし)、CID の場合は10進数の数値で指定してください。<br>
+半角カンマ ',' で区切って、複数の値を指定できます。<br>
+"00-FF" のように、数値の間に半角のマイナスを入れると、範囲で指定できます。<br>
+<br>
+(例:Unicode) <b>21,41-5a</b> =&gt; '!', 'A'-'Z'<br>
+<br>
+文字の Unicode を確認したい場合は、「文字から Unicode 表示」の部分でテキストを入力すると、各文字の Unicode を表示できます。<br>
+<br>
+<em>※ CID 指定の場合は、ベースフォントと置換フォントが共に CID フォントの場合のみ有効です。<br>
+　また、すべて CID フォントだったとしても、ROS (Adobe-Japan1-* など) が一致していないと、正しく置き換えられません。</em></td>
+</table><br>
+<div class="subh">文字種の Unicode 範囲</div>
+<table class="tbl1">
+<tr><th>基本ラテン文字<td>00-7F</td>
+<tr><th>ひらがな<td>3041-309F, 1B150-1B152</td>
+<tr><th>カタカナ<td>30A0-30FF, 31F0-31FF, 1B164-1B167</td>
+<tr><th>漢字<td>CJK統合漢字、CJK互換漢字、部首</td>
+<tr><th>句読点など<td>一般句読点 (2000-206F)<br>
+CJKの記号及び句読点 (3000-303F)<br>
+半角・全角形 (FF00-FFEF)</td>
+<tr><th>外字 (私用領域)<td>E000-F8FF, F0000-FFFFD, 100000-10FFFD</td>
+</table><br>
+<div class="subh">置き換え処理</div>
+まず、テキストの Unicode から、置換フォント１→置換フォント２の順番で、置き換えに指定された文字がないか判定します。<br>
+文字が一致した場合は、そのフォントで置き換えられます。<br>
+<br>
+一致するものがない場合は、ベースフォントが CID フォントの場合のみ、CID コード指定による置き換えに一致するものがないか確認します。<br>
+一致するものがあれば、そのフォントで置き換えられます。<br>
+<br>
+いずれも一致するものがなければ、ベースフォントが使われます。<br>
+※置換フォント内に、置換対象のグリフが存在しない場合は、ベースフォントのグリフが使用されます。<br>
+<br>
+<div class="subh">注意点</div>
+<em>登録フォントは、登録名で識別されるわけではありません。</em><br>
+<br>
+登録フォントの作成時には、内部で、各フォントに対して、数値による ID が割り当てられるので、その ID によって各登録フォントは識別されます。<br>
+そのため、登録名を変更したとしても、（同じ環境であれば）常に同じフォントとして判断されます。<br>
+<br>
+その代わり、登録フォントを別の形で作成して、同じ登録名を指定しても、同じフォントとしては識別されません。</div></div>
+<div class="subb_main">
+<div class="subb_h">特殊表記</div>
+<div class="subb_txt">「特殊表記有効」が ON の場合、テキスト内で以下の記述を行うと、特殊な処理を行うことができます。<br>
+<br>
+<table class="tbl1">
+<tr><th>\\<td>'\'</td>
+<tr><th>\}<td>'}'</td>
+<tr><th>\u{<em>Unicode(16進数)</em>}<td>Unicode の数値で文字を指定します。<br>
+U+XXXX の XXXX 部分を、16進数値として指定してください (桁数は自由、大文字小文字どちらでも可)。<br>
+<br>
+(例) \u{FF01}</td>
+<tr><th>\c{<em>CID(10進数)</em>}<td>CID フォントの場合は CID 値、それ以外はグリフインデックス (GID) で、文字を指定します。<br>
+10進数の数値で指定してください。<br>
+<br>
+(例) \c{841}</td>
+<tr><th>\r{<em>ルビ親文字列</em>,<em>ルビ文字列</em>}<td>ルビを指定します。<br>
+「ルビ親文字列」は、ルビがかかる文字。<br>
+「ルビ文字列」は、ルビの文字です。<br>
+半角のカンマ (,) で区切って、この２つを指定してください。<br>
+<br>
+(例) \r{漢字,かんじ}</td>
+<tr><th>\y{<em>文字列</em>}<td>{ } 内の文字列を、縦中横にします。<br>
+縦書き時、１文字分の高さに、文字を横書きにして並べます。<br>
+横書きの場合は、そのまま横書きにします。<br>
+<br>
+(例) \y{12}</td>
+<tr><th>\y2{<em>文字列</em>}<td>文字を半角幅にして、縦中横にします。<br>
+フォント内に、グリフを半角固定幅へ置き換える情報があれば、それを使います。<br>
+ない場合は、通常のグリフのまま、縦中横にします。<br>
+横書き時は、半角幅への置換のみ行います。</td>
+<tr><th>\y3{<em>文字列</em>}<td>文字を全角の1/3幅にして、縦中横にします。<br>
+フォント内に、グリフを1/3幅へ置き換える情報があれば、それを使います。<br>
+ない場合は、通常のグリフのままとなります。<br>
+(1/3幅は、基本的に半角数字のみです)</td>
+<tr><th>\dk{<em>文字列</em>}<td>各文字の横に、濁点文字 (U+309B:゛) を合成します。<br>
+あまりバランスの良い結果とはなりませんが、濁点が付いていない文字に濁点を付けたい時に使ってください。<br>
+<br>
+(例) \dk{あ}</td>
+<tr><th>\dh{<em>文字列</em>}<td>各文字の横に、半濁点文字 (U+309C:゜) を合成します。</td>
+</table><br>
+{ } 内で文字列を指定する場合、{ } 内では、\u や \c も記述することができます。<br>
+(例) \r{\u{8f5f},とどろき}</div></div>
+</div>
+</div>
+
+<a name="link17"></a><div class="ct_main">
+<div class="ct_h">グラデーション編集</div>
+<div class="ct_txt">グラデーションツールでは、自分で定義したカスタムのグラデーションを使用できます。<br>
+<br>
+色 (RGB) とアルファ値、それぞれでグラデーションを設定します。
 <div class="subb_main">
 <div class="subb_h">グラデーション編集部分</div>
-<div class="subb_txt">色を変化させたい部分にポイントを作り、各ポイントに色を設定します。<br>
+<div class="subb_txt">色を変化させたい位置にポイントを作り、そのポイントに色を設定します。<br>
 枠が赤いポイントが、現在選択されているポイントです。<br>
-左端と右端の２つのポイントは必須のポイントなので、位置を変更できず、削除することも出来ません。<br>
+左端と右端の２つのポイントは、常に必要なポイントであるため、位置は変更できず、削除することも出来ません。<br>
 <br>
 <ul>
-<li>ポイントがない部分で<span class="ctl">左クリック</span>すると、その位置に新しくポイントを追加できます。
-<li>ポイントのある部分で<span class="ctl">左ドラッグ</span>すると、そのポイントの位置を移動できます。<br>
-ただし、そのポイントの左右のポイント間しか移動できません。
-<li><span class="ctl">Ctrl＋左クリック</span>で、カレントポイントからクリックした位置のポイントまでの間のすべてのポイントを、等間隔に並べます。
-<li><span class="ctl">Shift＋左クリック</span>で、クリックした位置のポイントに現在の色/アルファ値をセットします。
-<li><span class="ctl">Alt＋左クリック</span>で、クリックした位置のポイントを削除します。
-<li>横の矢印ボタン (左右) を押すと、カレントポイントを一つ左か右のポイントに変更できます。<br>
-ポイントが密集している部分で、クリックでは選択しにくい場合に使ってください。
-<li>矢印ボタン (下) を押すと、メニューが表示されます。
-</ul>
+<li>ポイントがない部分で<span class="ctl">左クリック</span>すると、その位置に新しいポイントを追加します。
+<li>ポイントのある部分で<span class="ctl">左ドラッグ</span>すると、そのポイントの位置を移動します。<br>
+ただし、左右のポイントの間しか移動できません。
+<li><span class="ctl">Ctrl＋左クリック</span>で、現在の選択ポイントから、クリックしたポイントとの間にある、すべてのポイントを、等間隔に並べます。
+<li><span class="ctl">Shift＋左クリック</span>で、クリックしたポイントに、現在の色または不透明度をセットします。
+<li><span class="ctl">Alt＋左クリック</span>で、クリックしたポイントを削除します。
+<li>横の矢印ボタン (左/右) を押すと、選択ポイントを左右に変更できます。
+<li>メニューボタンを押すと、メニューが表示されます。</ul>
 </div></div>
 <div class="subb_main">
 <div class="subb_h">メニュー</div>
 <div class="subb_txt">
 <ul>
-<li><span class="li">１つ右との間を分割</span><br>
-カレントポイントと、その一つ右のポイントの間を n 分割して新しいポイントを作成します。<br>
-２分割なら、左右のポイントの中央に１つ新しいポイントが作成されます。
-<li><span class="li">左と右の中間位置に移動</span><br>
-カレントポイントの位置を、一つ左のポイントと一つ右のポイントの中間位置に移動します。
-<li><span class="li">ポイントを反転</span><br>
-すべてのポイントを、左右反転します。
-</ul>
+<li><span class="c1">次の位置との間を分割</span><br>
+選択ポイントと、その一つ右のポイントとの間を、N 分割して、新しいポイントを作成します。<br>
+２分割であれば、真ん中に新しいポイントが１つ作成されます。
+<li><span class="c1">左右の中間位置に移動</span><br>
+選択ポイントの位置を、一つ左のポイントと、一つ右のポイントの中間位置に移動します。
+<li><span class="c1">反転</span><br>
+すべてのポイントを、左右に反転します。</ul>
 </div></div>
-<div class="subb_main">
-<div class="subb_h">色/不透明度</div>
-<div class="subb_txt">「色」では、色部分のカレントポイントの位置と色を変更します。<br>
-描画色/背景色は、描画時に選択されている描画色と背景色を色として使います。<br>
-<br>
-「不透明度」では、アルファ値部分のカレントポイントの位置と値を変更します。<br>
-0 で透明、100 で完全不透明となります。</div></div>
 <div class="subb_main">
 <div class="subb_h">フラグ</div>
 <div class="subb_txt">
 <ul>
-<li><span class="li">くり返す (常に)</span><br>
-このグラデーション描画時は、常に色を繰り返して描画します。
-<li><span class="li">単色化</span><br>
-ポイント間をグラデーションせずに、常に左のポイントの色を使います。<br>
-A - B のポイント間は、ずっと A の色になります。
-</ul>
+<li><span class="c1">繰り返す (常に)</span><br>
+常に色を繰り返して描画します。
+<li><span class="c1">単色化</span><br>
+ポイント間をグラデーションせずに、常に左のポイントの色を使います。</ul>
 </div></div>
 </div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link16">メインメニュー</a></div>
+<a name="link18"></a><div class="ct_main">
+<div class="ct_h">メインメニュー</div>
 <div class="ct_txt">
 <div class="subb_main" style="margin-top:0">
-<div class="subb_h">ファイル</div>
-<div class="subb_txt">
-<ul>
-<li><span class="li">複製を保存</span><br>
-現在の編集ファイル名を変えずに、別のファイルにイメージを保存します。<br>
-ツールバーの「複製を保存」アイコンの右の「▼」でメニューを表示すると、保存時のデフォルトの画像フォーマットを指定できます。
-</ul>
-</div></div>
-<div class="subb_main">
-<div class="subb_h">編集</div>
-<div class="subb_txt">
-<ul>
-<li><span class="li">マスク類の状態をチェック</span><br>
-選択範囲やレイヤマスクなど、描画時に関連するマスクなどの状態が現在どうなっているかをチェックします。<br>
-レイヤに描画できない状態で、どのマスクが有効になっているか判断できない場合に使ってください。
-<li><span class="li">塗りつぶし</span><br>
-カレントレイヤの全体（選択範囲がある場合はその範囲内）を描画色で塗りつぶします。
-<li><span class="li">消去</span><br>
-カレントレイヤの全体（選択範囲がある場合はその範囲内）を透明にします。
-<li><span class="li">DPI値変更</span><br>
-画像の DPI の値を変更します。<br>
-値を直接変更するだけなので、イメージは何も変化しません。
-</ul>
-</div></div>
-<div class="subb_main">
 <div class="subb_h">レイヤ</div>
 <div class="subb_txt">
-<ul>
-<li><span class="li">下レイヤに移す</span><br>
-カレントレイヤのイメージを一つ下のレイヤに結合した後、カレントレイヤのイメージを消去します。<br>
-(カレントレイヤ自体は削除されません)
-<li><span class="li">画像の統合</span><br>
-すべてのレイヤを背景色 (白) と合成して一枚絵を作成し、レイヤをその一つのみにして、他のレイヤはすべて削除します。<br>
-イメージは、PNG などの通常フォーマットで保存する時と同じ状態になり、アルファ値はすべて最大 (完全不透明) となります。
-<li><span class="li">ファイルに出力</span><br>
-カレントレイヤのイメージをファイルに出力します。<br>
-出力フォーマットは、<span class="item">PNG</span> または <span class="item">APD (ver 3)</span> から選択できます。<br>
+<table class="tbl1">
+<tr><th>現在のレイヤの上に新規作成<td>現在のレイヤがフォルダの場合でも、現在のレイヤの上の位置に、レイヤを新規作成します</td>
+<tr><th>下レイヤに移す<td>現在のレイヤのイメージを、一つ下のレイヤに結合した後、現在のレイヤのイメージをクリアします</td>
+<tr><th>画像の統合<td>すべてのレイヤをイメージ背景色と合成して、それを新規レイヤで作成し、他のレイヤをすべて削除します</td>
+<tr><th>ファイルに出力<td>現在のレイヤのイメージを、ファイルに出力します。<br>
+出力フォーマットは、<b>PNG</b> または <b>APD (ver 4)</b> から選択できます。<br>
 <br>
-<span class="item">PNG</span> の場合は、アルファ付きで 8bit RGBA のフォーマットで出力されます。<br>
-<span class="item">APD (ver 3)</span> の場合、一つのレイヤイメージとして出力されます。<br>
-保存されたファイルは、通常の APD と同じように読み込むこともできます。
-</ul>
-</div></div>
+PNG の場合は、アルファ付き 8bit RGBA のフォーマットで出力されます。<br>
+APD (ver 4) の場合は、一つのレイヤのみが含まれた状態で出力されます。<br>
+(保存した APD ファイルは、通常の APD と同じように読み込むこともできます)</td>
+</table></div></div>
 <div class="subb_main">
 <div class="subb_h">表示</div>
 <div class="subb_txt">
-<ul>
-<li><span class="li">パネル &gt; 表示</span><br>
-OFF にした場合、パネルすべてを非表示にします。<br>
-メインウィンドウ内の、パネルを配置する左右のサイドバーも隠れます。<br>
-ON にすると、元に戻ります。
-<li><span class="li">キャンバス左右反転表示</span><br>
-キャンバス上のイメージを、左右反転して表示します。<br>
-これは表示上でのみ左右反転するので、実際のイメージは変更されません。
-<li><span class="li">背景をチェック柄で表示</span><br>
-イメージの背景をチェック柄で表示します。<br>
-透明部分が判別しやすくなります。
-<li><span class="li">分割線表示</span><br>
-分割線グリッドを表示します。<br>
-現在のイメージサイズを指定数分割したサイズでグリッドを表示します。
-</ul>
-</div></div>
+<table class="tbl1">
+<tr><th>パネル表示<td>OFF にした場合、すべてのパネル非表示にします。<br>
+ON にすると、元に戻ります。</td>
+<tr><th>キャンバス左右反転表示<td>キャンバスイメージを、左右反転して表示します。<br>
+これは表示上での左右反転であるため、実際のイメージは変更されません。</td>
+<tr><th>背景をチェック柄で表示<td>イメージの背景をチェック柄で表示します</td>
+<tr><th>分割線表示<td>分割線グリッドを表示します。<br>
+現在のイメージサイズを、指定数分に分割して、グリッドを表示します。</td>
+<tr><th>定規のガイド表示<td>定規が ON の場合、現在の形状のガイドを表示します</td>
+<tr><th>カーソル位置<td>ステータスバーに、カーソル位置を表示します</td>
+<tr><th>キャンバス操作時、レイヤ名を表示<td>一部のツールでキャンバス上を操作した時、選択レイヤの名前を、一瞬だけ表示します。<br>
+最後に表示した時から、レイヤの選択が変化していない場合は、表示されません。<br>
+レイヤの書き間違いが多いという場合に使ってください。</td>
+</table></div></div>
 </div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link17">フィルタ</a></div>
+<a name="link19"></a><div class="ct_main">
+<div class="ct_h">フィルタ</div>
 <div class="ct_txt">選択範囲がある場合は、その範囲内のみ処理されます。<br>
 <br>
 <ul>
-<li><span class="li">カラー &gt; グラデーションマップ</span><br>
-「グラデーション」ツールで現在選択されているグラデーションパターンを使います。<br>
-現在のイメージの色の明るさを元に、グラデーションパターンの色に置換えます。<br>
-色が暗いほどグラデーションの左側の色に、色が明るいほどグラデーションの右側の色になります。
-<li><span class="li">色置換 &gt; 描画色の色を置換</span><br>
-カレントレイヤ上において、描画色と同じ色すべてを、指定した色に置き換えます。
-</ul>
+<li><span class="c1">カラー &gt; グラデーションマップ</span><br>
+[グラデーション] ツールにおいて、現在選択されているグラデーションパターンを使います。<br>
+イメージ上の色の明るさを元に、グラデーションパターンの色に置き換えます。<br>
+色が暗いほど、グラデーションの左側の色になり、色が明るいほど、グラデーションの右側の色になります。</ul>
 <div class="subb_main">
 <div class="subb_h">アルファ操作 (チェックレイヤ)</div>
-<div class="subb_txt">レイヤ一覧上で、各レイヤのチェックアイコンを ON にすることで、指定したレイヤのイメージを元にカレントレイヤのアルファ値を編集します。<br>
-アルファ値のみ変更され、色 (RGB) はそのままになります。<br>
+<div class="subb_txt">レイヤ一覧上で、各レイヤのチェックアイコンを ON にすることで、指定したレイヤの色を元に、選択レイヤのアルファ値を編集します。<br>
+色 (RGB) は変化しません。<br>
 <br>
 <ul>
-<li><span class="li">(複数) すべて透明な点を透明に</span><br>
-指定複数レイヤ上のすべてで透明な点を、カレントレイヤでも透明にします。<br>
-一つでも不透明な点がある場合は、そのままとなります。<br>
+<li><span class="c1">(複数) すべて透明なら透明に</span><br>
+各位置において、指定した複数レイヤのすべてが透明な場合、その位置の色を透明にします。<br>
+一つでも不透明な色がある場合は、何もしません。<br>
 下地レイヤからはみ出した色を消したい場合などに使えます。
-<li><span class="li">(複数) いずれかが不透明な点を透明に</span><br>
-指定複数レイヤ上のいずれか一つでも不透明な点があった場合、カレントレイヤを透明にします。<br>
-すべて透明な点の場合は、そのままとなります。<br>
-点のある部分を切り抜きたい場合に使えます。
-<li><span class="li">(複数) すべての値を合成してコピー</span><br>
-指定複数レイヤのアルファ値をすべて合成して、その値をカレントレイヤにコピーします。<br>
-ただし、カレントレイヤ上で透明な点は処理対象外となります。
-<li><span class="li">(複数) すべての値を足す</span><br>
-指定複数レイヤのそれぞれのアルファ値を、カレントレイヤに加算します。
-<li><span class="li">(複数) すべての値を引く</span><br>
-指定複数レイヤのそれぞれのアルファ値を、カレントレイヤの値から減算します。
-<li><span class="li">(複数) すべての値を乗算</span><br>
-指定複数レイヤのそれぞれのアルファ値を、カレントレイヤの値と掛けます。
-<li><span class="li">(単体) 指定レイヤで明るい色ほど透明に</span><br>
-指定したレイヤのうち、一番最初の一つのレイヤの色 (RGB) を使い、明るい色ほどカレントレイヤのアルファ値を透明に、暗い色ほど不透明にします。
-<li><span class="li">(単体) 指定レイヤで暗い色ほど透明に</span><br>
-指定したレイヤのうち、一番最初の一つのレイヤの色 (RGB) を使い、暗い色ほどカレントレイヤのアルファ値を透明に、明るい色ほど不透明にします。
-</ul>
+<li><span class="c1">(複数) いずれかが不透明なら透明に</span><br>
+各位置において、複数レイヤの一つ以上が不透明な場合、その位置の色を透明にします。<br>
+すべて透明な場合は、何もしません。<br>
+色のある部分を切り抜きたい場合に使えます。
+<li><span class="c1">(複数) すべて合成してコピー</span><br>
+各位置において、複数レイヤのアルファ値をすべて合成し、その値をコピーします。<br>
+ただし、選択レイヤ上で透明な部分は対象外となります。
+<li><span class="c1">(複数) すべて加算</span><br>
+複数レイヤのそれぞれのアルファ値を、加算します。
+<li><span class="c1">(複数) すべて減算</span><br>
+複数レイヤのそれぞれのアルファ値を、減算します。
+<li><span class="c1">(複数) すべて乗算</span><br>
+複数レイヤのそれぞれのアルファ値を、掛けます。
+<li><span class="c1">(単体) 指定レイヤで明るい色ほど透明に</span><br>
+有効なのは、チェックレイヤの最初の一つのみです。<br>
+指定レイヤで明るい色ほど透明に、暗い色ほど不透明にします。
+<li><span class="c1">(単体) 指定レイヤで暗い色ほど透明に</span><br>
+有効なのは、チェックレイヤの最初の一つのみです。<br>
+指定レイヤで暗い色ほど透明に、明るい色ほど不透明にします。</ul>
 </div></div>
 <div class="subb_main">
 <div class="subb_h">アルファ操作 (カレント)</div>
-<div class="subb_txt">カレントレイヤの色やアルファ値を元に処理します。<br>
+<div class="subb_txt">選択レイヤの色やアルファ値を元に処理します。<br>
 <br>
 <ul>
-<li><span class="li">明るい色ほど透明に</span><br>
-色 (RGB) が明るい色ほどアルファ値を透明に、暗い色ほど不透明にします。
-<li><span class="li">暗い色ほど透明に</span><br>
-色 (RGB) が暗い色ほどアルファ値を透明に、明るい色ほど不透明にします。
-<li><span class="li">テクスチャ適用</span><br>
-オプションパネルの「テクスチャ」で、現在選択されているテクスチャを使います。<br>
-カレントレイヤのアルファ値に、選択されているテクスチャの濃度を適用します。
-<li><span class="li">アルファ値からグレイスケール作成</span><br>
-アルファ値を元に色を作成し、完全不透明にします。<br>
+<li><span class="c1">明るい色ほど透明に</span><br>
+明るい色ほどアルファ値を透明に、暗い色ほど不透明にします。
+<li><span class="c1">暗い色ほど透明に</span><br>
+暗い色ほどアルファ値を透明に、明るい色ほど不透明にします。
+<li><span class="c1">テクスチャ適用</span><br>
+オプションパネルの [テクスチャ] において、現在選択されているテクスチャを使います。<br>
+選択レイヤのアルファ値に、テクスチャの濃度を適用します。
+<li><span class="c1">アルファ値からグレイスケール作成</span><br>
+アルファ値を元に色を作成し、グレイスケールのイメージにします。<br>
 透明なら黒、不透明なら白になります。<br>
-アルファ値を目に見える形にしたい場合に使います。
-</ul>
+アルファ値を目に見える形にしたい場合に使います。</ul>
 </div></div>
 <div class="subb_main">
 <div class="subb_h">ほか</div>
 <div class="subb_txt">
 <ul>
-<li><span class="li">色の明るさから線画抽出</span><br>
-スキャナなどから取り込んだ画像から線画を取り出す場合に使います。<br>
+<li><span class="c1">色の明るさから線画抽出</span><br>
+スキャナなどから取り込んだ画像から、線画を取り出す場合に使います。<br>
 明るい色ほどアルファ値を透明に、暗い色ほど不透明にして、色は黒で統一します。
-<li><span class="li">1px ドット線の補正</span><br>
-ドットで 1px の主線を描いたものを、なるべく細く綺麗になるように線を補正します。<br>
-不透明なら点がある、透明なら点がないと判断します。色は判定には使いません。
-<li><span class="li">アンチエイリアシング</span><br>
+<li><span class="c1">1px ドット線の補正</span><br>
+ドットで描かれた 1px の線を、なるべく細く綺麗になるように、補正します。<br>
+不透明なら点があり、透明なら点がないと判断されます。色は関係ありません。
+<li><span class="c1">アンチエイリアシング</span><br>
 ドットで描いた絵にアンチエイリアス処理を行います。
-<li><span class="li">縁取り</span><br>
-色を上下左右に散らして合成させるのを複数回繰り返すことによって、輪郭を拡張させます。
-<li><span class="li">立体枠</span><br>
+<li><span class="c1">縁取り</span><br>
+色を上下左右に合成し、それを複数回繰り返すことによって、輪郭を拡張させます。
+<li><span class="c1">立体枠</span><br>
 イメージ全体の枠を作ります。凹凸部分では色を明るくしたり暗くします。
-<li><span class="li">シフト</span><br>
-イメージ全体を対象に、指定した方向にイメージをずらします。端の部分は繋がった状態となります。
-</ul>
+<li><span class="c1">シフト</span><br>
+イメージ全体を対象に、指定した方向にイメージをずらします。端の部分は繋がった状態となります。</ul>
 </div></div>
 </div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link18">[設定] 環境設定</a></div>
+<a name="link20"></a><div class="ct_main">
+<div class="ct_h">環境設定</div>
 <div class="ct_txt">
 <div class="subb_main" style="margin-top:0">
 <div class="subb_h">設定１</div>
 <div class="subb_txt">
-<ul>
-<li><span class="li">起動時のイメージ幅/高さ</span><br>
-起動時のイメージの初期サイズを px で指定します。
-<li><span class="li">キャンバス背景色</span><br>
-キャンバスの、イメージ範囲外の部分の色を指定します。
-<li><span class="li">チェック柄表示時の色</span><br>
-キャンバスイメージの背景をチェック柄で表示する時の色を指定します。
-<li><span class="li">アンドゥ最大回数</span><br>
-アンドゥの回数の上限値を指定します。
-<li><span class="li">アンドゥバッファサイズ</span><br>
-ブラシの描画時など、データサイズが小さい場合、アンドゥデータはメモリ上に確保されます。<br>
-その、メモリに保存するアンドゥデータの最大総サイズを指定します。<br>
-アンドゥデータが蓄積されて全体のデータサイズがこれより大きくなる場合は、作業ディレクトリにファイルとして保存されます。<br>
+<table class="tbl1">
+<tr><th>キャンバス背景色<td>キャンバスの、イメージ範囲外の部分の色を指定します</td>
+<tr><th>チェック柄背景の色<td>イメージの背景をチェック柄で表示する時の色を指定します</td>
+<tr><th>定規ガイドの色<td>定規ガイドの色と濃度を指定します</td>
+<tr><th>画像読み込み時のデフォルトビット数<td>PNG などの画像ファイルを読み込む際、8bit または 16bit カラーのいずれで読み込むかを指定します。<br>
+ビット数は、開くダイアログ時でも指定できますが、ファイルの履歴から読み込む場合や、D&amp;D で読み込む場合に使われます。<br>
+※APD/PSD などは、ファイルに記録されたビット数で読み込まれます。</td>
+<tr><th>アンドゥ最大回数<td>アンドゥの回数の上限を指定します</td>
+<tr><th>アンドゥバッファ最大サイズ<td>アンドゥデータをメモリ上に保存する場合に、その全体のバッファサイズの最大値を指定します。<br>
+アンドゥデータが蓄積されていき、全体のデータサイズが指定値を超えた場合、超えた分は、作業ディレクトリにファイルとして保存されます。<br>
 <br>
-０に設定すると、すべてのアンドゥデータはファイルに出力されます。<br>
-単位を付けずに数値だけ指定するとバイト数となり、数値の後に英字の単位を付けるとその単位のサイズとなります。<br>
-単位として使えるのは、「K＝キロバイト」「M＝メガバイト」「G＝ギガバイト」の３つです。<br>
-英小文字でも英大文字でも構いません。<br>
-数値は小数点を付けることもできます。<br>
+０に設定すると、アンドゥデータはすべてファイルに出力されます。<br>
 <br>
-<b>[例]</b> 1.5M
-</ul>
-</div></div>
+数値は小数点以下も有効です。<br>
+数値の後に単位を付けることもできます。<br>
+「K or k = キロバイト」「M or m = メガバイト」「G or g = ギガバイト」<br>
+単位がない場合は、バイト (byte) となります。<br>
+<br>
+<b>[例]</b><br>
+500k<br>
+0.5G</td>
+<tr><th>キャンバス表示倍率の1段階<td>キャンバスの表示倍率が 100% 以上の時に、１段階拡大/縮小する場合の、単位を指定します。<br>
+100 であれば、100..200..300 というように変化します。</td>
+<tr><th>キャンバス回転の1段階<td>キャンバス回転を左右に１段階回転させる時の、増減幅を指定します</td>
+</table></div></div>
 <div class="subb_main">
-<div class="subb_h">設定2</div>
+<div class="subb_h">フラグ</div>
 <div class="subb_txt">
 <ul>
-<li><span class="li">上書き保存時、確認する</span><br>
+<li><span class="c1">上書き保存時、確認する</span><br>
 上書き保存する時に、確認メッセージを表示します。
-<li><span class="li">APD 形式以外での上書き保存時、確認する</span><br>
+<li><span class="c1">APD 形式以外での上書き保存時、確認する</span><br>
 上書き保存時、現在の編集ファイルのフォーマットが APD 以外だった場合、そのまま保存するかどうかの確認メッセージを表示します。<br>
 常に APD 形式で保存したい場合に、間違えて上書き保存しないように警告させることができます。
-<li><span class="li">APD 保存時、一枚絵イメージを含めない</span><br>
-APD で保存する時、APD ファイル内に全レイヤを合成した一枚絵イメージを書き込まないようにします。<br>
-APD ファイル内には各レイヤのイメージデータが書き込まれるので、普通に読み書きする分には一枚絵イメージはなくても問題ありません。<br>
-他のソフトなどで APD 内の一枚絵イメージを読み込みたい場合は必要になります。<br>
-一枚絵イメージが必要なく、ファイルサイズを削減したいなら ON にしてください。
-<li><span class="li">フィルタ一覧の項目はダブルクリックで実行する</span><br>
-フィルタ一覧パネル上で、各フィルタ項目を選択する時に、通常はシングルクリックだけで実行されますが、ダブルクリックで実行するようにします。
-</ul>
-</div></div>
-<div class="subb_main">
-<div class="subb_h">増減幅</div>
-<div class="subb_txt">
-<ul>
-<li><span class="li">表示倍率の１段階</span><br>
-キャンバスの表示倍率を１段階拡大/縮小する時の増減幅を指定します。
-<li><span class="li">キャンバス回転の１段階</span><br>
-キャンバス回転を左右に１段階回転させる時の増減幅を指定します。
-<li><span class="li">左右ドラッグでのブラシサイズ変更時の 1px ごと</span><br>
-ブラシツールで描画タイプがフリーハンドの場合に、<span class="ctl">Shift＋左右ドラッグ</span>でブラシサイズを変更する時の、1px 移動するごとに増減させるブラシサイズの値を指定します。
-</ul>
+<li><span class="c1">APD 保存時、一枚絵イメージを書き込まない</span><br>
+APD で保存する時、APD ファイル内に、全レイヤを合成した一枚絵イメージを書き込まないようにします。<br>
+※ AzPainter 内では、この情報は使用されることはありません。<br>
+APD を読み込む他のソフトなどで、一枚絵イメージが必要な場合に使用されます。<br>
+一枚絵イメージを使うことがないため、ファイルサイズを削減したいという場合は ON にしてください。
+<li><span class="c1">(パネル)フィルタ一覧の項目は、ダブルクリックで実行</span><br>
+[フィルタ一覧] パネル上で、各フィルタ項目を選択する際、通常はシングルクリックで実行されますが、ON にすると、ダブルクリックで実行されます。</ul>
 </div></div>
 <div class="subb_main">
 <div class="subb_h">ボタン操作</div>
 <div class="subb_txt">ポインタデバイスの各ボタンを操作した時の動作を指定します。<br>
 <br>
-「<b>通常</b>」と「<b>ペンタブレット</b>」で、操作時のデバイスのタイプによって、設定を分けることができます。<br>
-「<b>ペンタブレット</b>」は、筆圧情報を持つデバイスで操作した時に使われます。<br>
-それ以外のデバイスでは、「<b>通常</b>」時の設定が使われます。<br>
+「通常デバイス」は、マウスなどの筆圧情報を持たないデバイス。<br>
+「筆圧情報があるデバイス」は、ペンタブレットなどの、筆圧情報を持つデバイスです。<br>
+２つのタイプに分けて設定することができます。<br>
 <br>
-設定したいボタンと、そのボタンに設定したい動作を選択し、「セット」を押すと、適用されます。<br>
-ボタン番号がわからない場合は、「<b>ここでボタンを押す</b>」の部分の上でデバイスのボタンを押してください。<br>
-押されたボタンの番号が選択されます。<br>
-ボタンの「<b>消しゴム側</b>」は、ペンタブレットの消しゴム側で操作した時となります。<br>
+ボタンと、設定されているコマンドのリストが表示されているので、設定したい項目上でダブルクリックするか、「コマンドの選択」ボタンを押して、コマンドを選択してください。<br>
 <br>
-コマンドのリストで「<b>指定なし</b>」を選択すると、何もしないか、通常の動作となります。<br>
-ボタンが「１ (左ボタン)」か「消しゴム側」で、コマンドが指定されていない場合は、通常の左ボタン動作 (ツールの動作など) を行います。<br>
-他のボタンの場合は、何もしません。</div></div>
-<div class="subb_main">
-<div class="subb_h">インターフェイス</div>
-<div class="subb_txt">
-<ul>
-<li><span class="li">テーマ</span><br>
-GUI の色テーマを変更します。<br>
-テーマが記述されたテキストファイルを選択してください。<br>
-空欄にすると、デフォルト色になります。<br>
-ファイル選択時、アプリ用のシステムデータディレクトリ内から選択した場合は、先頭が「<b>!/</b>」となります。
-</ul>
-</div></div>
+コマンドを「指定なし」にした場合、何もしないか、デフォルトの動作となります。<br>
+左ボタンや「ペンの消しゴム部分」の場合は、通常のツール動作などを行います。<br>
+<br>
+デバイスのボタン番号がわからない場合は、「ボタンの取得」の部分の上で、各デバイスのボタンを押すと、リスト上で、そのボタンの項目が選択されます。</div></div>
 <div class="subb_main">
 <div class="subb_h">システム</div>
 <div class="subb_txt">
-<ul>
-<li><span class="li">作業ディレクトリ</span><br>
-アンドゥデータなどの作業ファイルを保存するためのディレクトリを指定します。<br>
+<table class="tbl1">
+<tr><th>作業用ディレクトリ<td>アンドゥデータなどの作業ファイルを保存するためのディレクトリを指定します。<br>
 なるべく残り容量が大きいディレクトリを設定してください。<br>
-作業ディレクトリの作成に失敗すると、アンドゥなどが正しく動作しません。
-<li><span class="li">ブラシ/テクスチャ画像ディレクトリ</span><br>
-ブラシ画像とテクスチャ画像の、ユーザー用のトップディレクトリを指定します。
-</ul>
-</div></div>
-<div class="subb_main">
-<div class="subb_h">カーソル</div>
-<div class="subb_txt">ブラシツールなどの描画時用のカーソルを、自分で用意したイメージで置き換えることができます。<br>
+作業ディレクトリの作成に失敗すると、アンドゥなどが正しく動作しません。</td>
+<tr><th>ユーザーのブラシ画像ディレクトリ<br>
+ユーザーのテクスチャ画像ディレクトリ<td>ユーザー用のブラシ画像とテクスチャ画像のトップディレクトリを指定します</td>
+<tr><th>描画カーソル<td>ブラシなどの描画時に使われるカーソルを、自分で用意したイメージのカーソルにすることができます。<br>
 <br>
-「<b>画像読込</b>」で、カーソル画像のファイルを読み込みます。<br>
-「<b>デフォルト</b>」で、デフォルトのカーソルに戻します。<br>
-「<b>ホットスポット位置</b>」は、カーソル内の中心となる位置です。カーソルの左上を (0,0) とした座標で指定してください。<br>
+「画像ファイル」で、透過付きまたはアルファ付きの PNG 画像を指定してください。<br>
+色はそのまま表示され、イメージで透明な部分はカーソルでも透明になります。<br>
+ファイルパス部分を空にすると、デフォルトのカーソルが使われます。<br>
 <br>
-<span class="item">画像ファイルについて</span><br>
-<br>
-カーソルのサイズは、幅・高さともに 1〜32 px までです。<br>
-PNG などのフォーマットで画像を用意してください。<br>
-画像内の色によって形が決まります。また、カーソルの色は黒と白しか使えません。<br>
-画像内の <b>黒色:RGB(0,0,0) と 白色:RGB(255,255,255)</b> は、そのままカーソルの黒色と白色になります。<br>
-画像内の <b>それ以外のすべての色</b> は、透明になります。</div></div>
+「中心位置」には、画像の左上を (0,0) とした時の、カーソル中心位置を指定してください。</td>
+</table></div></div>
 </div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
 
-<div class="ct_main">
-<div class="ct_h"><a name="link19">[設定] ショートカットキー設定</a></div>
-<div class="ct_txt">メインウィンドウのメニューのショートカットキーを変更します。<br>
-<br>
-キーを変更したいコマンドをリストから選択し、「<b>キー</b>」の入力欄内で設定したいキーを押します。<br>
-装飾キー以外が押された時点でキーが設定されます。<br>
-「<b>クリア</b>」ボタンを押すと、設定されているキーがクリアされます。</div>
-</div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
-
-<div class="ct_main">
-<div class="ct_h"><a name="link20">[設定] キャンバスキー設定</a></div>
-<div class="ct_txt">キャンバス上で、ある一つのキーを押した時に指定したコマンドを実行したり、キーを押しながらドラッグなどの操作した時に指定した処理を行うようにすることができます。<br>
-<br>
-リスト上で、キーを設定したい項目を選択し、その状態で設定したいキーを押すことで、設定できます。<br>
-スペースキーを押すと、設定されているキーをクリアできます。<br>
-<em>設定できるのは単体のキーのみです。Ctrl+A など修飾キーを付けることは出来ません。</em><br>
-<br>
-<span class="item">項目について</span><br>
-<br>
-「ツール変更」などの通常コマンドは、押した瞬間に実行されます。<br>
-<br>
-「<b>キー＋操作で ...</b>」 のコマンドは、キャンバス上で、そのキーを押しながら左クリックまたはドラッグすると、その処理を行うことができます。<br>
-<br>
-「<b>キー＋操作でツール動作</b>」 の場合は、現在選択されているツールに関係なく、キー＋操作でそのツールの動作を行うことが出来ます。<br>
-「<b>キー＋操作で選択範囲ツール動作</b>」 の場合は、選択範囲ツールの特定の動作を、いつでも実行することが出来ます。<br>
-<br>
-<span class="item">動作説明</span><br>
-<br>
-<ul>
-<li><span class="li">中間色作成</span><br>
-キーを押した状態で、連続して２回、キャンバス上の色をクリックすると、その２色の中間色を作成して、描画色にします。<br>
-１回目のクリック後、２回目のクリックまでに数秒間間が空いた場合は、最初からやり直しとなります。
-<li><span class="li">色置換</span><br>
-キー＋左クリックでキャンバス上の色を選択すると、カレントレイヤ上において、その位置と同じ色がすべて描画色または透明に置き換わります。
-<li><span class="li">掴んだレイヤを選択</span><br>
-クリックした位置において、点があるレイヤのうち、一番最上位にあるレイヤをカレントレイヤとして選択します。
-</ul>
-</div>
-</div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
-
-<div class="ct_main">
-<div class="ct_h"><a name="link21">FAQ</a></div>
+<a name="link21"></a><div class="ct_main">
+<div class="ct_h">キー設定</div>
 <div class="ct_txt">
 <div class="subb_main" style="margin-top:0">
-<div class="subb_h">+Alt キーの動作が行えない</div>
-<div class="subb_txt">Linux のデスクトップ環境では、「Alt＋ボタン」に何らかのウィンドウ関連の機能が割り当てられていることが多いので (Alt＋左ドラッグでウィンドウ位置移動など)、その場合は、通常のアプリケーション側で +Alt による操作が認識できません。<br>
-アプリケーション側で +Alt を使えるようにするためには、デスクトップの設定で「Alt＋ボタン」の機能を無効にする必要があります。<br>
-ただし、設定方法は各デスクトップ環境によって異なります。<br>
-GUI 上で設定できるものもあれば、設定ファイルを編集する必要があるものもあります。<br>
-それぞれのデスクトップ環境で設定方法を調べてみてください。</div></div>
+<div class="subb_h">メニューのキー設定</div>
+<div class="subb_txt">メインウィンドウのメニューの、ショートカットキーを設定します。<br>
+<br>
+リストから、変更したい項目のキー部分を左クリック、または、項目を選択した状態でスペースキーを押すと、キーの入力状態になるので、設定したいキーを押した後、Enter キーまたは入力部分以外をクリックして、確定してください。<br>
+<br>
+Enter キーは設定できません。</div></div>
+<div class="subb_main">
+<div class="subb_h">キャンバスのキー設定</div>
+<div class="subb_txt">キャンバス上でキーを押した時（メインウィンドウにフォーカスがある状態でキーを押した時）、または、キャンバス上でキーを押しながら操作をした時に、設定したコマンドなどを実行することができます。<br>
+<br>
+リスト上で項目を選択した状態で、設定したいキーを押すと、キーを設定できます。<br>
+スペースキーを押すと、設定されているキーをクリアできます。<br>
+<em>※設定できるのは単体のキーのみです。Ctrl+A などの修飾キーを付けることは出来ません。</em><br>
+<br>
+※各キーは、キーボードの物理的なボタン番号で識別されるため、ハードウェアとしてのキーボードが変わると、別のキーとして識別される場合があります。</div></div>
 </div>
 </div>
-<div class="ct_footer"><a href="#menu">↑ TOP</a></div>
+
+<a name="link22"></a><div class="ct_main">
+<div class="ct_h">FAQ</div>
+<div class="ct_txt">
+<div class="subb_main" style="margin-top:0">
+<div class="subb_h">+Alt の動作が行えない</div>
+<div class="subb_txt">Linux のデスクトップ環境では、Alt＋ボタンに、何らかのウィンドウ関連の機能が割り当てられていることが多いです (Alt＋左ドラッグでウィンドウ位置移動など)。<br>
+その場合は、通常のアプリケーション側による +Alt が認識できません。<br>
+アプリケーション側で +Alt を使えるようにするためには、デスクトップの設定で、それらの機能を無効にする必要があります。<br>
+（設定方法は各デスクトップ環境によって異なります）<br>
+GUI 上で設定できる場合もあれば、設定ファイルを編集しなければならない場合もあります。</div></div>
+</div>
+</div>
 
 </body></html>

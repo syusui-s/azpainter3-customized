@@ -1,8 +1,9 @@
 **********************************************
-  AzPainter
-  Copyright (C) 2013-2020 Azel
+  AzPainter for Linux
+  Copyright (C) 2013-2021 Azel
 
   http://azsky2.html.xdomain.jp/
+  https://gitlab.com/azelpg/azpainter
   <azelpg@gmail.com>
 **********************************************
 
@@ -14,7 +15,7 @@ Please see the file GPL3 for details.
  * Overview
 =====================================
 
-It is mainly full color painting software for illustration drawing.
+Paint software for editing illustrations and images.
 
 
 =====================================
@@ -33,8 +34,9 @@ It is mainly full color painting software for illustration drawing.
 You need the C compiler, make, and development files for various libraries.
 
 [Required libraries]
-  x11 xext xinput
+  x11 xext xcursor xinput
   zlib libpng jpeglib(jpeg-turbo) fontconfig freetype2
+  tiff webp
 
 
 ## Required packages in each distribution
@@ -42,28 +44,34 @@ You need the C compiler, make, and development files for various libraries.
 
 (Debian/Ubuntu)
 
-  gcc or clang, make libx11-dev libxext-dev libxi-dev libfreetype6-dev
-  libfontconfig1-dev zlib1g-dev libpng-dev libjpeg-dev
+  gcc or clang, make
+  libx11-dev libxext-dev libxcursor-dev libxi-dev
+  libfreetype6-dev libfontconfig1-dev
+  zlib1g-dev libpng-dev libjpeg-dev libtiff-dev libwebp-dev
 
 (RedHat)
 
-  gcc or clang, make libX11-devel libXext-devel libXi-devel libfreetype6-devel
-  libfontconfig-devel zlib-devel libpng-devel libjpeg-devel
+  gcc or clang, make
+  libX11-devel libXext-devel libXcursor-devel libXi-devel
+  libfreetype6-devel libfontconfig-devel
+  zlib-devel libpng-devel libjpeg-devel libtiff-devel libwebp-devel
 
 (Arch Linux)
 
-  gcc or clang, make libx11 libxext libxi freetype2 fontconfig zlib
-  libpng libjpeg-turbo
+  gcc or clang, make
+  libx11 libxext libxcursor libxi
+  freetype2 fontconfig
+  zlib libpng libjpeg-turbo libtiff libwebp
   
 (FreeBSD)
 
-  gmake png jpeg-turbo
+  gmake png jpeg-turbo tiff webp
 
   - Not compatible with BSD make.
 
 (macOS)
 
-  xcode libpng jpeg-turbo
+  xcode libpng jpeg-turbo libtiff webp
 
   - It is assumed that XQuartz is installed.
 
@@ -125,13 +133,37 @@ $ azpainter
 
 
 =====================================
- * Environment variable
+ * Files
 =====================================
 
-If the following environment variables are defined at startup,
-settings etc. can be changed.
+INSTDIR is "/usr/local" by default.
 
-MLIB_APPDATADIR
-	Specify the location of the directory where the data files necessary
-	for running the application are located.
-	By default, it is "<INSTALLDIR>/share/azpainterb".
+<< Files to be installed >>
+
+<INSTDIR>/bin/azpainter : Executable file
+<INSTDIR>/share
+  |- azpainter3/ : Files used by the app
+  |- doc/azpainter/ : Document file
+  |- applications/
+     |- azpainter.desktop : Desktop file
+  |- icons/hicolor/ : Icon file
+     |- 48x48/apps/azpainter.png
+     |- scalable/apps/azpainter.svg
+
+
+<< File to be created >>
+
+A "~/.config/azpainter" directory will be created
+where each configuration file will be saved.
+
+
+=====================================
+ * About mlk
+=====================================
+
+I am using my own library mlk to build the GUI.
+
+GUI fonts, colors, icon themes, etc. can be specified in the "az-mlk-style.conf" configuration file.
+
+See "about_mlk_*.txt" for more information.
+

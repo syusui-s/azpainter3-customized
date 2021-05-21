@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,24 +18,18 @@
 $*/
 
 /**********************************
- * DrawData ファイル読み書き
+ * AppDraw:ファイル読み書き
  **********************************/
 
-#ifndef DRAW_FILE_H
-#define DRAW_FILE_H
+mlkerr drawFile_save_imageFile(AppDraw *p,const char *filename,uint32_t format,int dstbits,int falpha,mPopupProgress *prog);
 
-typedef struct _mPopupProgress mPopupProgress;
+mlkerr drawFile_load_apd_v4(AppDraw *p,const char *filename,mPopupProgress *prog);
+mlkerr drawFile_save_apd_v4(AppDraw *p,const char *filename,mPopupProgress *prog);
 
-mBool drawFile_save_image(DrawData *p,const char *filename,int format,mPopupProgress *prog);
+mlkerr drawFile_load_apd_v1v2(const char *filename,mPopupProgress *prog);
+mlkerr drawFile_load_apd_v3(AppDraw *p,const char *filename,mPopupProgress *prog);
 
-int drawFile_load_adw(const char *filename,mPopupProgress *prog);
-int drawFile_load_apd_v1v2(const char *filename,mPopupProgress *prog);
+mlkerr drawFile_load_adw(const char *filename,mPopupProgress *prog);
 
-mBool drawFile_load_apd_v3(DrawData *p,const char *filename,mPopupProgress *prog);
-mBool drawFile_save_apd_v3(DrawData *p,const char *filename,mPopupProgress *prog);
-
-mBool drawFile_load_psd(DrawData *p,const char *filename,mPopupProgress *prog,char **errmes);
-mBool drawFile_save_psd_layer(DrawData *p,const char *filename,mPopupProgress *prog);
-mBool drawFile_save_psd_image(DrawData *p,int type,const char *filename,mPopupProgress *prog);
-
-#endif
+mlkbool drawFile_load_psd(AppDraw *p,const char *filename,mPopupProgress *prog);
+mlkerr drawFile_save_psd(AppDraw *p,const char *filename,mPopupProgress *prog);

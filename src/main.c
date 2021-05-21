@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -21,78 +21,77 @@ $*/
  * main
  **********************************/
 
-#include "mDef.h"
-#include "mStr.h"
-#include "mGui.h"
-#include "mFont.h"
-#include "mDockWidget.h"
-#include "mMessageBox.h"
-#include "mTrans.h"
-#include "mUtilFile.h"
+#include <stdio.h>
+#include <string.h>
 
-#include "defMacros.h"
-#include "defConfig.h"
-#include "defDraw.h"
-#include "defWidgets.h"
+#include "mlk_gui.h"
+#include "mlk_panel.h"
+#include "mlk_sysdlg.h"
+#include "mlk_str.h"
+#include "mlk_font.h"
+#include "mlk_file.h"
 
-#include "ConfigData.h"
-#include "AppCursor.h"
-#include "ColorPalette.h"
-#include "MaterialImgList.h"
-#include "GradationList.h"
-#include "BrushSizeList.h"
-#include "BrushList.h"
-#include "Undo.h"
-#include "DrawFont.h"
-#include "SplineBuf.h"
-#include "FilterSaveData.h"
+#include "def_macro.h"
+#include "def_config.h"
+#include "def_widget.h"
+#include "def_draw_ptr.h"
 
-#include "MainWindow.h"
-#include "DockObject.h"
-#include "Docks_external.h"
+#include "configfile.h"
+#include "appconfig.h"
+#include "appresource.h"
+#include "appcursor.h"
+#include "table_data.h"
+#include "undo.h"
+#include "regfont.h"
+#include "textword_list.h"
+
+#include "panel.h"
+#include "panel_func.h"
+#include "mainwindow.h"
 
 #include "draw_main.h"
 
-#include "trgroup.h"
-#include "trid_message.h"
+#include "trid.h"
 
 #include "deftrans.h"
-
-//イメージデータ、グローバル定義
-#define IMAGEPATTERN_DEFINE
-#include "dataImagePattern.h"
 
 
 //-----------------------
 
-#define _CONFIGDIR_NAME  ".azpainter"
+#define _HELP_TEXT "[usage] exe <FILE>\n\n--help-mlk : show mlk options"
 
 //-----------------------
 /* グローバル変数定義 */
 
-WidgetsData g_app_widgets_body,	//WidgetsData 本体
-	*g_app_widgets = NULL;
-ConfigData *g_app_config = NULL;
-DrawData *g_app_draw = NULL;
+AppWidgets *g_app_widgets = NULL;
+AppConfig *g_app_config = NULL;
+AppDraw *g_app_draw = NULL;
 
 //-----------------------
 
-/* configfile.c */
-int appLoadConfig(mDockWidgetState *dock_state);
-void appSaveConfig();
+void MainWindow_new(ConfigFileState *state);
+void MainWindow_showInit(MainWindow *p,mToplevelSaveState *st);
 
-/* 各パレットオブジェクト作成 */
-void DockTool_new(mDockWidgetState *state);
-void DockOption_new(mDockWidgetState *state);
-void DockLayer_new(mDockWidgetState *state);
-void DockBrush_new(mDockWidgetState *state);
-void DockColor_new(mDockWidgetState *state);
-void DockColorPalette_new(mDockWidgetState *state);
-void DockCanvasCtrl_new(mDockWidgetState *state);
-void DockCanvasView_new(mDockWidgetState *state);
-void DockImageViewer_new(mDockWidgetState *state);
-void DockFilterList_new(mDockWidgetState *state);
-void DockColorWheel_new(mDockWidgetState *state);
+/* 各パネル作成 */
+void PanelTool_new(mPanelState *state);
+void PanelToolList_new(mPanelState *state);
+void PanelBrushOpt_new(mPanelState *state);
+void PanelOption_new(mPanelState *state);
+void PanelLayer_new(mPanelState *state);
+void PanelColor_new(mPanelState *state);
+void PanelColorWheel_new(mPanelState *state);
+void PanelColorPalette_new(mPanelState *state);
+void PanelCanvasCtrl_new(mPanelState *state);
+void PanelCanvasView_new(mPanelState *state);
+void PanelImageViewer_new(mPanelState *state);
+void PanelFilterList_new(mPanelState *state);
+
+/* layer_template.c */
+void LayerTemplate_loadFile(void);
+void LayerTemplate_saveFile(void);
+
+/* conv_ver2to3.c */
+void ConvertConfigFile(void);
 
 //-----------------------
 
@@ -103,198 +102,183 @@ void DockColorWheel_new(mDockWidgetState *state);
 //===========================
 
 
-/** 設定ディレクトリ内のファイルが存在するか */
+/* 設定ファイルディレクトリが新規作成された時 */
 
-static mBool _is_exist_conffile(const char *fname)
+static void _proc_new_confdir(void)
 {
 	mStr str = MSTR_INIT;
-	mBool ret;
+	int fnew = TRUE;
 
-	mAppGetConfigPath(&str, fname);
+	mStrPathSetHome_join(&str, ".azpainter");
 
-	ret = mIsFileExist(str.buf, FALSE);
+	//旧バージョンの設定ディレクトリがある場合
 
-	mStrFree(&str);
-
-	return ret;
-}
-
-/** データ移行、またはデフォルトファイルコピー */
-
-static void _set_init_data(mBool dir_exist,mBool loadconf_init)
-{
-	//ver.1 のデータ移行
-
-	if(dir_exist && loadconf_init
-		&& (!_is_exist_conffile(CONFIG_FILENAME_BRUSH) && !_is_exist_conffile(CONFIG_FILENAME_COLPALETTE))
-		&& (_is_exist_conffile("brush.dat") || _is_exist_conffile("palette.dat")))
+	if(mIsExistDir(str.buf))
 	{
-		/* 設定ファイルディレクトリがすでに存在 + 設定ファイルが存在しない
-		 *  + ver.2 のブラシ/パレットファイルが存在しない
-		 *  + ver.1 のブラシ/パレットファイルがある場合 */
+		MLK_TRGROUP(TRGROUP_MESSAGE);
 
-		if(mMessageBox(NULL, NULL,
-			M_TR_T2(TRGROUP_MESSAGE, TRID_MES_CONVERT_VER1),
+		if(mMessageBox(NULL, MLK_TR(TRID_MESSAGE_TITLE_CONFIRM),
+			MLK_TR(TRID_MESSAGE_CONVERT_VER2),
 			MMESBOX_YESNO, MMESBOX_YES) == MMESBOX_YES)
 		{
-			//ブラシとパレット変換
-			
-			BrushList_convert_from_ver1();
-			ColorPalette_convert_from_ver1();
+			ConvertConfigFile();
 
-			//グラデーションとショートカットキー設定は、
-			//ファイルが存在しない場合コピー
-
-			mAppCopyFile_dataToConfig(CONFIG_FILENAME_GRADATION);
-			mAppCopyFile_dataToConfig(CONFIG_FILENAME_SHORTCUTKEY);
-
-			return;
+			fnew = FALSE;
 		}
 	}
 
-	//デフォルトファイルコピー
-	/* 設定ファイルディレクトリを新規作成した場合、
-	 * または ver.1 のデータがあり ver.2 の設定ファイルがない時 */
+	mStrFree(&str);
 
-	if(!dir_exist || loadconf_init)
+	//デフォルトのファイルをコピー
+	// :旧バージョンのディレクトリが存在しない or 変換しない
+
+	if(fnew)
 	{
-		mAppCopyFile_dataToConfig(CONFIG_FILENAME_BRUSH);
-		mAppCopyFile_dataToConfig(CONFIG_FILENAME_GRADATION);
-		mAppCopyFile_dataToConfig(CONFIG_FILENAME_COLPALETTE);
-		mAppCopyFile_dataToConfig(CONFIG_FILENAME_SHORTCUTKEY);
+		mGuiCopyFile_dataToConfig("confdef/brushsize.dat", "brushsize.dat");
+		mGuiCopyFile_dataToConfig("confdef/toollist.dat", "toollist.dat");
+		mGuiCopyFile_dataToConfig("confdef/colpalette.dat", "colpalette.dat");
+		mGuiCopyFile_dataToConfig("confdef/grad.dat", "grad.dat");
 	}
 }
 
-/** 初期化 */
+/** アプリ初期化
+ *
+ * return: 0 で成功 */
 
-static mBool _init()
+static int _init_app(void)
 {
-	mDockWidgetState dock_state[DOCKWIDGET_NUM];
-	int i,configdir,loadconf;
+	ConfigFileState st;
+
+	//------ 初期化
 
 	//設定ファイル用ディレクトリ作成
-	/* 戻り値が 0 で作成、-1 ですでに存在する */
 
-	configdir = mAppCreateConfigDir(NULL);
-
-	//ディレクトリを新規作成した場合、ブラシ/テクスチャディレクトリを作成
-
-	if(configdir == 0)
+	if(mGuiCreateConfigDir(NULL) == MLKERR_OK)
 	{
-		mAppCreateConfigDir(APP_BRUSH_PATH);
-		mAppCreateConfigDir(APP_TEXTURE_PATH);
+		//サブディレクトリ作成
+		
+		mGuiCreateConfigDir(APP_DIRNAME_BRUSH);
+		mGuiCreateConfigDir(APP_DIRNAME_TEXTURE);
+
+		_proc_new_confdir();
 	}
 
 	//データ初期化
 
-	mMemzero(&g_app_widgets_body, sizeof(WidgetsData));
-	g_app_widgets = &g_app_widgets_body;
+	g_app_widgets = (AppWidgets *)mMalloc0(sizeof(AppWidgets));
 
-	ColorPalette_init();
-	GradationList_init();
-	MaterialImgList_init();
-	BrushSizeList_init();
-	SplineBuf_init();
-
-	//フォント初期化
-
-	if(!DrawFont_init()) return FALSE;
+	TableData_init();
+	RegFont_init();
 
 	//データ確保
 
-	if(!ConfigData_new()
-		|| !DrawData_new()
-		|| !BrushList_new()
-		|| !Undo_new())
-		return FALSE;
+	if(AppConfig_new()
+		|| AppDraw_new()
+		|| Undo_new())
+		return 1;
+
+	//------- 設定読み込み
+
+	drawInit_loadConfig_before();
 
 	//設定ファイル読み込み
 
-	loadconf = appLoadConfig(dock_state);
-	if(!loadconf) return FALSE;
+	mMemset0(&st, sizeof(ConfigFileState));
 
-	//初期データファイル
-
-	_set_init_data((configdir == -1), (loadconf == 2));
+	app_load_config(&st);
 
 	//他データファイル読み込み
 
-	ColorPalette_load();
-	GradationList_load();
-	BrushList_loadconfigfile();
+	LayerTemplate_loadFile();
+
+	TextWordList_loadFile(&APPCONF->list_textword);
+
+	RegFont_loadConfigFile();
+
+	//------ 設定読み込み後
+
+	//AppConfig 設定
+
+	AppConfig_set_afterConfig();
+
+	//リソース
+
+	AppResource_init();
 
 	//設定
 
-	Undo_setMaxNum(APP_CONF->undo_maxnum);
+	Undo_setMaxNum(APPCONF->undo_maxnum);
 
-	//作業用ディレクトリ作成
+	//カーソル
 
-	ConfigData_createTempDir();
+	AppCursor_init();
 
-	//カーソル作成 (! 設定読込後に行う)
+	//描画カーソル
 
-	AppCursor_init(APP_CONF->cursor_buf);
+	if(mStrIsnotEmpty(&APPCONF->strCursorFile))
+	{
+		AppCursor_setDrawCursor(APPCONF->strCursorFile.buf,
+			APPCONF->cursor_hotspot[0], APPCONF->cursor_hotspot[1]);
+	}
 
 	//フォント作成
 
-	mAppSetDefaultFont(APP_CONF->strFontStyle_gui.buf);
+	if(mStrIsnotEmpty(&APPCONF->strFont_panel))
+		APPWIDGET->font_panel = mFontCreate_text(mGuiGetFontSystem(), APPCONF->strFont_panel.buf);
+	
+	APPWIDGET->font_panel_fix = mFontCreate_text_size(mGuiGetFontSystem(), APPCONF->strFont_panel.buf, -12);
 
-	APP_WIDGETS->font_dock = mFontCreateFromFormat(APP_CONF->strFontStyle_dock.buf);
-	APP_WIDGETS->font_dock12px = mFontCreateFromFormat_size(APP_CONF->strFontStyle_dock.buf, -12);
+	//AppDraw
 
-	//テーマ
+	drawInit_createWidget_before();
 
-	mAppLoadThemeFile(APP_CONF->strThemeFile.buf);
-
-	//ウィジェット作成前の初期化
-
-	drawInit_beforeCreateWidget();
+	//------ ウィジェット
 
 	//メインウィンドウ作成
 
-	MainWindow_new();
+	MainWindow_new(&st);
 
-	//DockObject 作成
+	//パネル作成
 
-	DockTool_new(dock_state + DOCKWIDGET_TOOL);
-	DockOption_new(dock_state + DOCKWIDGET_OPTION);
-	DockLayer_new(dock_state + DOCKWIDGET_LAYER);
-	DockBrush_new(dock_state + DOCKWIDGET_BRUSH);
-	DockColor_new(dock_state + DOCKWIDGET_COLOR);
-	DockColorPalette_new(dock_state + DOCKWIDGET_COLOR_PALETTE);
-	DockCanvasCtrl_new(dock_state + DOCKWIDGET_CANVAS_CTRL);
-	DockCanvasView_new(dock_state + DOCKWIDGET_CANVAS_VIEW);
-	DockImageViewer_new(dock_state + DOCKWIDGET_IMAGE_VIEWER);
-	DockFilterList_new(dock_state + DOCKWIDGET_FILTER_LIST);
-	DockColorWheel_new(dock_state + DOCKWIDGET_COLOR_WHEEL);
+	PanelTool_new(st.panelst + PANEL_TOOL);
+	PanelToolList_new(st.panelst + PANEL_TOOLLIST);
+	PanelBrushOpt_new(st.panelst + PANEL_BRUSHOPT);
+	PanelOption_new(st.panelst + PANEL_OPTION);
+	PanelLayer_new(st.panelst + PANEL_LAYER);
+	PanelColor_new(st.panelst + PANEL_COLOR);
+	PanelColorWheel_new(st.panelst + PANEL_COLOR_WHEEL);
+	PanelColorPalette_new(st.panelst + PANEL_COLOR_PALETTE);
+	PanelCanvasCtrl_new(st.panelst + PANEL_CANVAS_CTRL);
+	PanelCanvasView_new(st.panelst + PANEL_CANVAS_VIEW);
+	PanelImageViewer_new(st.panelst + PANEL_IMAGE_VIEWER);
+	PanelFilterList_new(st.panelst + PANEL_FILTER_LIST);
 
-	//イメージなど初期化
+	//ウィンドウ表示前の初期化
 
 	drawInit_beforeShow();
 
 	//ウィンドウ表示
 
-	MainWindow_showStart(APP_WIDGETS->mainwin);
+	MainWindow_showInit(APPWIDGET->mainwin, &st.mainst);
 
-	for(i = 0; i < DOCKWIDGET_NUM; i++)
-		DockObject_showStart(APP_WIDGETS->dockobj[i]);
+	Panels_showInit();
 
 	//表示後更新
 
-	DockCanvasView_changeImageSize();
-	DockLayer_update_all();
+	PanelCanvasView_changeImageSize();
+	PanelLayer_update_all();
 
 	//--------------
 
 	//作業用ディレクトリの作成に失敗時
 
-	if(mStrIsEmpty(&APP_CONF->strTempDirProc))
+	if(mStrIsEmpty(&APPCONF->strTempDirProc))
 	{
-		mMessageBox(NULL, NULL,
-			M_TR_T2(TRGROUP_MESSAGE, TRID_MES_EMPTY_TEMPDIR), MMESBOX_OK, MMESBOX_OK);
+		mMessageBoxErrTr(MLK_WINDOW(APPWIDGET->mainwin),
+			TRGROUP_MESSAGE, TRID_MESSAGE_FAILED_TEMPDIR);
 	}
-	 
-	return TRUE;
+ 
+	return 0;
 }
 
 /** 引数のファイルを開く */
@@ -303,9 +287,9 @@ static void _open_arg_file(const char *fname)
 {
 	mStr str = MSTR_INIT;
 
-	mStrSetTextLocal(&str, fname, -1);
+	mStrSetText_locale(&str, fname, -1);
 	
-	MainWindow_loadImage(APP_WIDGETS->mainwin, str.buf, 0);
+	MainWindow_loadImage(APPWIDGET->mainwin, str.buf, NULL);
 
 	mStrFree(&str);
 }
@@ -316,94 +300,135 @@ static void _open_arg_file(const char *fname)
 //===========================
 
 
+/* AppWidgets・ウィジェット解放
+ *
+ * [!] mGuiEnd() によるウィジェット破棄前に解放されるため、
+ *     destroy ハンドラ内で APPWIDGET を参照しないこと。 */
+
+static void _free_widgets(AppWidgets *p)
+{
+	Panels_destroy();
+
+	mFontFree(p->font_panel);
+	mFontFree(p->font_panel_fix);
+
+	mFree(p);
+
+	APPWIDGET = NULL;
+}
+
 /** 終了処理 */
 
-static void _finish()
+static void _finish(void)
 {
-	int i;
+	//----- 設定ファイル保存
 
-	//設定ファイル保存
+	app_save_config();
 
-	appSaveConfig();
+	drawEnd_saveConfig();
 
-	BrushList_saveconfigfile();
-	ColorPalette_savefile();
-	GradationList_save();
+	RegFont_saveConfigFile();
 
-	//解放
+	if(APPCONF->fmodify_layertempl)
+		LayerTemplate_saveFile();
 
-	for(i = 0; i < DOCKWIDGET_NUM; i++)
-	{
-		DockObject_destroy(APP_WIDGETS->dockobj[i]);
-		APP_WIDGETS->dockobj[i] = NULL;
-	}
+	if(APPCONF->fmodify_textword)
+		TextWordList_saveFile(&APPCONF->list_textword);
 
-	mFontFree(APP_WIDGETS->font_dock);
-	mFontFree(APP_WIDGETS->font_dock12px);
+	//----- 解放
 
+	AppResource_free();
 	AppCursor_free();
 
-	DrawData_free();
+	TableData_free();
+	RegFont_free();
 
-	MaterialImgList_free();
-	ColorPalette_free();
-	GradationList_free();
-	BrushSizeList_free();
-	BrushList_free();
 	Undo_free();
-	SplineBuf_free();
-	FilterSaveData_free();
 
-	DrawFont_finish();
-
+	AppDraw_free();
+	
 	//作業用ディレクトリ削除
 
-	ConfigData_deleteTempDir();
+	AppConfig_deleteTempDir();
 
-	ConfigData_free();
+	AppConfig_free();
+
+	_free_widgets(APPWIDGET);
+}
+
+/** 初期化メイン */
+
+static int _init_main(int argc,char **argv)
+{
+	int top,i;
+
+	if(mGuiInit(argc, argv, &top)) return 1;
+
+	//"--help"
+
+	for(i = top; i < argc; i++)
+	{
+		if(strcmp(argv[i], "--help") == 0)
+		{
+			puts(_HELP_TEXT);
+			mGuiEnd();
+			return 1;
+		}
+	}
+
+	//
+
+	mGuiSetWMClass("azpainter", "AzPainter");
+
+	//パスセット
+
+	mGuiSetPath_data_exe("../share/azpainter3");
+	mGuiSetPath_config_home(".config/azpainter");
+
+	//翻訳データ
+
+	mGuiLoadTranslation(g_deftransdat, NULL, "tr");
+
+	//バックエンド初期化
+
+	mGuiSetEnablePenTablet();
+
+	if(mGuiInitBackend()) return 1;
+
+	//アプリ初期化
+
+	if(_init_app())
+	{
+		mError("failed initialize\n");
+		return 1;
+	}
+
+	//ファイル開く
+
+	if(top < argc)
+		_open_arg_file(argv[top]);
+
+	return 0;
 }
 
 /** メイン */
 
 int main(int argc,char **argv)
 {
-	if(mAppInit(&argc, argv)) return 1;
-
-	mAppSetClassName("AzPainter", "AzPainter");
-
-	mAppInitPenTablet();
-
-	//パス
-
-	mAppSetConfigPath(_CONFIGDIR_NAME, TRUE);
-	mAppSetDataPath(PACKAGE_DATA_DIR);
-
-	//翻訳データ
-
-	mAppLoadTranslation(g_deftransdat, NULL, "tr");
-
 	//初期化
 
-	if(!_init())
-	{
-		mDebug("! failed initialize\n");
+	if(_init_main(argc, argv))
 		return 1;
-	}
-
-	//
-
-	if(argc > 1)
-		_open_arg_file(argv[1]);
 
 	//実行
 
-	mAppRun();
+	mGuiRun();
 
 	//終了
 
 	_finish();
 
-	mAppEnd();
+	mGuiEnd();
 
 	return 0;
 }

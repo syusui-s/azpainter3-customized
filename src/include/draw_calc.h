@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,51 +18,43 @@
 $*/
 
 /**********************************
- * DrawData 計算関数
+ * AppDraw: 計算関数
  **********************************/
 
-#ifndef DRAW_CALC_H
-#define DRAW_CALC_H
-
-typedef struct _DrawData DrawData;
-typedef struct _TileImage TileImage;
-
-
-void drawCalc_setCanvasViewParam(DrawData *p);
-mBool drawCalc_isPointInCanvasArea(DrawData *p,mPoint *pt);
+void drawCalc_setCanvasViewParam(AppDraw *p);
+mlkbool drawCalc_isPointInCanvasArea(AppDraw *p,mPoint *pt);
 
 /* 座標変換 */
 
-void drawCalc_areaToimage_double(DrawData *p,double *dx,double *dy,double x,double y);
-void drawCalc_areaToimage_double_pt(DrawData *p,mDoublePoint *dst,mPoint *src);
-void drawCalc_areaToimage_pt(DrawData *p,mPoint *pt,double x,double y);
-void drawCalc_areaToimage_relative(DrawData *p,mPoint *dst,mPoint *src);
+void drawCalc_canvas_to_image_double(AppDraw *p,double *dx,double *dy,double x,double y);
+void drawCalc_canvas_to_image_double_pt(AppDraw *p,mDoublePoint *dst,mPoint *src);
+void drawCalc_canvas_to_image_pt(AppDraw *p,mPoint *pt,double x,double y);
+void drawCalc_canvas_to_image_relative(AppDraw *p,mPoint *dst,mPoint *src);
 
-void drawCalc_imageToarea_pt(DrawData *p,mPoint *dst,int x,int y);
-void drawCalc_imageToarea_pt_double(DrawData *p,mPoint *dst,double x,double y);
+void drawCalc_image_to_canvas_pt(AppDraw *p,mPoint *dst,int x,int y);
+void drawCalc_image_to_canvas_pt_double(AppDraw *p,mPoint *dst,double x,double y);
 
-void drawCalc_getImagePos_atCanvasCenter(DrawData *p,double *px,double *py);
-mBool drawCalc_imageToarea_box(DrawData *p,mBox *dst,mBox *src);
-mBool drawCalc_areaToimage_box(DrawData *p,mBox *dst,mBox *src);
+void drawCalc_getImagePos_atCanvasCenter(AppDraw *p,double *px,double *py);
+mlkbool drawCalc_image_to_canvas_box(AppDraw *p,mBox *dst,const mBox *src);
+mlkbool drawCalc_canvas_to_image_box(AppDraw *p,mBox *dst,const mBox *src);
 
 /* 範囲 */
 
-mBool drawCalc_clipArea_toBox(DrawData *p,mBox *dst,mRect *src);
-mBool drawCalc_clipImageRect(DrawData *p,mRect *rc);
-mBool drawCalc_getImageBox_rect(DrawData *p,mBox *dst,mRect *rc);
-mBool drawCalc_unionImageBox(mBox *dst,mBox *src);
+mlkbool drawCalc_clipCanvas_toBox(AppDraw *p,mBox *dst,mRect *src);
+mlkbool drawCalc_clipImageRect(AppDraw *p,mRect *rc);
+mlkbool drawCalc_image_rect_to_box(AppDraw *p,mBox *dst,const mRect *rc);
+mlkbool drawCalc_unionImageBox(mBox *dst,mBox *src);
 void drawCalc_unionRect_relmove(mRect *dst,mRect *src,int mx,int my);
 
 /* 描画操作 */
 
 void drawCalc_fitLine45(mPoint *pt,mPoint *ptstart);
-double drawCalc_getLineRadian_forImage(DrawData *p);
-mBool drawCalc_moveImage_onMotion(DrawData *p,TileImage *img,uint32_t state,mPoint *ptret);
+double drawCalc_getLineRadian_forImage(AppDraw *p);
+mlkbool drawCalc_moveImage_onMotion(AppDraw *p,TileImage *img,uint32_t state,mPoint *ptret);
 
 /* ほか */
 
-int drawCalc_getZoom_step(DrawData *p,mBool zoomup);
-int drawCalc_getZoom_fitWindow(DrawData *p);
-void drawCalc_getCanvasScrollMax(DrawData *p,mSize *size);
+int drawCalc_getZoom_step(AppDraw *p,mlkbool zoomup);
+int drawCalc_getZoom_fitWindow(AppDraw *p);
+void drawCalc_getCanvasScrollMax(AppDraw *p,mSize *size);
 
-#endif

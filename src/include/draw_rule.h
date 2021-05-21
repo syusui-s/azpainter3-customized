@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,33 +18,32 @@
 $*/
 
 /**********************************
- * DrawData 定規関連
+ * AppDraw: 定規関連
  **********************************/
-
-#ifndef DRAW_RULE_H
-#define DRAW_RULE_H
 
 enum
 {
-	RULE_TYPE_OFF,
-	RULE_TYPE_PARALLEL_LINE,
-	RULE_TYPE_GRID_LINE,
-	RULE_TYPE_CONC_LINE,
-	RULE_TYPE_CIRCLE,
-	RULE_TYPE_ELLIPSE,
+	DRAW_RULE_TYPE_OFF,
+	DRAW_RULE_TYPE_LINE,
+	DRAW_RULE_TYPE_GRID,
+	DRAW_RULE_TYPE_CONCLINE,
+	DRAW_RULE_TYPE_CIRCLE,
+	DRAW_RULE_TYPE_ELLIPSE,
+	DRAW_RULE_TYPE_SYMMETRY,
 
-	RULE_TYPE_NUM
+	DRAW_RULE_TYPE_NUM
 };
 
+void drawRule_setType(AppDraw *p,int type);
+mlkbool drawRule_isVisibleGuide(AppDraw *p);
 
-void drawRule_setType(DrawData *p,int type);
-void drawRule_onPress(DrawData *p,mBool dotpen);
-mBool drawRule_onPress_setting(DrawData *p);
+void drawRule_onPress(AppDraw *p,mlkbool dotpen);
+mlkbool drawRule_onPress_setting(AppDraw *p);
 
-void drawRule_setting_line(DrawData *p);
-void drawRule_setting_ellipse(DrawData *p);
+void drawRule_setting_line(AppDraw *p);
+void drawRule_setting_point(AppDraw *p);
+void drawRule_setting_ellipse(AppDraw *p);
 
-void drawRule_setRecord(DrawData *p,int no);
-void drawRule_callRecord(DrawData *p,int no);
+void drawRule_setRecord(AppDraw *p,int no);
+void drawRule_readRecord(AppDraw *p,int no);
 
-#endif

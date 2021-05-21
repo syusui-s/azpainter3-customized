@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,57 +18,55 @@
 $*/
 
 /**********************************
- * DrawData レイヤ処理
+ * AppDraw レイヤ処理
  **********************************/
 
-#ifndef DRAW_LAYER_H
-#define DRAW_LAYER_H
+typedef struct _LayerNewOptInfo LayerNewOptInfo;
 
-void drawLayer_newLayer(DrawData *p,const char *name,int type,int blendmode,uint32_t col,LayerItem *pi_above);
-void drawLayer_newFolder(DrawData *p,const char *name,LayerItem *pi_above);
-void drawLayer_newLayer_direct(DrawData *p,int type);
-mBool drawLayer_newLayer_fromImage(DrawData *p,TileImage *img,uint32_t col);
 
-int drawLayer_newLayer_file(DrawData *p,const char *filename,mBool ignore_alpha,mRect *rcupdate);
+void drawLayer_newLayer(AppDraw *p,LayerNewOptInfo *info,LayerItem *pi_above);
+void drawLayer_newLayer_direct(AppDraw *p,int type);
+mlkerr drawLayer_newLayer_file(AppDraw *p,const char *filename,mRect *rcupdate);
+mlkbool drawLayer_newLayer_image(AppDraw *p,TileImage *img);
 
-void drawLayer_copy(DrawData *p);
-void drawLayer_delete(DrawData *p,mBool update);
-void drawLayer_erase(DrawData *p);
-void drawLayer_setColorType(DrawData *p,LayerItem *item,int type,mBool bLumtoAlpha);
-void drawLayer_editFullImage(DrawData *p,int type);
+void drawLayer_copy(AppDraw *p);
+void drawLayer_delete(AppDraw *p,mlkbool update);
+void drawLayer_erase(AppDraw *p);
+void drawLayer_setLayerType(AppDraw *p,LayerItem *item,int type,mlkbool lum_to_alpha);
+void drawLayer_editImage_full(AppDraw *p,int type);
 
-void drawLayer_combine(DrawData *p,mBool drop);
-void drawLayer_combineMulti(DrawData *p,int target,mBool newlayer,int coltype);
-void drawLayer_blendAll(DrawData *p);
+void drawLayer_combine(AppDraw *p,mlkbool drop);
+void drawLayer_combineMulti(AppDraw *p,int target,mlkbool newlayer,int type);
+void drawLayer_blendAll(AppDraw *p);
 
-mBool drawLayer_setCurrent(DrawData *p,LayerItem *item);
-void drawLayer_setCurrent_visibleOnList(DrawData *p,LayerItem *item);
-void drawLayer_setTexture(DrawData *p,const char *path);
-void drawLayer_setLayerColor(DrawData *p,LayerItem *item,uint32_t col);
+mlkbool drawLayer_setCurrent(AppDraw *p,LayerItem *item);
+void drawLayer_setCurrent_visibleOnList(AppDraw *p,LayerItem *item);
+void drawLayer_setTexture(AppDraw *p,LayerItem *item,const char *path);
+void drawLayer_setLayerColor(AppDraw *p,LayerItem *item,uint32_t col);
 
-void drawLayer_revFolderExpand(DrawData *p,LayerItem *item);
-void drawLayer_revVisible(DrawData *p,LayerItem *item);
-void drawLayer_revLock(DrawData *p,LayerItem *item);
-void drawLayer_revFillRef(DrawData *p,LayerItem *item);
-void drawLayer_revChecked(DrawData *p,LayerItem *item);
-void drawLayer_setLayerMask(DrawData *p,LayerItem *item,int type);
+void drawLayer_toggle_folderOpened(AppDraw *p,LayerItem *item);
+void drawLayer_toggle_visible(AppDraw *p,LayerItem *item);
+void drawLayer_toggle_lock(AppDraw *p,LayerItem *item);
+void drawLayer_setLayerMask(AppDraw *p,LayerItem *item,int type);
 
-void drawLayer_showAll(DrawData *p,int type);
-void drawLayer_showRevChecked(DrawData *p);
-void drawLayer_showRevImage(DrawData *p);
+void drawLayer_visibleAll(AppDraw *p,int type);
+void drawLayer_visibleAll_checked_rev(AppDraw *p);
+void drawLayer_visibleAll_img_rev(AppDraw *p);
 
-void drawLayer_closeAllFolders(DrawData *p);
+void drawLayer_folder_open_all(AppDraw *p);
+void drawLayer_folder_close_all(AppDraw *p);
 
-void drawLayer_allFlagsOff(DrawData *p,uint32_t flags);
+void drawLayer_setFlags_all_off(AppDraw *p,uint32_t flags);
 
-void drawLayer_moveUpDown(DrawData *p,mBool bUp);
-void drawLayer_moveDND(DrawData *p,LayerItem *dst,int type);
-void drawLayer_moveCheckedToFolder(DrawData *p,LayerItem *dst);
+void drawLayer_toggle_tone_to_gray(AppDraw *p);
 
-void drawLayer_deleteForUndo(DrawData *p,LayerItem *item);
-void drawLayer_afterMoveList_forUndo(DrawData *p);
+void drawLayer_moveUpDown(AppDraw *p,mlkbool up);
+void drawLayer_moveDND(AppDraw *p,LayerItem *dst,int type);
+void drawLayer_moveChecked_to_folder(AppDraw *p,LayerItem *dst);
 
-void drawLayer_currentSelUpDown(DrawData *p,mBool up);
-void drawLayer_selectPixelTopLayer(DrawData *p);
+void drawLayer_deleteForUndo(AppDraw *p,LayerItem *item);
+void drawLayer_afterMoveList_forUndo(AppDraw *p);
 
-#endif
+void drawLayer_selectUpDown(AppDraw *p,mlkbool up);
+void drawLayer_selectGrabLayer(AppDraw *p,int x,int y);
+

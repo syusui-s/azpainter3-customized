@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,19 +18,19 @@
 $*/
 
 /*****************************************
- * DrawData
- *
+ * AppDraw
  * 操作 - メイン
  *****************************************/
 
-#include "mDef.h"
-#include "mEvent.h"
-#include "mKeyDef.h"
-#include "mRectBox.h"
+#include "mlk_gui.h"
+#include "mlk_event.h"
+#include "mlk_key.h"
+#include "mlk_rectbox.h"
 
-#include "defDraw.h"
-#include "defConfig.h"
-#include "defCanvasKeyID.h"
+#include "def_draw.h"
+#include "def_draw_toollist.h"
+#include "def_config.h"
+#include "def_canvaskey.h"
 
 #include "draw_main.h"
 #include "draw_calc.h"
@@ -40,107 +40,89 @@ $*/
 #include "draw_op_sub.h"
 #include "draw_rule.h"
 
-#include "BrushItem.h"
-#include "BrushList.h"
-#include "AppCursor.h"
+#include "toollist.h"
+#include "appcursor.h"
 
-#include "MainWindow.h"
-#include "MainWinCanvas.h"
-#include "Docks_external.h"
-
-
-//---------------------
-
-#define _ONPRESS_BRUSH_F_REGISTERED   1	//登録ブラシ
-#define _ONPRESS_BRUSH_F_PRESSURE_MAX 2 //筆圧最大
-
-//---------------------
+#include "mainwindow.h"
+#include "maincanvas.h"
+#include "statusbar.h"
 
 
 
 //============================
-// sub
+// 押し時
 //============================
 
 
-/** ボタン押し時 : ブラシ、自由線描画 */
+/* (押し時) ブラシ/ドット線 自由線描画 */
 
-static mBool _onPress_brush_free(DrawData *p,uint32_t flags)
+static mlkbool _on_press_brushdot_free(AppDraw *p,int toolno)
 {
-	BrushItem *item;
-	mBool registered;
+	mlkbool is_brush;
 
-	//登録ブラシか
+	//ブラシか
 
-	registered = ((flags & _ONPRESS_BRUSH_F_REGISTERED) != 0);
+	is_brush = (toolno == TOOL_TOOLLIST);
 
 	//-------- 装飾キー
 
-	if(p->w.press_state & M_MODS_ALT)
+	if(p->w.press_state & MLK_STATE_ALT)
 	{
-		//+Alt : スポイト
+		//+Alt: スポイト (キャンバス色)
 
-		return drawOp_spoit_press(p, FALSE);
+		return drawOp_spoit_press(p, 0, FALSE);
 	}
-	else if(p->rule.type && (p->w.press_state & M_MODS_CTRL))
+	else if(p->rule.type && (p->rule.setting_mode || (p->w.press_state & MLK_STATE_CTRL)))
 	{
-		//+Ctrl : (定規ON時) 定規設定
+		//[定規ON時] +Ctrl or 設定モード時: 定規設定
 
 		return drawRule_onPress_setting(p);
 	}
-	else if(p->w.press_state == M_MODS_SHIFT)
+	else if(is_brush && p->w.press_state == MLK_STATE_SHIFT)
 	{
-		//+Shift でブラシサイズ変更 (ドットペン時は除く)
+		//[ブラシ時] +Shift: ブラシサイズ変更
 
-		return drawOp_dragBrushSize_press(p, registered);
+		return drawOp_dragBrushSize_press(p);
 	}
 
-	//------------
+	//--------- 自由線描画
 
 	//描画不可
 
-	if(drawOpSub_canDrawLayer_mes(p)) return FALSE;
-
-	//ブラシアイテム
-
-	BrushList_getDrawInfo(&item, NULL, registered);
+	if(drawOpSub_canDrawLayer_mes(p, 0)) return FALSE;
 
 	//定規セット
 
-	drawRule_onPress(p, (item->type == BRUSHITEM_TYPE_DOTPEN));
+	drawRule_onPress(p, !is_brush);
 
 	//開始
 
-	switch(item->type)
-	{
-		//ドットペン
-		case BRUSHITEM_TYPE_DOTPEN:
-			return drawOp_dotpen_free_press(p, registered);
-		//指先
-		case BRUSHITEM_TYPE_FINGER:
-			return drawOp_finger_free_press(p, registered);
+	if(is_brush)
 		//ブラシ
-		default:
-			return drawOp_brush_free_press(p, registered, ((flags & _ONPRESS_BRUSH_F_PRESSURE_MAX) != 0));
-	}
+		return drawOp_brush_free_press(p);
+	else
+		//ドットペン/指先
+		return drawOp_dotpen_free_press(p);
 }
 
-/** ボタン押し時 : ブラシ描画 */
+/* (押し時) ブラシ/ドットペン/指先 */
 
-static mBool _onPress_brush(DrawData *p,int subno,uint32_t flags)
+static mlkbool _on_press_brush_dot(AppDraw *p,int toolno,int subno)
 {
 	//自由線以外時、描画可能かチェック
 
-	if(subno != TOOLSUB_DRAW_FREE && drawOpSub_canDrawLayer_mes(p))
+	if(subno != TOOLSUB_DRAW_FREE && drawOpSub_canDrawLayer_mes(p, 0))
 		return FALSE;
 
 	//
+
+	mRectEmpty(&p->w.rcdraw);
 
 	switch(subno)
 	{
 		//自由線
 		case TOOLSUB_DRAW_FREE:
-			return _onPress_brush_free(p, flags);
+			return _on_press_brushdot_free(p, toolno);
 
 		//直線
 		case TOOLSUB_DRAW_LINE:
@@ -148,7 +130,7 @@ static mBool _onPress_brush(DrawData *p,int subno,uint32_t flags)
 
 		//四角形
 		case TOOLSUB_DRAW_BOX:
-			return drawOpXor_boxarea_press(p, DRAW_OPSUB_DRAW_FRAME);
+			return drawOpXor_rect_canv_press(p, DRAW_OPSUB_DRAW_FRAME);
 
 		//楕円
 		case TOOLSUB_DRAW_ELLIPSE:
@@ -165,26 +147,22 @@ static mBool _onPress_brush(DrawData *p,int subno,uint32_t flags)
 		//ベジェ曲線
 		case TOOLSUB_DRAW_BEZIER:
 			return drawOpXor_line_press(p, DRAW_OPSUB_TO_BEZIER);
-
-		//スプライン曲線
-		case TOOLSUB_DRAW_SPLINE:
-			return drawOp_spline_press(p);
 	}
 
 	return FALSE;
 }
 
-/** ボタン押し時 : 図形塗り/消し */
+/* (押し時) 図形塗り/消し */
 
-static mBool _onPress_fillpoly(DrawData *p,int subno)
+static mlkbool _on_press_fillpoly(AppDraw *p,int subno)
 {
-	if(drawOpSub_canDrawLayer_mes(p)) return FALSE;
+	if(drawOpSub_canDrawLayer_mes(p, 0)) return FALSE;
 
 	switch(subno)
 	{
 		//四角形
 		case 0:
-			return drawOpXor_boxarea_press(p, DRAW_OPSUB_DRAW_FILL);
+			return drawOpXor_rect_canv_press(p, DRAW_OPSUB_DRAW_FILL);
 		//楕円
 		case 1:
 			return drawOpXor_ellipse_press(p, DRAW_OPSUB_DRAW_FILL);
@@ -199,15 +177,15 @@ static mBool _onPress_fillpoly(DrawData *p,int subno)
 	return FALSE;
 }
 
-/** ボタン押し時 : 選択範囲 */
+/* (押し時) 選択範囲 */
 
-static mBool _onPress_select(DrawData *p,int subno)
+static mlkbool _on_press_select(AppDraw *p,int subno)
 {
 	switch(subno)
 	{
 		//四角
 		case TOOLSUB_SEL_BOX:
-			return drawOpXor_boxarea_press(p, DRAW_OPSUB_SET_SELECT);
+			return drawOpXor_rect_canv_press(p, DRAW_OPSUB_SET_SELECT);
 		//多角形
 		case TOOLSUB_SEL_POLYGON:
 			return drawOpXor_polygon_press(p, DRAW_OPSUB_SET_SELECT);
@@ -217,38 +195,51 @@ static mBool _onPress_select(DrawData *p,int subno)
 		//イメージ移動/コピー
 		case TOOLSUB_SEL_IMGMOVE:
 		case TOOLSUB_SEL_IMGCOPY:
-			return drawOp_selimgmove_press(p, (subno == 3));
-		//範囲移動
+			return drawOp_selimgmove_press(p, (subno == TOOLSUB_SEL_IMGMOVE));
+		//範囲位置移動
 		case TOOLSUB_SEL_POSMOVE:
-			return drawOp_selmove_press(p);
+			return drawOp_selectMove_press(p);
 	}
 
 	return FALSE;
 }
 
-/** ボタン押し時 : ツール
+/* (押し時) ツールの各処理 (ツールリスト以外)
  *
- * @param subno 負の値で現在のサブタイプ */
+ * is_toollist_toolopt:
+ *   FALSE で現在のツールの設定値を使う。
+ *   TRUE で toollist_toolopt の値を使う (ツールリストのアイテム時)。
+ * return: グラブするか */
 
-static mBool _onPress_tool(DrawData *p,int toolno,int subno)
+static mlkbool _on_press_tool_main(AppDraw *p,int toolno,int subno,mlkbool is_toollist_toolopt)
 {
-	if(subno < 0)
-		subno = p->tool.subno[toolno];
-
 	p->w.optoolno = toolno;
+	p->w.optool_subno = subno;
+
+	p->w.is_toollist_toolopt = is_toollist_toolopt;
 
 	mRectEmpty(&p->w.rcdraw);
 
+	//レイヤ名表示
+
+	if(toolno <= TOOL_TEXT &&
+		(APPCONF->fview & CONFIG_VIEW_F_CANV_LAYER_NAME))
+		MainCanvasPage_showLayerName();
+
+	//
+
 	switch(toolno)
 	{
-		//ブラシ
-		case TOOL_BRUSH:
-			return _onPress_brush(p, subno, 0);
-
+		//ドットペン/消しゴム/指先
+		case TOOL_DOTPEN:
+		case TOOL_DOTPEN_ERASE:
+		case TOOL_FINGER:
+			return _on_press_brush_dot(p, toolno, subno);
+	
 		//図形塗り/消し
 		case TOOL_FILL_POLYGON:
 		case TOOL_FILL_POLYGON_ERASE:
-			return _onPress_fillpoly(p, subno);
+			return _on_press_fillpoly(p, subno);
 
 		//塗りつぶし
 		case TOOL_FILL:
@@ -257,35 +248,39 @@ static mBool _onPress_tool(DrawData *p,int toolno,int subno)
 
 		//グラデーション
 		case TOOL_GRADATION:
-			if(drawOpSub_canDrawLayer_mes(p))
+			if(drawOpSub_canDrawLayer_mes(p, 0))
 				return FALSE;
 			else
 				return drawOpXor_line_press(p, DRAW_OPSUB_DRAW_GRADATION);
 
 		//移動
 		case TOOL_MOVE:
-			return drawOp_movetool_press(p);
+			return drawOp_movetool_press(p, subno);
 
 		//テキスト
 		case TOOL_TEXT:
 			return drawOp_drawtext_press(p);
 
 		//自動選択
-		case TOOL_MAGICWAND:
-			return drawOp_magicwand_press(p);
+		case TOOL_SELECT_FILL:
+			return drawOp_selectFill_press(p);
 
 		//選択範囲
 		case TOOL_SELECT:
-			return _onPress_select(p, subno);
+			return _on_press_select(p, subno);
+
+		//切り貼り
+		case TOOL_CUTPASTE:
+			return drawOp_cutpaste_press(p);
 
 		//矩形編集
 		case TOOL_BOXEDIT:
-			return drawOp_boxedit_press(p);
-
+			return drawOp_boxsel_press(p);
+	
 		//スタンプ
 		case TOOL_STAMP:
 			return drawOp_stamp_press(p, subno);
-
+	
 		//キャンバス回転
 		case TOOL_CANVAS_ROTATE:
 			return drawOp_canvasRotate_press(p);
@@ -294,90 +289,188 @@ static mBool _onPress_tool(DrawData *p,int toolno,int subno)
 			return drawOp_canvasMove_press(p);
 		//スポイト
 		case TOOL_SPOIT:
-			return drawOp_spoit_press(p, TRUE);
+			return drawOp_spoit_press(p, subno, TRUE);
 	}
 
 	return FALSE;
 }
 
-/** キャンバスキーのキー＋操作のコマンド取得
+/* (押し時) ツールリスト/登録アイテムの処理
  *
- * @return -1 でなし */
+ * regno: 登録アイテム番号 (-1 で選択アイテム)
+ * subno: -1 でツールリストのサブタイプ */
 
-static int _get_canvaskey_cmd()
+static mlkbool _on_press_toollist(AppDraw *p,int regno,int subno)
+{
+	ToolListItem *item;
+	ToolListItem_tool *pitool;
+
+	//アイテム
+
+	if(regno < 0)
+		item = p->tlist->selitem;
+	else
+		item = p->tlist->regitem[regno];
+
+	if(!item) return FALSE;
+
+	//
+
+	if(subno < 0)
+		subno = p->tool.subno[TOOL_TOOLLIST];
+
+	//
+
+	if(item->type == TOOLLIST_ITEMTYPE_TOOL)
+	{
+		//--- ツール
+
+		pitool = (ToolListItem_tool *)item;
+
+		//サブタイプ
+
+		if(pitool->subno != 255)
+			subno = pitool->subno;
+
+		//
+
+		p->w.toollist_toolopt = pitool->toolopt;
+
+		p->w.drag_cursor_type = drawCursor_getToolCursor(pitool->toolno);
+
+		return _on_press_tool_main(p, pitool->toolno, subno, TRUE);
+	}
+	else
+	{
+		//--- ブラシ
+		
+		//レイヤ名表示
+
+		if(APPCONF->fview & CONFIG_VIEW_F_CANV_LAYER_NAME)
+			MainCanvasPage_showLayerName();
+
+		//
+
+		p->w.optoolno = TOOL_TOOLLIST;
+		p->w.brush_regno = regno;
+
+		if(regno >= 0)
+			p->w.drag_cursor_type = APPCURSOR_DRAW;
+
+		return _on_press_brush_dot(p, TOOL_TOOLLIST, subno);
+	}
+}
+
+/* (押し時) ツールから判定
+ *
+ * subno: 負の値で、現在のサブタイプ
+ * return: グラブするか */
+
+static mlkbool _on_press_tool(AppDraw *p,int toolno,int subno)
+{
+	if(subno < 0)
+		subno = p->tool.subno[toolno];
+
+	//
+
+	if(toolno != TOOL_TOOLLIST)
+		return _on_press_tool_main(p, toolno, subno, FALSE);
+	else
+	{
+		//ツールリスト
+		// :テキストレイヤの場合は、テキストツールとして扱う
+
+		if(drawOpSub_isCurLayer_text())
+			return _on_press_tool_main(p, TOOL_TEXT, 0, FALSE);
+	
+		return _on_press_toollist(p, -1, subno);
+	}
+}
+
+
+//==============================
+// キー/ボタン設定など
+//==============================
+
+
+/* キャンバスキーのキーを押しながら操作時のコマンド取得
+ *
+ * return: -1 でなし */
+
+static int _get_canvaskey_cmd(void)
 {
 	int key,cmd;
 
 	//キャンバス上で現在押されているキー
 
-	key = MainWinCanvasArea_getPressRawKey();
+	key = MainCanvasPage_getPressedRawKey();
 	if(key == -1) return -1;
 
 	//現在のキーにコマンドが設定されているか
 
-	cmd = APP_CONF->canvaskey[key];
+	cmd = APPCONF->canvaskey[key];
 	if(cmd == 0) return -1;
 
-	//<キー＋操作> のコマンドかどうか
-	/* ここで弾いておかないと、キー押し時に実行されるタイプのコマンドのキーが
-	 * 押されている間に左ボタンを押すと、キー押し時とボタン押し時に
-	 * ２回コマンドが実行されてしまう。 */
+	//<キー+操作> のコマンドかどうか
+	// :key に、キー押し時に実行されるタイプのコマンドが設定されている場合、
+	// :キー押し時に処理をした後、キーが押されている間に左ボタンが押されると、
+	// :2回コマンドが実行されてしまうので、+キーのコマンドでなければ弾く。
 
-	if(CANVASKEY_IS_PLUS_MOTION(cmd))
+	if(CANVASKEY_IS_OPERATE(cmd))
 		return cmd;
 	else
 		return -1;
 }
 
-/** 左ボタン以外、またはキャンバスキーの動作を判定 & 実行
+/* (押し時) 各ボタンに設定されたコマンドを処理
  *
- * @return グラブするか。-1 で左ボタン動作 */
+ * is_pentab: 筆圧情報があるデバイスか
+ * return: [0] 何もしない [1] グラブする [-1] 通常動作を行う。 */
 
-static int _onPress_command(DrawData *p,int btt,int pentab_eraser,mBool type_pentab)
+static int _on_press_command(AppDraw *p,int btt,int is_pentab_eraser,int is_pentab)
 {
-	int cmd,ret,cursor = -1;
-	mBool can_draw;
+	int cmd,ret,can_draw;
 
-	//====== コマンドID 取得 (CANVASKEYID_*)
+	//====== コマンドID 取得 (CANVASKEY_*)
 
-	if(btt >= 2)
+	if(btt > MLK_BTT_LEFT)
 	{
-		//[左ボタン以外のボタン]
-		/* 指定なしなら、何もしない。 */
+		//[左ボタン以外]
+		// :設定されたコマンド。指定なしなら、何もしない。
 		
 		if(btt > CONFIG_POINTERBTT_MAXNO) return 0;
 
-		if(type_pentab)
-			cmd = APP_CONF->pentab_btt_cmd[btt];
+		if(is_pentab)
+			cmd = APPCONF->pointer_btt_pentab[btt];
 		else
-			cmd = APP_CONF->default_btt_cmd[btt];
+			cmd = APPCONF->pointer_btt_default[btt];
 
 		if(!cmd) return 0;
 	}
-	else if(pentab_eraser && APP_CONF->pentab_btt_cmd[0])
+	else if(is_pentab_eraser && APPCONF->pointer_btt_pentab[0])
 	{
-		//[左ボタン:ペンタブの消しゴム側]
-		/* 指定がなければ普通の左ボタンとして扱う */
+		//[左ボタン & ペンタブの消しゴム側]
+		// :コマンドの指定がなければ、普通の左ボタンとして扱う。
 	
-		cmd = APP_CONF->pentab_btt_cmd[0];
+		cmd = APPCONF->pointer_btt_pentab[0];
 	}
 	else
 	{
 		//[左ボタン]
 
-		//キャンバスキーのキー＋操作コマンドを優先
+		//キャンバスキーのキー＋操作のコマンドがある場合、優先
 
 		cmd = _get_canvaskey_cmd();
 		
 		if(cmd == -1)
 		{
-			//キャンバスキー操作がなかった場合、左ボタンに動作指定があるか
-			/* 指定がなければ通常左ボタン動作へ */
+			//キャンバスキー操作がなかった場合、左ボタンに設定されている動作。
+			//設定がなければ、通常の左ボタン動作へ。
 
-			if(type_pentab)
-				cmd = APP_CONF->pentab_btt_cmd[1];
+			if(is_pentab)
+				cmd = APPCONF->pointer_btt_pentab[1];
 			else
-				cmd = APP_CONF->default_btt_cmd[1];
+				cmd = APPCONF->pointer_btt_default[1];
 
 			if(!cmd) return -1;
 		}
@@ -385,111 +478,86 @@ static int _onPress_command(DrawData *p,int btt,int pentab_eraser,mBool type_pen
 
 	//======= 各コマンド処理
 
-	//戻り値はデフォルトで何もしない
+	//グラブ中のカーソルは、操作処理を行う前に、デフォルト扱いとしてセットする。
+	//各操作処理でカーソルが変更される場合は、値が上書きされる。
+
+	//ret : 戻り値はデフォルトで何もしない。
 
 	ret = 0;
 
-	//描画が可能な状態か (矩形編集ツール中は描画不可とする)
+	//描画が可能な状態か
+	// :切り貼り/矩形編集ツール時は描画不可とする。
 
-	can_draw = (p->tool.no != TOOL_BOXEDIT);
+	can_draw = (p->tool.no != TOOL_CUTPASTE && p->tool.no != TOOL_BOXEDIT);
 
 	//
 
-	if(cmd >= CANVASKEYID_OP_TOOL && cmd < CANVASKEYID_OP_TOOL + TOOL_NUM)
+	if(cmd >= CANVASKEY_OP_TOOL && cmd < CANVASKEY_OP_TOOL + TOOL_NUM)
 	{
-		//ツール動作 (矩形編集ツール中は、キャンバス操作のみ使用可)
+		//ツール動作
+		// :描画不可時は、キャンバス操作のみ使用可。
 
-		cmd -= CANVASKEYID_OP_TOOL;
+		cmd -= CANVASKEY_OP_TOOL;
 
-		if(!(p->tool.no == TOOL_BOXEDIT && cmd != TOOL_CANVAS_MOVE && cmd != TOOL_CANVAS_ROTATE))
+		if(can_draw || drawTool_isType_notDraw(cmd))
 		{
-			ret = _onPress_tool(p, cmd, -1);
+			p->w.drag_cursor_type = drawCursor_getToolCursor(cmd);
 
-			cursor = drawCursor_getToolCursor(cmd);
+			ret = _on_press_tool(p, cmd, -1);
 		}
 	}
-	else if(cmd >= CANVASKEYID_OP_BRUSHDRAW && cmd < CANVASKEYID_OP_BRUSHDRAW + TOOLSUB_DRAW_NUM)
+	else if(cmd >= CANVASKEY_OP_DRAWTYPE && cmd < CANVASKEY_OP_DRAWTYPE + TOOLSUB_DRAW_NUM)
 	{
-		//ブラシ描画 (描画タイプ指定)
+		//描画タイプ動作
 
-		if(can_draw)
+		if(drawTool_isType_haveDrawType(p->tool.no))
 		{
-			ret = _onPress_tool(p, TOOL_BRUSH, cmd - CANVASKEYID_OP_BRUSHDRAW);
-
-			cursor = APP_CURSOR_DRAW;
+			ret = _on_press_tool(p, p->tool.no, cmd - CANVASKEY_OP_DRAWTYPE);
 		}
 	}
-	else if(cmd >= CANVASKEYID_OP_SELECT && cmd < CANVASKEYID_OP_SELECT + TOOLSUB_SEL_NUM)
+	else if(cmd >= CANVASKEY_OP_SELECT && cmd < CANVASKEY_OP_SELECT + TOOLSUB_SEL_NUM)
 	{
 		//選択範囲ツール動作
 
-		cmd -= CANVASKEYID_OP_SELECT;
+		p->w.drag_cursor_type = APPCURSOR_SELECT;
 
-		ret = _onPress_select(p, cmd);
-
-		if(cmd == TOOLSUB_SEL_IMGMOVE || cmd == TOOLSUB_SEL_IMGCOPY || cmd == TOOLSUB_SEL_POSMOVE)
-			cursor = APP_CURSOR_SEL_MOVE;
-		else
-			cursor = APP_CURSOR_SELECT;
+		ret = _on_press_select(p, cmd - CANVASKEY_OP_SELECT);
 	}
-	else if(cmd >= CANVASKEYID_OP_OTHER && cmd < CANVASKEYID_OP_OTHER + CANVASKEY_OP_OTHER_NUM)
+	else if(cmd >= CANVASKEY_OP_REGIST && cmd < CANVASKEY_OP_REGIST + DRAW_TOOLLIST_REG_NUM)
+	{
+		//登録ツール動作
+
+		ret = _on_press_toollist(p, cmd - CANVASKEY_OP_REGIST, -1);
+	}
+	else if(cmd >= CANVASKEY_OP_OTHER && cmd < CANVASKEY_OP_OTHER + CANVASKEY_OP_OTHER_NUM)
 	{
 		//他動作
 
-		cmd -= CANVASKEYID_OP_OTHER;
-
-		cursor = APP_CURSOR_DRAW;
+		cmd -= CANVASKEY_OP_OTHER;
 
 		switch(cmd)
 		{
-			//登録ブラシで自由線描画
-			case 0:
-				if(can_draw)
-					ret = _onPress_brush_free(p, _ONPRESS_BRUSH_F_REGISTERED);
-				break;
-			//登録ブラシで自由線描画 (筆圧最大)
-			case 1:
-				if(can_draw)
-					ret = _onPress_brush_free(p, _ONPRESS_BRUSH_F_REGISTERED | _ONPRESS_BRUSH_F_PRESSURE_MAX);
-				break;
 			//表示倍率変更 (上下ドラッグ)
-			case 2:
+			case CANVASKEY_OP_OTHER_CANVAS_ZOOM:
 				ret = drawOp_canvasZoom_press(p);
 				break;
 			//ブラシサイズ変更
-			case 3:
-				ret = drawOp_dragBrushSize_press(p, FALSE);
-				break;
-			//登録ブラシのブラシサイズ変更
-			case 4:
-				ret = drawOp_dragBrushSize_press(p, TRUE);
-				break;
-			//中間色作成
-			case 5:
-				ret = drawOp_intermediateColor_press(p);
-				break;
-			//色置き換え
-			case 6:
-			case 7:
-				ret = drawOp_replaceColor_press(p, (cmd == 7));
+			case CANVASKEY_OP_OTHER_BRUSHSIZE:
+				ret = drawOp_dragBrushSize_press(p);
 				break;
 			//掴んだレイヤを選択
-			case 8:
-				drawLayer_selectPixelTopLayer(p);
+			case CANVASKEY_OP_OTHER_GET_LAYER:
+				drawOpSub_getImagePoint_int(p, p->w.pttmp);
+				drawLayer_selectGrabLayer(p, p->w.pttmp[0].x, p->w.pttmp[0].y);
 				break;
 		}
 	}
-	else if(cmd >= CANVASKEYID_CMD_OTHER && cmd < CANVASKEYID_CMD_OTHER + CANVASKEY_CMD_OTHER_NUM)
+	else if(cmd >= CANVASKEY_CMD_OTHER && cmd < CANVASKEY_CMD_OTHER + CANVASKEY_CMD_OTHER_NUM)
 	{
 		//他コマンド (左ボタン以外のボタン操作時)
 
-		MainWindow_onCanvasKeyCommand(cmd);
+		MainWindow_runCanvasKeyCmd(cmd);
 	}
-
-	//グラブする場合、カーソル指定がある時はセット
-
-	if(ret > 0 && cursor != -1)
-		p->w.drag_cursor_type = cursor;
 
 	return ret;
 }
@@ -502,9 +570,9 @@ static int _onPress_command(DrawData *p,int btt,int pentab_eraser,mBool type_pen
 
 /** ボタン押し時
  *
- * @return グラブするか */
+ * return: グラブするか */
 
-mBool drawOp_onPress(DrawData *p,mEvent *ev)
+mlkbool drawOp_onPress(AppDraw *p,mEvent *ev)
 {
 	int ret;
 
@@ -512,14 +580,14 @@ mBool drawOp_onPress(DrawData *p,mEvent *ev)
 	{
 		//======= 操作中
 
-		if(ev->pen.btt == M_BTT_LEFT && p->w.funcPressInGrab)
+		if(ev->pentab.btt == MLK_BTT_LEFT && p->w.func_press_in_grab)
 		{
 			//左ボタン押し
 			
-			p->w.dptAreaCur.x = ev->pen.x;
-			p->w.dptAreaCur.y = ev->pen.y;
+			p->w.dpt_canv_cur.x = ev->pentab.x;
+			p->w.dpt_canv_cur.y = ev->pentab.y;
 
-			(p->w.funcPressInGrab)(p, ev->pen.state);
+			(p->w.func_press_in_grab)(p, ev->pentab.state);
 		}
 
 		return FALSE;
@@ -528,52 +596,70 @@ mBool drawOp_onPress(DrawData *p,mEvent *ev)
 	{
 		//======= 操作開始
 
-		p->w.dptAreaPress.x = ev->pen.x;
-		p->w.dptAreaPress.y = ev->pen.y;
-		p->w.dptAreaPress.pressure = ev->pen.pressure;
+		//押し時の位置
+		p->w.dpt_canv_press.x = ev->pentab.x;
+		p->w.dpt_canv_press.y = ev->pentab.y;
+		p->w.dpt_canv_press.pressure = ev->pentab.pressure;
 
-		p->w.dptAreaCur = p->w.dptAreaLast = p->w.dptAreaPress;
+		p->w.dpt_canv_cur = p->w.dpt_canv_last = p->w.dpt_canv_press;
 
-		p->w.ptLastArea.x = ev->pen.x;
-		p->w.ptLastArea.y = ev->pen.y;
+		//押し時の位置 (int)
+		p->w.pt_canv_last.x = (int)ev->pentab.x;
+		p->w.pt_canv_last.y = (int)ev->pentab.y;
 
-		p->w.press_btt = ev->pen.btt;
-		p->w.press_state = ev->pen.state & M_MODS_MASK_KEY;
+		//押し時のボタンと状態
+		p->w.press_btt = ev->pentab.btt;
+		p->w.press_state = ev->pentab.state & MLK_STATE_MASK_MODS;
 
+		//ほか
 		p->w.opflags = 0;
-		p->w.release_only_btt = ev->pen.btt;
+		p->w.release_btt = ev->pentab.btt;
 		p->w.drag_cursor_type = -1;
 
 		//---- 左ボタン+SPACE 操作
 
-		if(ev->pen.btt == M_BTT_LEFT
-			&& MainWinCanvasArea_isPressKey_space())
+		if(ev->pentab.btt == MLK_BTT_LEFT
+			&& MainCanvasPage_isPressed_space())
 		{
-			if(p->w.press_state == M_MODS_CTRL)
+			if(p->w.press_state == MLK_STATE_CTRL)
 			{
-				//+Ctrl : キャンバス回転
+				//+Ctrl: キャンバス回転
 
 				p->w.opflags |= DRAW_OPFLAGS_MOTION_DISABLE_STATE;
+				
 				return drawOp_canvasRotate_press(p);
 			}
-			else if(p->w.press_state == M_MODS_SHIFT)
-				//+Shift : キャンバス表示倍率
+			else if(p->w.press_state == MLK_STATE_SHIFT)
+				//+Shift: キャンバス表示倍率
 				return drawOp_canvasZoom_press(p);
 			else
+				//キャンバス移動
 				return drawOp_canvasMove_press(p);
 		}
 
-		//
+		//---- テキストツール:右ボタン
 
-		ret = _onPress_command(p, ev->pen.btt,
-			(ev->pen.flags & MEVENT_PENTAB_FLAGS_ERASER),
-			ev->pen.bPenTablet);
+		if(ev->pentab.btt == MLK_BTT_RIGHT
+			&& drawOpSub_isRunTextTool())
+		{
+			drawOp_drawtext_press_rbtt(p);
+			return FALSE;
+		}
 
-		if(ret == -1)
-			//左ボタンの通常動作
-			return _onPress_tool(p, p->tool.no, -1);
-		else
+		//----
+
+		ret = _on_press_command(p, ev->pentab.btt,
+			ev->pentab.flags & MEVENT_PENTABLET_F_ERASER,
+			ev->pentab.flags & MEVENT_PENTABLET_F_HAVE_PRESSURE);
+
+		if(ret != -1)
 			return ret;
+		else
+		{
+			//ツールの左ボタンの通常動作
+
+			return _on_press_tool(p, p->tool.no, -1);
+		}
 	}
 
 	return FALSE;
@@ -581,35 +667,36 @@ mBool drawOp_onPress(DrawData *p,mEvent *ev)
 
 /** ボタン離し時
  *
- * @return グラブ解除するか */
+ * return: グラブ解除するか */
 
-mBool drawOp_onRelease(DrawData *p,mEvent *ev)
+mlkbool drawOp_onRelease(AppDraw *p,mEvent *ev)
 {
-	mBool ungrab = TRUE;
+	mlkbool ungrab = TRUE;
 
 	if(p->w.optype == DRAW_OPTYPE_NONE) return FALSE;
 
-	//位置
+	//現在の位置
 
-	p->w.dptAreaCur.x = ev->pen.x;
-	p->w.dptAreaCur.y = ev->pen.y;
-	p->w.dptAreaCur.pressure = ev->pen.pressure;
+	p->w.dpt_canv_cur.x = ev->pentab.x;
+	p->w.dpt_canv_cur.y = ev->pentab.y;
+	p->w.dpt_canv_cur.pressure = ev->pentab.pressure;
 
 	//右ボタン押し時の処理
 
-	if(ev->pen.btt == M_BTT_RIGHT
-		&& p->w.funcAction && (p->w.funcAction)(p, DRAW_FUNCACTION_RBTT_UP))
+	if(ev->pentab.btt == MLK_BTT_RIGHT
+		&& p->w.func_action
+		&& (p->w.func_action)(p, DRAW_FUNC_ACTION_RBTT_UP))
 		goto END;
 
-	//指定ボタンのみ処理する
+	//指定ボタン以外なら処理しない
 
-	if(ev->pen.btt != p->w.release_only_btt)
+	if(ev->pentab.btt != p->w.release_btt)
 		return FALSE;
 
 	//処理
 
-	if(p->w.funcRelease)
-		ungrab = (p->w.funcRelease)(p);
+	if(p->w.func_release)
+		ungrab = (p->w.func_release)(p);
 
 	//操作終了
 
@@ -622,18 +709,18 @@ END:
 
 /** カーソル移動時 */
 
-void drawOp_onMotion(DrawData *p,mEvent *ev)
+void drawOp_onMotion(AppDraw *p,mEvent *ev)
 {
 	mPoint pt;
-	mBool flag;
+	mlkbool flag;
 
-	//イメージ位置 (int)
+	//pt = イメージ位置 (int)
 
-	drawCalc_areaToimage_pt(p, &pt, ev->pen.x, ev->pen.y);
+	drawCalc_canvas_to_image_pt(p, &pt, ev->pentab.x, ev->pentab.y);
 
-	//キャンバスビューパレット、ルーペモード時
+	//カーソル位置
 
-	DockCanvasView_changeLoupePos(&pt);
+	StatusBar_setCursorPos(pt.x, pt.y);
 
 	//
 
@@ -641,58 +728,77 @@ void drawOp_onMotion(DrawData *p,mEvent *ev)
 	{
 		//------- 非操作中の処理
 
-		if(p->tool.no == TOOL_BOXEDIT && p->boxedit.box.w)
+		if(p->boxsel.box.w && !p->boxsel.is_paste_mode)
 		{
-			//矩形編集ツールで、範囲がある時
+			//矩形範囲がある時
 
-			p->w.dptAreaCur.x = ev->pen.x;
-			p->w.dptAreaCur.y = ev->pen.y;
+			p->w.dpt_canv_cur.x = ev->pentab.x;
+			p->w.dpt_canv_cur.y = ev->pentab.y;
 
-			drawOp_boxedit_nograb_motion(p);
+			drawOp_boxsel_nograb_motion(p);
 		}
 	}
 	else
 	{
 		//-------- 操作中の処理
-	
-		p->w.dptAreaCur.x = ev->pen.x;
-		p->w.dptAreaCur.y = ev->pen.y;
-		p->w.dptAreaCur.pressure = ev->pen.pressure;
 
-		pt.x = ev->pen.x;
-		pt.y = ev->pen.y;
+		//現在位置
+	
+		p->w.dpt_canv_cur.x = ev->pentab.x;
+		p->w.dpt_canv_cur.y = ev->pentab.y;
+		p->w.dpt_canv_cur.pressure = ev->pentab.pressure;
+
+		//
+
+		pt.x = (int)ev->pentab.x;
+		pt.y = (int)ev->pentab.y;
 
 		//位置を int で扱う場合、前回と同じ位置なら処理しない
 
 		flag = ((p->w.opflags & DRAW_OPFLAGS_MOTION_POS_INT)
-			&& pt.x == p->w.ptLastArea.x && pt.y == p->w.ptLastArea.y);
+			&& pt.x == p->w.pt_canv_last.x && pt.y == p->w.pt_canv_last.y);
 
 		//処理
 
-		if(p->w.funcMotion && !flag)
+		if(p->w.func_motion && !flag)
 		{
-			(p->w.funcMotion)(p,
-				(p->w.opflags & DRAW_OPFLAGS_MOTION_DISABLE_STATE)? 0: ev->pen.state);
+			(p->w.func_motion)(p,
+				(p->w.opflags & DRAW_OPFLAGS_MOTION_DISABLE_STATE)? 0: ev->pentab.state);
 		}
 
-		p->w.dptAreaLast = p->w.dptAreaCur;
-		p->w.ptLastArea = pt;
+		//位置保存
+
+		p->w.dpt_canv_last = p->w.dpt_canv_cur;
+		p->w.pt_canv_last = pt;
 	}
 }
 
-/** 左ボタン、ダブルクリック時
+/** 左ボタンのダブルクリック時
  *
- * @return TRUE でダブルクリックとして処理し、グラブ解除。
- *         FALSE で通常の押しとして処理する。*/
+ * return: TRUE でダブルクリックとして処理し、グラブ解除。
+ *         FALSE で通常の押しとして処理する (default)。*/
 
-mBool drawOp_onLBttDblClk(DrawData *p,mEvent *ev)
+mlkbool drawOp_onLBttDblClk(AppDraw *p,mEvent *ev)
 {
-	mBool release = FALSE;
+	mlkbool release = FALSE;
 
-	//現在の操作処理
+	if(p->w.optype)
+	{
+		//操作中
+		
+		if(p->w.func_action)
+			release = (p->w.func_action)(p, DRAW_FUNC_ACTION_LBTT_DBLCLK);
+	}
+	else
+	{
+		//非操作中: テキストツール時
 
-	if(p->w.optype && p->w.funcAction)
-		release = (p->w.funcAction)(p, DRAW_FUNCACTION_LBTT_DBLCLK);
+		if(drawOpSub_isRunTextTool())
+		{
+			drawOp_drawtext_dblclk(p);
+			release = TRUE;
+		}
+	}
 
 	//解除
 
@@ -704,27 +810,35 @@ mBool drawOp_onLBttDblClk(DrawData *p,mEvent *ev)
 
 /** 操作中のキー押し時
  *
- * @return TRUE でグラブ解除 */
+ * return: TRUE でグラブ解除 */
 
-mBool drawOp_onKeyDown(DrawData *p,uint32_t key)
+mlkbool drawOp_onKeyDown(AppDraw *p,uint32_t key)
 {
-	mBool release = FALSE;
+	mlkbool release = FALSE;
 	int action;
 
 	//現在の操作処理
 
-	if(p->w.funcAction)
+	if(p->w.func_action)
 	{
+		action = -1;
+	
 		switch(key)
 		{
-			case MKEY_ENTER: action = DRAW_FUNCACTION_KEY_ENTER; break;
-			case MKEY_ESCAPE: action = DRAW_FUNCACTION_KEY_ESC; break;
-			case MKEY_BACKSPACE: action = DRAW_FUNCACTION_KEY_BACKSPACE; break;
-			default: action = -1; break;
+			case MKEY_ENTER:
+			case MKEY_KP_ENTER:
+				action = DRAW_FUNC_ACTION_KEY_ENTER;
+				break;
+			case MKEY_ESCAPE:
+				action = DRAW_FUNC_ACTION_KEY_ESC;
+				break;
+			case MKEY_BACKSPACE:
+				action = DRAW_FUNC_ACTION_KEY_BACKSPACE;
+				break;
 		}
 
 		if(action != -1)
-			release = (p->w.funcAction)(p, action);
+			release = (p->w.func_action)(p, action);
 	}
 
 	//解除
@@ -737,15 +851,16 @@ mBool drawOp_onKeyDown(DrawData *p,uint32_t key)
 
 /** 想定外のグラブ解除時 */
 
-void drawOp_onUngrab(DrawData *p)
+void drawOp_onUngrab(AppDraw *p)
 {
 	if(p->w.optype)
 	{
-		if(p->w.funcAction)
-			(p->w.funcAction)(p, DRAW_FUNCACTION_UNGRAB);
-		else if(p->w.funcRelease)
-			(p->w.funcRelease)(p);
+		if(p->w.func_action)
+			(p->w.func_action)(p, DRAW_FUNC_ACTION_UNGRAB);
+		else if(p->w.func_release)
+			(p->w.func_release)(p);
 
 		p->w.optype = DRAW_OPTYPE_NONE;
 	}
 }
+

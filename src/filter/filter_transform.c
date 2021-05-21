@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2020 Azel.
+ Copyright (C) 2013-2021 Azel.
 
  This file is part of AzPainter.
 
@@ -18,41 +18,41 @@
 $*/
 
 /**************************************
- * フィルタ処理
- *
- * 変形
+ * フィルタ処理: 変形
  **************************************/
 
 #include <math.h>
 
-#include "mDef.h"
-#include "mPopupProgress.h"
-#include "mRandXorShift.h"
+#include "mlk.h"
+#include "mlk_rand.h"
 
-#include "TileImage.h"
+#include "def_filterdraw.h"
 
-#include "FilterDrawInfo.h"
-#include "filter_sub.h"
+#include "tileimage.h"
+
+#include "pv_filter_sub.h"
 
 
 /** 波形 */
 
-mBool FilterDraw_trans_wave(FilterDrawInfo *info)
+mlkbool FilterDraw_trans_wave(FilterDrawInfo *info)
 {
-	int ix,iy,type,flags;
+	int ix,iy,type,flags,bits;
 	double factor,freq,dx,dy;
-	RGBAFix15 pix;
+	uint64_t col;
 	TileImageSetPixelFunc setpix;
 
 	FilterSub_getPixelFunc(&setpix);
 
+	bits = info->bits;
+
 	factor = info->val_bar[0];
-	freq = info->val_bar[1] * 0.1 * M_MATH_PI / 180;
+	freq = info->val_bar[1] * 0.1 * MLK_MATH_PI / 180;
 	type = info->val_combo[0] + 1;
 
 	flags = 0;
-	if(info->clipping) flags |= 1;
-	if(info->val_ckbtt[0]) flags |= 2;
+	if(info->clipping) flags |= LINERCOL_F_CLIPPING;
+	if(info->val_ckbtt[0]) flags |= LINERCOL_F_LOOP;
 
 	//
 
@@ -65,12 +65,12 @@ mBool FilterDraw_trans_wave(FilterDrawInfo *info)
 			if(type & 1) dx += factor * sin(freq * iy);
 			if(type & 2) dy += factor * sin(freq * ix);
 
-			FilterSub_getLinerColor(info->imgsrc, dx, dy, &pix, flags);
+			FilterSub_getLinerColor(info->imgsrc, dx, dy, &col, bits, flags);
 
-			(setpix)(info->imgdst, ix, iy, &pix);
+			(setpix)(info->imgdst, ix, iy, &col);
 		}
 
-		FilterSub_progIncSubStep(info);
+		FilterSub_prog_substep_inc(info);
 	}
 
 	return TRUE;
@@ -78,14 +78,18 @@ mBool FilterDraw_trans_wave(FilterDrawInfo *info)
 
 /** 波紋 */
 
-mBool FilterDraw_trans_ripple(FilterDrawInfo *info)
+mlkbool FilterDraw_trans_ripple(FilterDrawInfo *info)
 {
-	int ix,iy;
+	int ix,iy,bits,xpos,ypos;
 	double factor,freq,dx,dy,r,rg;
-	RGBAFix15 pix;
+	uint64_t col;
 	TileImageSetPixelFunc setpix;
 
 	FilterSub_getPixelFunc(&setpix);
+
+	bits = info->bits;
+	xpos = info->imgx;
+	ypos = info->imgy;
 
 	freq = info->val_bar[0] * 0.01;
 	factor = info->val_bar[1] * 0.1;
@@ -96,23 +100,23 @@ mBool FilterDraw_trans_ripple(FilterDrawInfo *info)
 	{
 		for(ix = info->rc.x1; ix <= info->rc.x2; ix++)
 		{
-			dx = ix - info->imgx;
-			dy = iy - info->imgy;
+			dx = ix - xpos;
+			dy = iy - ypos;
 
 			r = sqrt(dx * dx + dy * dy);
 			rg = atan2(dy, dx);
 
 			r += sin(r * freq) * factor;
 
-			dx = r * cos(rg) + info->imgx;
-			dy = r * sin(rg) + info->imgy;
+			dx = r * cos(rg) + xpos;
+			dy = r * sin(rg) + ypos;
 		
-			FilterSub_getLinerColor(info->imgsrc, dx, dy, &pix, info->clipping);
+			FilterSub_getLinerColor(info->imgsrc, dx, dy, &col, bits, info->clipping);
 
-			(setpix)(info->imgdst, ix, iy, &pix);
+			(setpix)(info->imgdst, ix, iy, &col);
 		}
 
-		FilterSub_progIncSubStep(info);
+		FilterSub_prog_substep_inc(info);
 	}
 
 	return TRUE;
@@ -120,20 +124,23 @@ mBool FilterDraw_trans_ripple(FilterDrawInfo *info)
 
 /** 極座標 */
 
-mBool FilterDraw_trans_polar(FilterDrawInfo *info)
+mlkbool FilterDraw_trans_polar(FilterDrawInfo *info)
 {
-	int ix,iy,type,imgw,imgh,right,bottom,bkgnd;
+	int ix,iy,type,imgw,imgh,right,bottom,bkgnd,bits;
 	double dx,dy,xx,yy,cx,cy;
-	RGBAFix15 pix;
+	uint64_t col;
 	TileImageSetPixelFunc setpix;
 
 	FilterSub_getImageSize(&imgw, &imgh);
 	FilterSub_getPixelFunc(&setpix);
 
+	bits = info->bits;
 	type = info->val_combo[0];
 	bkgnd = info->val_combo[1];
 
-	right = imgw - 1; if(right == 0) right = 1;
+	right = imgw - 1;
+	if(right == 0) right = 1; //ゼロ除算回避
+
 	bottom = imgh - 1;
 
 	cx = imgw * 0.5;
@@ -149,7 +156,7 @@ mBool FilterDraw_trans_polar(FilterDrawInfo *info)
 			{
 				//極座標 -> 直交座標
 
-				xx = (double)(right - ix) / right * M_MATH_PI * 2 - M_MATH_PI / 2;
+				xx = (double)(right - ix) / right * (MLK_MATH_PI * 2) - (MLK_MATH_PI / 2);
 				yy = iy * 0.5;
 
 				dx = yy * cos(xx) + cx;
@@ -162,16 +169,16 @@ mBool FilterDraw_trans_polar(FilterDrawInfo *info)
 				xx = ix - cx;
 				yy = cy - (bottom - iy);
 
-				dx = (atan2(xx, yy) + M_MATH_PI) / (M_MATH_PI * 2) * right;
+				dx = (atan2(xx, yy) + MLK_MATH_PI) / (MLK_MATH_PI * 2) * right;
 				dy = sqrt(xx * xx + yy * yy) * 2;
 			}
 		
-			FilterSub_getLinerColor_bkgnd(info->imgsrc, dx, dy, ix, iy, &pix, bkgnd);
+			FilterSub_getLinerColor_bkgnd(info->imgsrc, dx, dy, ix, iy, &col, bits, bkgnd);
 
-			(setpix)(info->imgdst, ix, iy, &pix);
+			(setpix)(info->imgdst, ix, iy, &col);
 		}
 
-		FilterSub_progIncSubStep(info);
+		FilterSub_prog_substep_inc(info);
 	}
 
 	return TRUE;
@@ -179,25 +186,33 @@ mBool FilterDraw_trans_polar(FilterDrawInfo *info)
 
 /** 放射状ずらし */
 
-mBool FilterDraw_trans_radial_shift(FilterDrawInfo *info)
+mlkbool FilterDraw_trans_radial_shift(FilterDrawInfo *info)
 {
-	int ix,iy,n;
-	int16_t *buf;
+	int ix,iy,n,xpos,ypos,bits;
 	double dx,dy,r,rg;
-	RGBAFix15 pix;
+	uint64_t col;
+	int16_t *buf;
+	mRandSFMT *rand;
 	TileImageSetPixelFunc setpix;
-
-	FilterSub_getPixelFunc(&setpix);
 
 	//角度ごとのずらす量
 
-	buf = (int16_t *)mMalloc(2 * 1024, FALSE);
+	buf = (int16_t *)mMalloc(2 * 1024);
 	if(!buf) return FALSE;
 
+	rand = info->rand;
 	iy = info->val_bar[0];
 
 	for(ix = 0; ix < 1024; ix++)
-		buf[ix] = mRandXorShift_getIntRange(0, iy);
+		buf[ix] = mRandSFMT_getIntRange(rand, 0, iy);
+
+	//
+
+	FilterSub_getPixelFunc(&setpix);
+
+	bits = info->bits;
+	xpos = info->imgx;
+	ypos = info->imgy;
 
 	//
 
@@ -205,30 +220,30 @@ mBool FilterDraw_trans_radial_shift(FilterDrawInfo *info)
 	{
 		for(ix = info->rc.x1; ix <= info->rc.x2; ix++)
 		{
-			dx = ix - info->imgx;
-			dy = iy - info->imgy;
+			dx = ix - xpos;
+			dy = iy - ypos;
 
 			r = sqrt(dx * dx + dy * dy);
 			rg = atan2(dy, dx);
 
-			n = (int)(rg * 512 / M_MATH_PI) & 1023;
+			n = (int)(rg * 512 / MLK_MATH_PI) & 1023;
 
 			r -= buf[n];
 
 			if(r <= 0)
-				TileImage_getPixel(info->imgsrc, info->imgx, info->imgy, &pix);
+				TileImage_getPixel(info->imgsrc, xpos, ypos, &col);
 			else
 			{
-				dx = r * cos(rg) + info->imgx;
-				dy = r * sin(rg) + info->imgy;
+				dx = r * cos(rg) + xpos;
+				dy = r * sin(rg) + ypos;
 
-				FilterSub_getLinerColor(info->imgsrc, dx, dy, &pix, 0);
+				FilterSub_getLinerColor(info->imgsrc, dx, dy, &col, bits, 0);
 			}
 
-			(setpix)(info->imgdst, ix, iy, &pix);
+			(setpix)(info->imgdst, ix, iy, &col);
 		}
 
-		FilterSub_progIncSubStep(info);
+		FilterSub_prog_substep_inc(info);
 	}
 
 	mFree(buf);
@@ -238,11 +253,11 @@ mBool FilterDraw_trans_radial_shift(FilterDrawInfo *info)
 
 /** 渦巻き */
 
-mBool FilterDraw_trans_swirl(FilterDrawInfo *info)
+mlkbool FilterDraw_trans_swirl(FilterDrawInfo *info)
 {
-	int ix,iy,bkgnd;
+	int ix,iy,bkgnd,xpos,ypos,bits;
 	double dx,dy,zoom,factor,r,rg;
-	RGBAFix15 pix;
+	uint64_t col;
 	TileImageSetPixelFunc setpix;
 
 	FilterSub_getPixelFunc(&setpix);
@@ -251,27 +266,31 @@ mBool FilterDraw_trans_swirl(FilterDrawInfo *info)
 	zoom = 1.0 / (info->val_bar[1] * 0.01);
 	bkgnd = info->val_combo[0];
 
+	bits = info->bits;
+	xpos = info->imgx;
+	ypos = info->imgy;
+
 	//
 
 	for(iy = info->rc.y1; iy <= info->rc.y2; iy++)
 	{
 		for(ix = info->rc.x1; ix <= info->rc.x2; ix++)
 		{
-			dx = ix - info->imgx;
-			dy = iy - info->imgy;
+			dx = ix - xpos;
+			dy = iy - ypos;
 
 			r = sqrt(dx * dx + dy * dy) * zoom;
 			rg = atan2(dy, dx) + factor * r;
 
-			dx = r * cos(rg) + info->imgx;
-			dy = r * sin(rg) + info->imgy;
+			dx = r * cos(rg) + xpos;
+			dy = r * sin(rg) + ypos;
 			
-			FilterSub_getLinerColor_bkgnd(info->imgsrc, dx, dy, ix, iy, &pix, bkgnd);
+			FilterSub_getLinerColor_bkgnd(info->imgsrc, dx, dy, ix, iy, &col, bits, bkgnd);
 
-			(setpix)(info->imgdst, ix, iy, &pix);
+			(setpix)(info->imgdst, ix, iy, &col);
 		}
 
-		FilterSub_progIncSubStep(info);
+		FilterSub_prog_substep_inc(info);
 	}
 
 	return TRUE;
