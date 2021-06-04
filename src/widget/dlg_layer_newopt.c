@@ -266,14 +266,12 @@ static void _newopt_set_template(_dlg_newopt *p,ConfigLayerTemplItem *pl)
 {
 	int type;
 
-	//名前/タイプは、新規作成時のみ
+	mLineEditSetText(p->edit_name, pl->text);
+
+	//タイプは、新規作成時のみ
 
 	if(p->cb_type)
 	{
-		mLineEditSetText(p->edit_name, pl->text);
-
-		//
-		
 		type = (pl->type == 0xff)? -1: pl->type;
 
 		mComboBoxSetSelItem_fromParam(p->cb_type, type);

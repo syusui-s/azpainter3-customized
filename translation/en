@@ -587,6 +587,7 @@ with characters other than numbers and '.'.\
 +=Density when 0 pressure(%)
 +=Pressure curve editing
 +=Use a common pressure curve
++=Various
 
 # Water preset menu
 1000=Registered in %c
@@ -1264,6 +1265,7 @@ Do you want to convert the ver 2 configuration file?\
 +=Display layer name when operating canvas(&A)
 +=Canvas zoom rate(&C)
 +=Canvas rotate(&R)
++=Display coordinates of selected rectangle(&Z)
 
 3100=Set to all window mode(&M)
 +=All stored in panes(&S)

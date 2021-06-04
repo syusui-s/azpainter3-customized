@@ -41,6 +41,7 @@ $*/
 #include "draw_op_sub.h"
 #include "draw_rule.h"
 
+#include "statusbar.h"
 
 
 //=============================
@@ -306,6 +307,8 @@ static void _xorrect_image_motion(AppDraw *p,uint32_t state)
 		drawOpXor_drawRect_image(p);
 
 		p->w.pttmp[3] = pt;
+
+		StatusBar_setHelp_selbox(FALSE);
 	}
 }
 
@@ -321,6 +324,10 @@ static mlkbool _xorrect_image_release(AppDraw *p)
 
 	p->w.rctmp[0].x1 = p->w.pttmp[0].x, p->w.rctmp[0].y1 = p->w.pttmp[0].y;
 	p->w.rctmp[0].x2 = p->w.pttmp[1].x, p->w.rctmp[0].y2 = p->w.pttmp[1].y;
+
+	//statusbar 戻す
+
+	StatusBar_setHelp_selbox(TRUE);
 
 	//
 
@@ -353,6 +360,10 @@ mlkbool drawOpXor_rect_image_press(AppDraw *p,int sub)
 	drawOpSub_copyTmpPoint_0toN(p, 3);
 
 	drawOpXor_drawRect_image(p);
+
+	//座標情報
+
+	StatusBar_setHelp_selbox(FALSE);
 
 	return TRUE;
 }

@@ -128,9 +128,10 @@ typedef struct
 
 enum
 {
-	CONFIG_PANEL_BRUSHOPT_F_EXPAND_WATER = 1<<0,	//"水彩"の展開
-	CONFIG_PANEL_BRUSHOPT_F_EXPAND_SHAPE = 1<<1,	//ブラシ形状
-	CONFIG_PANEL_BRUSHOPT_F_EXPAND_PRESSURE = 1<<2	//筆圧
+	CONFIG_PANEL_BRUSHOPT_F_HIDE_WATER = 1<<0,	//水彩
+	CONFIG_PANEL_BRUSHOPT_F_HIDE_SHAPE = 1<<1,	//ブラシ形状
+	CONFIG_PANEL_BRUSHOPT_F_HIDE_PRESSURE = 1<<2,	//筆圧
+	CONFIG_PANEL_BRUSHOPT_F_HIDE_OTHRES = 1<<3	//色々
 };
 
 /** 変形ダイアログの設定 */
@@ -265,7 +266,8 @@ enum
 	CONFIG_VIEW_F_CURSOR_POS = 1<<7,	//ステータスバーにカーソル位置を表示
 	CONFIG_VIEW_F_CANV_LAYER_NAME = 1<<8,	//キャンバス操作時、レイヤ名表示
 	CONFIG_VIEW_F_FILEDLG_PREVIEW = 1<<9,	//ファイルダイアログ:プレビュー
-	CONFIG_VIEW_F_FILTERDLG_PREVIEW = 1<<10	//フィルタダイアログ:プレビュー
+	CONFIG_VIEW_F_FILTERDLG_PREVIEW = 1<<10,	//フィルタダイアログ:プレビュー
+	CONFIG_VIEW_F_BOXSEL_POS = 1<<11	//切り貼り・矩形編集の選択時、座標を表示
 };
 
 /* キャンバスビューとイメージビューアのボタン番号 */

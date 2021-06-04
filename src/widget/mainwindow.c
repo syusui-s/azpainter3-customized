@@ -67,7 +67,7 @@ $*/
 
 //---------------------
 
-#define _APP_VERSION_TEXT  "AzPainter ver 3.0.0\n\nCopyright (c) 2013-2021 Azel"
+#define _APP_VERSION_TEXT  "AzPainter ver 3.0.1\n\nCopyright (c) 2013-2021 Azel"
 
 #define _APP_LICENSE_TEXT \
 "AzPainter is free software: you can redistribute it and/or modify\n" \
@@ -855,6 +855,10 @@ static void _event_command(MainWindow *p,mEventCommand *ev)
 		case TRMENU_VIEW_LAYER_NAME:
 			APPCONF->fview ^= CONFIG_VIEW_F_CANV_LAYER_NAME;
 			APPDRAW->ttip_layer = NULL;
+			break;
+		//矩形選択時、座標を表示
+		case TRMENU_VIEW_BOXSEL_POS:
+			APPCONF->fview ^= CONFIG_VIEW_F_BOXSEL_POS;
 			break;
 
 		//表示倍率拡大

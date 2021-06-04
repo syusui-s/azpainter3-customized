@@ -28,4 +28,5 @@ mWidget *StatusBar_getProgressBarPos(mBox *box);
 
 void StatusBar_setImageInfo(void);
 void StatusBar_setCursorPos(int x,int y);
+void StatusBar_setHelp_selbox(mlkbool reset);
 void StatusBar_setHelp_tool(void);

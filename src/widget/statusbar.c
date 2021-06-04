@@ -53,6 +53,8 @@ struct _StatusBar
 	mLabel *label_info,
 		*label_help;
 	mWidget *wg_curpos;
+
+	mStr strtmp; //作業用
 };
 
 //----------------------
@@ -188,6 +190,13 @@ static mWidget *_create_curpos(mWidget *parent)
 //************************************
 
 
+/* 破棄ハンドラ */
+
+static void _destroy_handle(mWidget *wg)
+{
+	mStrFree(&((StatusBar *)wg)->strtmp);
+}
+
 /** ステータスバー作成 */
 
 void StatusBar_new(void)
@@ -202,6 +211,7 @@ void StatusBar_new(void)
 	//
 
 	p->wg.flayout = MLF_EXPAND_W;
+	p->wg.destroy = _destroy_handle;
 	p->wg.draw = mWidgetDrawHandle_bkgnd;
 	p->wg.draw_bkgnd = mWidgetDrawBkgndHandle_fillFace;
 
@@ -286,16 +296,13 @@ mWidget *StatusBar_getProgressBarPos(mBox *box)
 void StatusBar_setImageInfo(void)
 {
 	StatusBar *p = APPWIDGET->statusbar;
-	mStr str = MSTR_INIT;
 
 	if(p)
 	{
-		mStrSetFormat(&str, "%d x %d | %d dpi | %dbit",
+		mStrSetFormat(&p->strtmp, "%d x %d | %d dpi | %dbit",
 			APPDRAW->imgw, APPDRAW->imgh, APPDRAW->imgdpi, APPDRAW->imgbits);
 
-		mLabelSetText(p->label_info, str.buf);
-
-		mStrFree(&str);
+		mLabelSetText(p->label_info, p->strtmp.buf);
 
 		mWidgetReLayout(MLK_WIDGET(p));
 	}
@@ -315,6 +322,34 @@ void StatusBar_setCursorPos(int x,int y)
 
 		if(APPCONF->fview & CONFIG_VIEW_F_CURSOR_POS)
 			mWidgetRedraw(p->wg_curpos);
+	}
+}
+
+/** ヘルプ欄に矩形選択時の範囲をセット
+ *
+ * reset: TRUE で元に戻す */
+
+void StatusBar_setHelp_selbox(mlkbool reset)
+{
+	StatusBar *p = APPWIDGET->statusbar;
+	int x1,y1,x2,y2;
+
+	if(!p || !(APPCONF->fview & CONFIG_VIEW_F_BOXSEL_POS))
+		return;
+
+	if(reset)
+		StatusBar_setHelp_tool();
+	else
+	{
+		x1 = APPDRAW->w.pttmp[0].x;
+		y1 = APPDRAW->w.pttmp[0].y;
+		x2 = APPDRAW->w.pttmp[1].x;
+		y2 = APPDRAW->w.pttmp[1].y;
+
+		mStrSetFormat(&p->strtmp, "(%d, %d) - (%d, %d) [%d x %d]",
+			x1, y1, x2, y2, x2 - x1 + 1, y2 - y1 + 1);
+
+		mLabelSetText(p->label_help, p->strtmp.buf);
 	}
 }
 

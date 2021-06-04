@@ -945,6 +945,7 @@ void _draw_one(PanelLayerList *page,mPixbuf *pixbuf,
 {
 	int width,right,x,y,i,n,n2;
 	uint8_t m[16],*pm;
+	const char *pc;
 	mPixCol pix_bkgnd,coltmp[4],col[5];
 	mlkbool is_sel,is_folder;
 
@@ -1200,7 +1201,7 @@ void _draw_one(PanelLayerList *page,mPixbuf *pixbuf,
 			14 * _FLAGBOX_NO_ALPHAMASK, 0, 14, 14, _FLAGBOX_IMG_WIDTH, coltmp);
 	}
 
-	//トーン情報
+	//トーン情報・合成モード
 
 	if(!is_folder && LAYERITEM_IS_TONE(pi)
 		&& (pi->type == LAYERTYPE_GRAY || pi->type == LAYERTYPE_ALPHA1BIT))
@@ -1211,6 +1212,20 @@ void _draw_one(PanelLayerList *page,mPixbuf *pixbuf,
 			xtop + _TONEINFO_X, ytop + _EACH_H - 9 - 6,
 			AppResource_get1bitImg_number5x9(), APPRES_NUMBER_5x9_WIDTH, 9, 5,
 			m, 0);
+	}
+	else
+	{
+		pc = g_blend_name[pi->blendmode];
+		pm = m;
+
+		for(; *pc; pc++)
+			*(pm++) = *pc - 'A';
+
+		*pm = 255;
+
+		mPixbufDraw1bitPattern_list(pixbuf,
+			xtop + _TONEINFO_X + 2, ytop + _EACH_H - 7 - 6,
+			g_img_alphabet, 156, 7, 6, m, 0);
 	}
 	
 	//不透明度

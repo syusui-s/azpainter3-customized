@@ -110,19 +110,23 @@ enum
 	WID_CB_HOSEI_TYPE,
 	WID_BAR_HOSEI_VAL,
 
+	//色々
 	WID_BAR_INTERVAL,
+	WID_EXPAND_OTHRES,
 	WID_BAR_RAND_SIZE,
 	WID_BAR_RAND_POS,
 	WID_SEL_TEXTURE,
 	WID_CK_ANTIALIAS,
 	WID_CK_CURVE,
 
+	//水彩
 	WID_EXPAND_WATER,
 	WID_BAR_WATER1,
 	WID_BAR_WATER2,
 	WID_CK_WATER_TP_WHITE,
 	WID_BTT_WATER_PRESET_MENU,
 
+	//形状
 	WID_EXPAND_SHAPE,
 	WID_SEL_SHAPE,
 	WID_BAR_SHAPE_HARD,
@@ -131,6 +135,7 @@ enum
 	WID_BAR_ANGLE_RAND,
 	WID_CK_ROTATE_DIR,
 
+	//筆圧
 	WID_EXPAND_PRESSURE,
 	WID_BAR_PRESSURE_SIZE,
 	WID_BAR_PRESSURE_OPACITY,
@@ -169,6 +174,7 @@ enum
 	TRID_PRESSURE_OPACITY,
 	TRID_PRESSURE_EDIT,
 	TRID_PRESSURE_COMMON,
+	TRID_OTHRES,
 
 	TRID_WATER_PRESET_MENU_REGIST = 1000,
 	TRID_WATER_PRESET_MENU_RESET
@@ -804,6 +810,7 @@ void _event_notify(_topct *p,mEventNotify *ev)
 			break;
 
 		//mExpander 展開状態変化
+		case WID_EXPAND_OTHRES:
 		case WID_EXPAND_WATER:
 		case WID_EXPAND_SHAPE:
 		case WID_EXPAND_PRESSURE:
@@ -835,7 +842,7 @@ static mWidget *_create_expander(mWidget *parent,int wid,int trid,uint32_t expan
 	
 	mExpanderSetPadding_pack4(p, MLK_MAKE32_4(0,8,0,3));
 
-	mExpanderToggle(p, APPCONF->panel.brushopt_flags & expand_flag);
+	mExpanderToggle(p, !(APPCONF->panel.brushopt_flags & expand_flag));
 
 	return (mWidget *)p;
 }
@@ -939,10 +946,21 @@ static void _create_widget_main(_topct *p,mWidget *ct)
 	mLabelCreate(ct, 0, 0, 0, MLK_TR2(TRGROUP_WORD, TRID_WORD_PIXELMODE));
 
 	p->cb_pixmode = mComboBoxCreate(ct, WID_CB_PIXMODE, MLF_EXPAND_W, 0, 0);
+}
+
+/* 色々 */
+
+static void _create_widget_othres(_topct *p,mWidget *cttop)
+{
+	mWidget *ct;
+
+	//mExpander
+
+	ct = _create_expander(cttop, WID_EXPAND_OTHRES, TRID_OTHRES, CONFIG_PANEL_BRUSHOPT_F_HIDE_OTHRES);
 
 	//---- 点の間隔
 
-	p->bar_interval = _create_label_bar_vert(ct, MLK_TR(TRID_INTERVAL), MLK_MAKE32_4(0,6,0,0),
+	p->bar_interval = _create_label_bar_vert(ct, MLK_TR(TRID_INTERVAL), 0,
 		WID_BAR_INTERVAL, 2, BRUSH_INTERVAL_MIN, BRUSH_INTERVAL_MAX);
 
 	//---- ブラシサイズランダム
@@ -981,7 +999,7 @@ static void _create_widget_water(_topct *p,mWidget *cttop)
 
 	//mExpander
 
-	ct = _create_expander(cttop, WID_EXPAND_WATER, TRID_WATER, CONFIG_PANEL_BRUSHOPT_F_EXPAND_WATER);
+	ct = _create_expander(cttop, WID_EXPAND_WATER, TRID_WATER, CONFIG_PANEL_BRUSHOPT_F_HIDE_WATER);
 
 	//プリセット
 
@@ -1025,7 +1043,7 @@ static void _create_widget_shape(_topct *p,mWidget *cttop)
 
 	//mExpander
 
-	ct = _create_expander(cttop, WID_EXPAND_SHAPE, TRID_BRUSH_SHAPE, CONFIG_PANEL_BRUSHOPT_F_EXPAND_SHAPE);
+	ct = _create_expander(cttop, WID_EXPAND_SHAPE, TRID_BRUSH_SHAPE, CONFIG_PANEL_BRUSHOPT_F_HIDE_SHAPE);
 
 	//形状画像
 
@@ -1067,7 +1085,7 @@ static void _create_widget_pressure(_topct *p,mWidget *cttop)
 
 	//mExpander
 
-	ct = _create_expander(cttop, WID_EXPAND_PRESSURE, TRID_PRESSURE, CONFIG_PANEL_BRUSHOPT_F_EXPAND_PRESSURE);
+	ct = _create_expander(cttop, WID_EXPAND_PRESSURE, TRID_PRESSURE, CONFIG_PANEL_BRUSHOPT_F_HIDE_PRESSURE);
 
 	//サイズ
 
@@ -1094,6 +1112,7 @@ static void _create_widget_pressure(_topct *p,mWidget *cttop)
 void _create_widget(_topct *p,mWidget *parent)
 {
 	_create_widget_main(p, parent);
+	_create_widget_othres(p, parent);
 	_create_widget_pressure(p, parent);
 	_create_widget_water(p, parent);
 	_create_widget_shape(p, parent);

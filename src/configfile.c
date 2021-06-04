@@ -325,9 +325,7 @@ static void _load_configdata(mIniRead *ini,AppConfig *cf)
 	cf->panel.option_type = mIniRead_getInt(ini, "option_type", 0);
 	cf->panel.toollist_sizelist_h = mIniRead_getInt(ini, "toollist_sizelist_h", 60);
 
-	cf->panel.brushopt_flags = mIniRead_getHex(ini, "brushopt_flags",
-		CONFIG_PANEL_BRUSHOPT_F_EXPAND_WATER | CONFIG_PANEL_BRUSHOPT_F_EXPAND_SHAPE
-		| CONFIG_PANEL_BRUSHOPT_F_EXPAND_PRESSURE);
+	cf->panel.brushopt_flags = mIniRead_getHex(ini, "brushopt_flags", 0);
 
 	mIniRead_getNumbers(ini, "water_preset", cf->panel.water_preset, CONFIG_WATER_PRESET_NUM, 4, TRUE);
 

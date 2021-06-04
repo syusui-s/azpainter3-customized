@@ -408,6 +408,7 @@ static void _menupopup_view(mMenu *menu)
 	mMenuSetItemCheck(menu, TRMENU_VIEW_STATUSBAR, fview & CONFIG_VIEW_F_STATUSBAR);
 	mMenuSetItemCheck(menu, TRMENU_VIEW_CURSOR_POS, fview & CONFIG_VIEW_F_CURSOR_POS);
 	mMenuSetItemCheck(menu, TRMENU_VIEW_LAYER_NAME, fview & CONFIG_VIEW_F_CANV_LAYER_NAME);
+	mMenuSetItemCheck(menu, TRMENU_VIEW_BOXSEL_POS, fview & CONFIG_VIEW_F_BOXSEL_POS);
 
 	//---- パネル
 

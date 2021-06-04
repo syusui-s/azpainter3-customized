@@ -50,6 +50,7 @@ $*/
 
 #include "appcursor.h"
 #include "maincanvas.h"
+#include "statusbar.h"
 
 
 
@@ -782,6 +783,10 @@ static void _boxsel_resize_motion(AppDraw *p,uint32_t state)
 	//
 
 	p->w.pttmp[2] = pt;
+
+	//status
+
+	StatusBar_setHelp_selbox(FALSE);
 }
 
 /* (リサイズ中) 離し */
@@ -806,6 +811,10 @@ static mlkbool _boxsel_resize_release(AppDraw *p)
 	//離された位置で、リサイズカーソル再判定
 
 	drawOp_boxsel_nograb_motion(p);
+
+	//status
+
+	StatusBar_setHelp_selbox(TRUE);
 
 	return TRUE;
 }
@@ -837,6 +846,10 @@ static mlkbool _boxsel_resize_press(AppDraw *p)
 	drawUpdateBox_canvaswg_forBoxSel(p, &box, TRUE);
 	
 	drawOpXor_drawRect_image(p);
+
+	//status
+
+	StatusBar_setHelp_selbox(FALSE);
 
 	return TRUE;
 }

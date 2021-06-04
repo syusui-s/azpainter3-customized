@@ -460,11 +460,13 @@ static void (*g_funcs_getpoint[])(AppDraw *p,double *,double *,int) = {
 
 void drawRule_setType(AppDraw *p,int type)
 {
-	int f;
+	int f1,f2;
 	
 	if(p->rule.type == type) return;
 
-	f = drawRule_isVisibleGuide(p);
+	//非対応のツール時にも来るので、表示条件を確認
+
+	f1 = drawRule_isVisibleGuide(p);
 
 	//
 
@@ -477,11 +479,15 @@ void drawRule_setType(AppDraw *p,int type)
 	p->rule.func_get_point = g_funcs_getpoint[type];
 
 	//更新
+	// :ツール変更などによって表示が切り替わる時、
+	// :または、現在表示状態で定規タイプが変わった時。
+
+	f2 = drawRule_isVisibleGuide(p);
 
 	if(p->rule.func_set_guide)
 		(p->rule.func_set_guide)(p);
 
-	if(f != drawRule_isVisibleGuide(p))
+	if(f2 || f1 != f2)
 		drawUpdate_canvas();
 }
 
