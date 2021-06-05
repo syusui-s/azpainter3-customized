@@ -139,11 +139,13 @@ void mX11SetPropertyCompoundText(Window id,Atom prop,const char *text,int len)
 		if(!buf) return;
 
 		if(XmbTextListToTextProperty(p->display, &buf, 1, XCompoundTextStyle, &tp) == Success)
+		{
 			XSetTextProperty(p->display, id, &tp, prop);
 
-		mFree(buf);
+			XFree(tp.value);
+		}
 
-		if(tp.value) XFree(tp.value);
+		mFree(buf);
 	}
 }
 
