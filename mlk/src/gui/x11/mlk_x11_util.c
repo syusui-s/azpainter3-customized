@@ -138,12 +138,16 @@ void mX11SetPropertyCompoundText(Window id,Atom prop,const char *text,int len)
 		buf = mUTF8toLocale(text, len, NULL);
 		if(!buf) return;
 
-		if(XmbTextListToTextProperty(p->display, &buf, 1, XCompoundTextStyle, &tp) == Success)
-		{
+		//XmbTextListToTextProperty は、成功で 0、エラー時は負の値、
+		//一部の文字が変換できなかった場合は、変換可能なテキストをセットして、変換できなかった数を返す。
+		//エラー時は tp に値はセットされないが、0 以上の場合はセットされているので、注意。
+
+		tp.value = 0;
+
+		if(XmbTextListToTextProperty(p->display, &buf, 1, XCompoundTextStyle, &tp) >= 0)
 			XSetTextProperty(p->display, id, &tp, prop);
 
-			XFree(tp.value);
-		}
+		if(tp.value) XFree(tp.value);
 
 		mFree(buf);
 	}
