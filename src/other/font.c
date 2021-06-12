@@ -989,7 +989,7 @@ static void _drawtext_horz(DrawFont *p,int x,int y,int imgdpi,DrawTextData *dt,m
 				//改行
 				case CHAR_CMD_ID_ENTER:
 					dat.relx = 0;
-					dat.rely += font->mt.height + dat.linesp;
+					dat.rely += p->font[0]->mt.height + dat.linesp;
 					break;
 				//半角幅
 				case CHAR_CMD_ID_YOKO2_START:
@@ -1283,7 +1283,7 @@ static void _drawtext_vert(DrawFont *p,int x,int y,int imgdpi,DrawTextData *dt,m
 			{
 				//改行
 				case CHAR_CMD_ID_ENTER:
-					dat.relx -= font->mt.pixel_per_em + dat.linesp;
+					dat.relx -= p->font[0]->mt.pixel_per_em + dat.linesp;
 					dat.rely = 0;
 					break;
 				//縦中横
