@@ -1,3 +1,9 @@
 /config-info
 /config.h
 Makefile
+*.o
+*.d
+*.a
+tags
+/azpainter
+
