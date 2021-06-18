@@ -701,21 +701,26 @@ mlkbool drawOp_canvasRotate_press(AppDraw *p)
 
 static void _canvaszoom_motion(AppDraw *p,uint32_t state)
 {
-	int n,cur;
+	int n,x,cur;
 
 	if(p->w.dpt_canv_cur.y == p->w.dpt_canv_last.y)
 		return;
 
 	cur = p->canvas_zoom;
 
+	if (cur < 1000)
+		x = 1;
+	else
+		x = 15;
+
 	if(p->w.dpt_canv_cur.y < p->w.dpt_canv_last.y)
 	{
-		n = (int)(cur * 1.1);
+		n = cur + (p->w.dpt_canv_last.y - p->w.dpt_canv_cur.y) * x;
 		if(n == cur) n = cur + 1;
 	}
 	else
 	{
-		n = (int)(cur * 0.9);
+		n = cur + (p->w.dpt_canv_last.y - p->w.dpt_canv_cur.y) * x;
 		if(n == cur) n = cur - 1;
 	}
 
