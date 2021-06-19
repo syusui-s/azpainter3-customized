@@ -708,19 +708,14 @@ static void _canvaszoom_motion(AppDraw *p,uint32_t state)
 
 	cur = p->canvas_zoom;
 
-	if (cur < 1000)
-		x = 1;
-	else
-		x = 15;
-
 	if(p->w.dpt_canv_cur.y < p->w.dpt_canv_last.y)
 	{
-		n = cur + (p->w.dpt_canv_last.y - p->w.dpt_canv_cur.y) * x;
+		n = cur + (p->w.dpt_canv_last.y - p->w.dpt_canv_cur.y) * 10;
 		if(n == cur) n = cur + 1;
 	}
 	else
 	{
-		n = cur + (p->w.dpt_canv_last.y - p->w.dpt_canv_cur.y) * x;
+		n = cur + (p->w.dpt_canv_last.y - p->w.dpt_canv_cur.y) * 10;
 		if(n == cur) n = cur - 1;
 	}
 
