@@ -595,7 +595,7 @@ static mlkbool _read_item_common(FILE *fp,ToolListItem *pi,uint32_t *psize,ToolL
 
 	//登録アイテム
 
-	n = (flags >> 1) & 7;
+	n = (flags >> 1) & 15;
 
 	if(n)
 		APPDRAW->tlist->regitem[n - 1] = pi;

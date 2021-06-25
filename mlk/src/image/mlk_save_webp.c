@@ -40,14 +40,14 @@ typedef struct
 //---------------
 
 
-/** 書き込み関数 */
+/* 書き込み関数 */
 
 static int _write_func(const uint8_t *data,size_t size,const WebPPicture *pic)
 {
 	return (fwrite(data, 1, size, (FILE *)pic->custom_ptr) == size);
 }
 
-/** 経過関数 */
+/* 経過関数 */
 
 static int _progress_hook(int percent,const WebPPicture *pic)
 {
@@ -58,7 +58,7 @@ static int _progress_hook(int percent,const WebPPicture *pic)
 	return 1;
 }
 
-/** ライン変換 RGB/RGBA => ARGB (uint32) */
+/* ライン変換 RGB/RGBA => ARGB (uint32) */
 
 static void _convert_line(mSaveImage *si,uint32_t *buf)
 {
@@ -94,15 +94,16 @@ static void _convert_line(mSaveImage *si,uint32_t *buf)
 	}
 }
 
-/** 圧縮のプリセット値取得
+/* 圧縮のプリセット値取得
  *
  * level = -1 で不可逆  */
 
-static void _get_preset(mSaveOptWEBP *opt,int *level,float *quality)
+static void _get_preset(mSaveOptWEBP *opt,int *level,float *quality,int *preset)
 {
 	//デフォルトで可逆
 	*level = 6;
 	*quality = 75;
+	*preset = 0;
 	
 	if(opt)
 	{
@@ -112,6 +113,9 @@ static void _get_preset(mSaveOptWEBP *opt,int *level,float *quality)
 		if(opt->mask & MSAVEOPT_WEBP_MASK_QUALITY)
 			*quality = opt->quality;
 
+		if(opt->mask & MSAVEOPT_WEBP_MASK_PRESET)
+			*preset = opt->preset;
+
 		//不可逆か
 		
 		if((opt->mask & MSAVEOPT_WEBP_MASK_LOSSY) && opt->lossy)
@@ -119,11 +123,11 @@ static void _get_preset(mSaveOptWEBP *opt,int *level,float *quality)
 	}
 }
 
-/** メイン処理 */
+/* メイン処理 */
 
 static int _main_proc(webpdata *p,mSaveImage *si,mSaveOptWEBP *opt)
 {
-	int ret,level,i,pitch;
+	int ret,level,i,pitch,preset;
 	float quality;
 	uint32_t *buf;
 	WebPPicture *pic = &p->pic;
@@ -142,11 +146,11 @@ static int _main_proc(webpdata *p,mSaveImage *si,mSaveOptWEBP *opt)
 
 	//設定初期化
 
-	_get_preset(opt, &level, &quality);
+	_get_preset(opt, &level, &quality, &preset);
 
 	if(level == -1)
 		//不可逆
-		WebPConfigPreset(&p->conf, WEBP_PRESET_DEFAULT, quality);
+		WebPConfigPreset(&p->conf, preset, quality);
 	else
 	{
 		//可逆

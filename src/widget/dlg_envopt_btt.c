@@ -50,9 +50,11 @@ $*/
 
 //--------------------
 
+#define _REGTOOL_NUM  8
+
 //登録ツール名
 static const char *g_regtool_name[] = {
-	"tool1","tool2","tool3","tool4","tool5"
+	"tool1","tool2","tool3","tool4","tool5","tool6","tool7","tool8"
 };
 
 //--------------------
@@ -91,7 +93,7 @@ static void _cmdsel_setlist(mListView *list)
 
 	mListViewAddItem(list, MLK_TR2(TRGROUP_DLG_ENVOPT, TRID_BTT_CMD_GROUP_REGIST), -1, MCOLUMNITEM_F_HEADER, -1);
 
-	for(i = 0; i < 5; i++)
+	for(i = 0; i < _REGTOOL_NUM; i++)
 		mListViewAddItem_text_static_param(list, g_regtool_name[i], CANVASKEY_OP_REGIST + i);
 
 	//ほか動作
@@ -209,7 +211,7 @@ static const char *_get_cmdname(int no)
 		//ツール動作
 		return MLK_TR2(TRGROUP_TOOL, no - CANVASKEY_OP_TOOL);
 	}
-	else if(no >= CANVASKEY_OP_REGIST && no < CANVASKEY_OP_REGIST + 5)
+	else if(no >= CANVASKEY_OP_REGIST && no < CANVASKEY_OP_REGIST + _REGTOOL_NUM)
 	{
 		//登録ツール動作
 		return g_regtool_name[no - CANVASKEY_OP_REGIST];

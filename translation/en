@@ -905,6 +905,7 @@ Also, the tone layer is not toned.
 +=Selection tool operation by key+operation
 +=Registration tool operation by key+operation
 +=Other operations by key+operation
++=Ruler ON/OFF
 
 1100=Undo
 +=Redo
@@ -1183,6 +1184,7 @@ Do you want to convert the ver 2 configuration file?\
 +=Change canvas size(&S)...
 +=Integrate images to scale(&R)...
 +=Image settings(&O)...
++=Drawing color as image background color(&B)
 
 ;== selection
 1200=Deselect(&D)
@@ -1194,7 +1196,7 @@ Do you want to convert the ver 2 configuration file?\
 +=Paste to new layer(&V)
 +=Select the opaque area of the layer(&O)
 +=Select the drawing color area of the layer(&L)
-+=Output the image in selection to a file(&P)
++=Output the image in selection to a file(&P)...
 
 ;== settings
 1300=Environmental setting(&E)...

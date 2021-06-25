@@ -491,6 +491,18 @@ void drawRule_setType(AppDraw *p,int type)
 		drawUpdate_canvas();
 }
 
+/** タイプをON/OFF切り替え (キャンバスキー操作) */
+
+void drawRule_setType_onoff(AppDraw *p,int type)
+{
+	//同じタイプでONの状態なら、OFFに
+
+	if(p->rule.type == type)
+		type = 0;
+
+	drawRule_setType(p, type);
+}
+
 /** キャンバスに定規ガイドを描画するか */
 
 mlkbool drawRule_isVisibleGuide(AppDraw *p)

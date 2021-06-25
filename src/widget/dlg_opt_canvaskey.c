@@ -39,6 +39,9 @@ $*/
 #include "def_tool.h"
 #include "def_canvaskey.h"
 
+#include "def_draw_ptr.h"
+#include "draw_rule.h"
+
 #include "apphelp.h"
 #include "widget_func.h"
 
@@ -157,6 +160,11 @@ static void _set_list(_dialog *p)
 
 	_add_group_item(p, TRID_DLG_KEYOPT_GROUP_CMD_DRAWTYPE, TRGROUP_TOOL_SUB,
 		0, CANVASKEY_CMD_DRAWTYPE, TOOLSUB_DRAW_NUM, str);
+
+	//定規
+
+	_add_group_item(p, TRID_DLG_KEYOPT_GROUP_CMD_RULE, TRGROUP_RULE,
+		1, CANVASKEY_CMD_RULE, DRAW_RULE_TYPE_NUM - 1, str);
 
 	//他コマンド
 

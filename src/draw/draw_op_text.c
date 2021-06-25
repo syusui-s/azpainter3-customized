@@ -568,6 +568,17 @@ static mlkbool _press_textlayer(AppDraw *p,mlkbool dblclk)
 
 	pi = _get_textitem_press(p, &p->w.pttmp[0]);
 
+	//+Alt 時、テキスト編集。テキストがなければ何もしない
+
+	if(p->w.press_state & MLK_STATE_ALT)
+	{
+		if(pi) _textlayer_edit_text(p, pi);
+
+		return FALSE;
+	}
+
+	//
+
 	if(!pi)
 		//テキストがなければ新規
 		_textlayer_new_text(p, TRUE);

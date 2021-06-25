@@ -67,7 +67,7 @@ $*/
 
 //---------------------
 
-#define _APP_VERSION_TEXT  "AzPainter ver 3.0.1\n\nCopyright (c) 2013-2021 Azel"
+#define _APP_VERSION_TEXT  "AzPainter ver 3.0.2\n\nCopyright (c) 2013-2021 Azel"
 
 #define _APP_LICENSE_TEXT \
 "AzPainter is free software: you can redistribute it and/or modify\n" \
@@ -738,6 +738,11 @@ static void _event_command(MainWindow *p,mEventCommand *ev)
 		//イメージの設定
 		case TRMENU_EDIT_IMAGE_OPTION:
 			_cmd_image_option(p);
+			break;
+		//描画色をイメージ背景色に
+		case TRMENU_EDIT_DRAWCOL_TO_BKGNDCOL:
+			APPDRAW->imgbkcol = APPDRAW->col.drawcol;
+			drawUpdate_all();
 			break;
 
 		//---- 選択範囲

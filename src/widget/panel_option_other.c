@@ -317,6 +317,13 @@ mlkbool PanelOption_createPage_rule(mPager *p,mPagerInfo *info)
 	return TRUE;
 }
 
+/** 定規タイプ変更時 */
+
+void PanelOption_rule_setType(mPager *p)
+{
+	mIconBarSetCheck(MLK_ICONBAR(p->wg.param1), APPDRAW->rule.type, TRUE);
+}
+
 
 //******************************
 // 入り抜き

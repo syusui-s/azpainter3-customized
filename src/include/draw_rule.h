@@ -35,6 +35,7 @@ enum
 };
 
 void drawRule_setType(AppDraw *p,int type);
+void drawRule_setType_onoff(AppDraw *p,int type);
 mlkbool drawRule_isVisibleGuide(AppDraw *p);
 
 void drawRule_onPress(AppDraw *p,mlkbool dotpen);

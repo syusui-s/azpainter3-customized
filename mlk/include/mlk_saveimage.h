@@ -146,13 +146,14 @@ enum MSAVEOPT_WEBP_MASK
 {
 	MSAVEOPT_WEBP_MASK_LOSSY = 1<<0,
 	MSAVEOPT_WEBP_MASK_LEVEL = 1<<1,
-	MSAVEOPT_WEBP_MASK_QUALITY = 1<<2
+	MSAVEOPT_WEBP_MASK_QUALITY = 1<<2,
+	MSAVEOPT_WEBP_MASK_PRESET = 1<<3
 };
 
 typedef struct _mSaveOptWEBP
 {
 	uint32_t mask;
-	int lossy,level;
+	int lossy,level,preset;
 	float quality;
 }mSaveOptWEBP;
 

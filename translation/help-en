@@ -87,6 +87,8 @@ Click to draw the text at that position.\
 - Double-click to edit the text.\
 - Right click to menu.\
 - Ctrl + drag on the text to move the position.\
+- Alt + left click on the text to edit.\
+  (If there is no text, do nothing)\
 \
 * You can change the text position even in the dialog when editing.\
 * When the "Tool List" tool is selected in the text layer,\

@@ -28,7 +28,7 @@ typedef struct _ToolListItem ToolListItem;
 typedef struct _BrushEditData BrushEditData;
 typedef struct _BrushDrawParam BrushDrawParam;
 
-#define DRAW_TOOLLIST_REG_NUM 5		//ツールリスト登録アイテム数
+#define DRAW_TOOLLIST_REG_NUM  8		//ツールリスト登録アイテム数
 
 
 struct _AppDrawToolList

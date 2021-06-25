@@ -43,6 +43,7 @@ void PanelBrushOpt_updateBrushOpacity(void);
 //オプション
 
 void PanelOption_changeTool(void);
+void PanelOption_changeRuleType(void);
 void PanelOption_changeStampImage(void);
 
 //レイヤ

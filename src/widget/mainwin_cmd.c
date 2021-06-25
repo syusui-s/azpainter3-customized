@@ -53,6 +53,7 @@ $*/
 #include "draw_calc.h"
 #include "draw_layer.h"
 #include "draw_toollist.h"
+#include "draw_rule.h"
 
 #include "pv_mainwin.h"
 
@@ -92,6 +93,14 @@ void MainWindow_runCanvasKeyCmd(int cmd)
 
 		if(drawTool_isType_haveDrawType(n))
 			drawTool_setTool_subtype(p, cmd - CANVASKEY_CMD_DRAWTYPE);
+	}
+	else if(cmd >= CANVASKEY_CMD_RULE && cmd < CANVASKEY_CMD_RULE + DRAW_RULE_TYPE_NUM - 1)
+	{
+		//定規ON/OFF
+
+		drawRule_setType_onoff(APPDRAW, cmd - CANVASKEY_CMD_RULE + 1);
+
+		PanelOption_changeRuleType();
 	}
 	else if(cmd >= CANVASKEY_CMD_OTHER && cmd < CANVASKEY_CMD_OTHER + CANVASKEY_CMD_OTHER_NUM)
 	{

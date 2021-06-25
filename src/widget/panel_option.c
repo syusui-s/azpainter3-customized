@@ -56,6 +56,15 @@ static const mFuncPagerCreate g_pagefunc[] = {
 //
 
 void PanelOption_toolStamp_changeImage(mWidget *wg);
+void PanelOption_rule_setType(mPager *p);
+
+enum
+{
+	_PAGE_TOOL,
+	_PAGE_RULE,
+	_PAGE_TEXTURE,
+	_PAGE_HEADTAIL
+};
 
 //--------------------
 
@@ -155,12 +164,22 @@ void PanelOption_changeTool(void)
 
 	//"ツール" が選択されている場合、各ツールの内容に変更
 
-	if(p && APPCONF->panel.option_type == 0)
+	if(p && APPCONF->panel.option_type == _PAGE_TOOL)
 	{
 		mPagerSetPage((mPager *)p->param1, g_pagefunc[0]);
 
 		mWidgetReLayout(p);
 	}
+}
+
+/** 定規タイプ変更時 */
+
+void PanelOption_changeRuleType(void)
+{
+	mWidget *p = _get_topct();
+
+	if(p && APPCONF->panel.option_type == _PAGE_RULE)
+		PanelOption_rule_setType((mPager *)p->param1);
 }
 
 /** スタンプイメージの変更時 */
@@ -172,7 +191,7 @@ void PanelOption_changeStampImage(void)
 	//"ツール" 選択 & スタンプツール時
 
 	if(p
-		&& APPCONF->panel.option_type == 0
+		&& APPCONF->panel.option_type == _PAGE_TOOL
 		&& APPDRAW->tool.no == TOOL_STAMP)
 	{
 		//mPager の mWidget::param1 に、中身のコンテナ

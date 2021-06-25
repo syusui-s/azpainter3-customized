@@ -769,7 +769,7 @@ static void _save_configdata(FILE *fp,AppConfig *cf)
 	mIniWrite_putHex(fp, "canvasbkcol", cf->canvasbkcol);
 	mIniWrite_putHex(fp, "rule_guide_col", cf->rule_guide_col);
 
-	mIniWrite_putNumbers(fp, "textsize_recent", cf->textsize_recent, CONFIG_TEXTSIZE_RECENT_NUM, 4, TRUE);
+	mIniWrite_putNumbers(fp, "textsize_recent", cf->textsize_recent, CONFIG_TEXTSIZE_RECENT_NUM, 2, TRUE);
 
 	//
 
