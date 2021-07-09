@@ -179,29 +179,48 @@ void MainWindow_menu_canvasZoom(MainWindow *p,int id)
 	}
 }
 
+/* 開く/保存ドロップメニューに、ディレクトリリスト追加 */
+
+static void _add_dropmenu_dirlist(MainWindow *p,mMenu *menu,mlkbool save)
+{
+	mStr str = MSTR_INIT,*str_array;
+
+	str_array = (save)? APPCONF->strRecentSaveDir: APPCONF->strRecentOpenDir;
+
+	//編集中のファイルと同じディレクトリ
+
+	if(!mStrIsEmpty(&p->strFilename))
+	{
+		mStrPathGetDir(&str, p->strFilename.buf);
+	
+		mMenuAppendText_copy(menu, -2, str.buf, str.len);
+
+		mStrFree(&str);
+
+		if(!mStrIsEmpty(str_array))
+			mMenuAppendSep(menu);
+	}
+
+	//履歴
+
+	mMenuAppendStrArray(menu, str_array, 0, CONFIG_RECENTDIR_NUM);
+}
+
 /** 開く/保存のディレクトリ履歴メニュー
  *
- * return: 選択された履歴の番号。-1 でキャンセル */
+ * return: 選択された履歴の番号。
+ *  -1 でキャンセル。-2 で編集ファイルのディレクトリ。 */
 
 int MainWindow_menu_opensave_dir(MainWindow *p,mlkbool save)
 {
 	mMenu *menu;
 	mMenuItem *mi;
-	mStr *str_array;
 	mBox box;
 	int no;
 
-	str_array = (save)? APPCONF->strRecentSaveDir: APPCONF->strRecentOpenDir;
-
-	//履歴が一つもない (先頭が空)
-
-	if(mStrIsEmpty(str_array)) return -1;
-
-	//メニュー
-
 	menu = mMenuNew();
 
-	mMenuAppendStrArray(menu, str_array, 0, CONFIG_RECENTDIR_NUM);
+	_add_dropmenu_dirlist(p, menu, save);
 
 	mIconBarGetItemBox(p->ib_toolbar,
 		(save)? TRMENU_FILE_SAVE_AS: TRMENU_FILE_OPEN, &box);
@@ -238,7 +257,8 @@ void MainWindow_menu_recentFile(MainWindow *p)
 
 /** 複製保存のドロップメニュー
  *
- * return: 選択された履歴の番号。-1 でキャンセル */
+ * return: 選択された履歴の番号。
+ *  -1 でキャンセル、-2 で現在の編集ファイルのディレクトリ。 */
 
 int MainWindow_menu_savedup(MainWindow *p)
 {
@@ -270,7 +290,8 @@ int MainWindow_menu_savedup(MainWindow *p)
 
 	mMenuAppendSubmenu(menu, 100, MLK_TR(0), sub, 0);
 	mMenuAppendSep(menu);
-	mMenuAppendStrArray(menu, APPCONF->strRecentSaveDir, 0, CONFIG_RECENTDIR_NUM);
+
+	_add_dropmenu_dirlist(p, menu, TRUE);
 	
 	//
 

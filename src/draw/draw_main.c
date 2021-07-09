@@ -272,6 +272,10 @@ void drawInit_createWidget_before(void)
 	//オプションテクスチャ画像読み込み
 
 	drawTexture_loadOptionTextureImage(APPDRAW);
+
+	//トーンをグレイスケール表示
+
+	TileImage_global_setToneToGray(APPDRAW->ftonelayer_to_gray);
 }
 
 /** ウィンドウ表示前の初期化 (ウィンドウ作成後) */

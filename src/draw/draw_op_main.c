@@ -314,7 +314,7 @@ static mlkbool _on_press_toollist(AppDraw *p,int regno,int subno)
 
 	if(!item) return FALSE;
 
-	//
+	//ツールリストのサブタイプ
 
 	if(subno < 0)
 		subno = p->tool.subno[TOOL_TOOLLIST];
@@ -330,7 +330,11 @@ static mlkbool _on_press_toollist(AppDraw *p,int regno,int subno)
 		//サブタイプ
 
 		if(pitool->subno != 255)
+			//指定値
 			subno = pitool->subno;
+		else if(regno >= 0 && drawTool_isType_haveDrawType(pitool->toolno))
+			//登録ツールで、描画タイプがある場合、自由線で固定
+			subno = TOOLSUB_DRAW_FREE;
 
 		//
 
@@ -355,7 +359,12 @@ static mlkbool _on_press_toollist(AppDraw *p,int regno,int subno)
 		p->w.brush_regno = regno;
 
 		if(regno >= 0)
+		{
 			p->w.drag_cursor_type = APPCURSOR_DRAW;
+
+			//登録ツールの場合、常に自由線
+			subno = TOOLSUB_DRAW_FREE;
+		}
 
 		return _on_press_brush_dot(p, TOOL_TOOLLIST, subno);
 	}

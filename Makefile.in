@@ -279,7 +279,7 @@ uninstall:
 dist:
 	tar czf $(package_full).tar.gz \
 	 ChangeLog configure config.h.in GPL3 Makefile.in manual_ja.html ReadMe_en ReadMe_ja \
-	 about_mlk_en.txt about_mlk_ja.txt \
+	 about_mlk_en.txt about_mlk_ja.txt AUTHORS \
 	 data desktop translation src mlk/Makefile.in mlk/include mlk/src
 
 	if test ! -d $(package_full);then mkdir $(package_full); fi

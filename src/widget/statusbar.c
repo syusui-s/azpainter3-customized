@@ -34,6 +34,8 @@ $*/
 #include "def_widget.h"
 #include "def_draw.h"
 
+#include "draw_calc.h"
+
 #include "statusbar.h"
 
 #include "trid.h"
@@ -332,7 +334,7 @@ void StatusBar_setCursorPos(int x,int y)
 void StatusBar_setHelp_selbox(mlkbool reset)
 {
 	StatusBar *p = APPWIDGET->statusbar;
-	int x1,y1,x2,y2;
+	mRect rc;
 
 	if(!p || !(APPCONF->fview & CONFIG_VIEW_F_BOXSEL_POS))
 		return;
@@ -341,13 +343,21 @@ void StatusBar_setHelp_selbox(mlkbool reset)
 		StatusBar_setHelp_tool();
 	else
 	{
-		x1 = APPDRAW->w.pttmp[0].x;
-		y1 = APPDRAW->w.pttmp[0].y;
-		x2 = APPDRAW->w.pttmp[1].x;
-		y2 = APPDRAW->w.pttmp[1].y;
+		rc.x1 = APPDRAW->w.pttmp[0].x;
+		rc.y1 = APPDRAW->w.pttmp[0].y;
+		rc.x2 = APPDRAW->w.pttmp[1].x;
+		rc.y2 = APPDRAW->w.pttmp[1].y;
 
-		mStrSetFormat(&p->strtmp, "(%d, %d) - (%d, %d) [%d x %d]",
-			x1, y1, x2, y2, x2 - x1 + 1, y2 - y1 + 1);
+		//イメージ範囲内に
+
+		if(!drawCalc_clipImageRect(APPDRAW, &rc))
+			mStrSetText(&p->strtmp, "-");
+		else
+		{
+			mStrSetFormat(&p->strtmp, "(%d, %d) - (%d, %d) [%d x %d]",
+				rc.x1, rc.y1, rc.x2, rc.y2,
+				rc.x2 - rc.x1 + 1, rc.y2 - rc.y1 + 1);
+		}
 
 		mLabelSetText(p->label_help, p->strtmp.buf);
 	}

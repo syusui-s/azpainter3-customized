@@ -466,6 +466,8 @@ static void _load_drawdata(mIniRead *ini,AppDraw *p)
 
 	mIniRead_getTextStr(ini, "opt_texture", &p->strOptTexturePath, NULL);
 
+	p->ftonelayer_to_gray = (mIniRead_getInt(ini, "tone_gray", 0) != 0);
+
 	//------- カラー
 
 	mIniRead_setGroup(ini, "draw_color");
@@ -923,6 +925,7 @@ static void _save_drawdata(FILE *fp,AppDraw *p)
 	mIniWrite_putGroup(fp, "draw_main");
 
 	mIniWrite_putStr(fp, "opt_texture", &p->strOptTexturePath);
+	mIniWrite_putInt(fp, "tone_gray", p->ftonelayer_to_gray);
 
 	//------ カラー
 

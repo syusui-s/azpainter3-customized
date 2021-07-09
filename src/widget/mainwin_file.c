@@ -262,25 +262,30 @@ mlkbool MainWindow_loadImage(MainWindow *p,const char *filename,LoadImageOption 
 
 /** ファイルを開く (ダイアログ)
  *
- * recentno: ディレクトリ履歴番号 (0 で最新の履歴) */
+ * recentno: ディレクトリ番号 (-2 で現在の編集ファイルと同じ) */
 
 void MainWindow_openFileDialog(MainWindow *p,int recentno)
 {
-	mStr str = MSTR_INIT;
+	mStr str = MSTR_INIT,dir = MSTR_INIT;
 	LoadImageOption opt;
+
+	if(recentno == -2)
+		mStrPathGetDir(&dir, p->strFilename.buf);
+	else
+		mStrCopy(&dir, APPCONF->strRecentOpenDir + recentno);
 
 	//ファイル名
 
-	if(!FileDialog_openImage_forCanvas(MLK_WINDOW(p),
-		APPCONF->strRecentOpenDir[recentno].buf, &str, &opt))
-		return;
+	if(FileDialog_openImage_forCanvas(MLK_WINDOW(p), dir.buf, &str, &opt))
+	{
+		//保存確認後、読み込み
 
-	//保存確認後、読み込み
-
-	if(MainWindow_confirmSave(p))
-		MainWindow_loadImage(p, str.buf, &opt);
+		if(MainWindow_confirmSave(p))
+			MainWindow_loadImage(p, str.buf, &opt);
+	}
 
 	mStrFree(&str);
+	mStrFree(&dir);
 }
 
 
@@ -389,6 +394,7 @@ static int _save_confirm_message(MainWindow *p)
 static int _save_get_path_and_format(MainWindow *p,
 	mStr *strpath,int savetype,int recentno)
 {
+	mStr dir = MSTR_INIT;
 	int ret,type,format,fexist;
 
 	//現在のファイルパスがあるか
@@ -440,6 +446,13 @@ static int _save_get_path_and_format(MainWindow *p,
 		}
 	}
 
+	//ディレクトリ
+
+	if(recentno == -2)
+		mStrPathGetDir(&dir, p->strFilename.buf);
+	else
+		mStrCopy(&dir, APPCONF->strRecentSaveDir + recentno);
+
 	//ダイアログ
 
 	ret = mSysDlg_saveFile(MLK_WINDOW(p),
@@ -451,7 +464,9 @@ static int _save_get_path_and_format(MainWindow *p,
 		"GIF (*.gif)\tgif\t"
 		"TIFF (*.tiff;*.tif)\ttiff;tif\t"
 		"WEBP (*.webp)\twebp\t",
-		type, APPCONF->strRecentSaveDir[recentno].buf, 0, strpath, &type);
+		type, dir.buf, 0, strpath, &type);
+
+	mStrFree(&dir);
 
 	if(!ret) return -1;
 
@@ -594,7 +609,7 @@ static int _thread_save(mPopupProgress *prog,void *data)
 /** ファイル保存
  *
  * savetype: [0]上書き保存 [1]別名保存 [2]複製保存
- * recentno: ディレクトリ履歴番号
+ * recentno: ディレクトリ履歴番号 (-2 で現在の編集ファイルと同じ)
  * return: FALSE でキャンセルされた */
 
 mlkbool MainWindow_saveFile(MainWindow *p,int savetype,int recentno)

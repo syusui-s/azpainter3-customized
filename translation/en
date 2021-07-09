@@ -74,11 +74,11 @@
 
 [2]
 # Brush
-0=[Shift: Brush size change] [Ctrl: Ruler setting] [Alt: Spuit(canvas)]
+0=[Shift: Brush size change] [Ctrl: Ruler setting] [Alt: Color Picker(canvas)]
 # Dot pen
-+=[Shift: 1px eraser] [Ctrl: Ruler setting] [Alt: Spuit(canvas)]
++=[Shift: 1px eraser] [Ctrl: Ruler setting] [Alt: Color Picker(canvas)]
 # Finger
-+=[Ctrl: Ruler setting] [Alt: Spuit(canvas)]
++=[Ctrl: Ruler setting] [Alt: Color Picker(canvas)]
 # Move
 +=[Shift: Horizontal] [Ctrl: Vertical]
 # selection
@@ -87,7 +87,7 @@
 +=[Ctrl: Hide selection while dragging]
 # stamp
 +=[If there is an image, click to paste] [Ctrl: Clear the image and start selecting]
-# Spuit
+# Color Picker
 +=[Ctrl: Get the color on the layer] [Shift: First set of color masks]
 
 # line
@@ -307,11 +307,13 @@
 
 [101]
 0=New text(&N)
-+=Edit(&E)
-+=Delete(&D)
++=Edit(&T)
++=Delete(&L)
 +=Copy(&C)
 +=Paste(&P)
 +=Redraw everything(&R)
++=Edit this text(&E)
++=Delete this text(&D)
 
 ;-------------------------------
 ; Duplicate save toolbar menu
@@ -348,7 +350,7 @@
 +=Full view
 +=Mirror
 
-# spuit menu
+# Color Picker menu
 200=Set to drawing color
 +=Set to background color
 

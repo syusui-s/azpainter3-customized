@@ -62,11 +62,13 @@ $*/
 enum
 {
 	TRID_MENU_NEW,
-	TRID_MENU_EDIT,
-	TRID_MENU_DEL,
+	TRID_MENU_EDIT_SUB,
+	TRID_MENU_DEL_SUB,
 	TRID_MENU_COPY,
 	TRID_MENU_PASTE,
-	TRID_MENU_REDRAW
+	TRID_MENU_REDRAW,
+	TRID_MENU_EDIT_THIS,
+	TRID_MENU_DEL_THIS
 };
 
 mlkbool TextDialog_run(void);
@@ -620,8 +622,9 @@ static mlkbool _press_textlayer(AppDraw *p,mlkbool dblclk)
 
 static uint16_t g_menudat[] = {
 	TRID_MENU_NEW, MMENU_ARRAY16_SEP,
-	TRID_MENU_EDIT, TRID_MENU_DEL, MMENU_ARRAY16_SEP,
+	TRID_MENU_EDIT_THIS, TRID_MENU_DEL_THIS, MMENU_ARRAY16_SEP,
 	TRID_MENU_COPY, TRID_MENU_PASTE, MMENU_ARRAY16_SEP,
+	TRID_MENU_EDIT_SUB, TRID_MENU_DEL_SUB, MMENU_ARRAY16_SEP,
 	TRID_MENU_REDRAW,
 	MMENU_ARRAY16_END
 };
@@ -644,7 +647,13 @@ static int _run_text_menu(AppDraw *p,LayerTextItem *text)
 
 	mMenuAppendTrText_array16(menu, g_menudat);
 
-	mMenuSetItemEnable(menu, TRID_MENU_COPY, (text != NULL));
+	if(!text)
+	{
+		mMenuSetItemEnable(menu, TRID_MENU_EDIT_THIS, FALSE);
+		mMenuSetItemEnable(menu, TRID_MENU_DEL_THIS, FALSE);
+		mMenuSetItemEnable(menu, TRID_MENU_COPY, FALSE);
+	}
+
 	mMenuSetItemEnable(menu, TRID_MENU_PASTE, p->text.fhave_copy);
 
 	//サブメニュー
@@ -668,8 +677,8 @@ static int _run_text_menu(AppDraw *p,LayerTextItem *text)
 
 	mStrFree(&str);
 
-	mMenuSetItemSubmenu(menu, TRID_MENU_EDIT, subedit);
-	mMenuSetItemSubmenu(menu, TRID_MENU_DEL, subdel);
+	mMenuSetItemSubmenu(menu, TRID_MENU_EDIT_SUB, subedit);
+	mMenuSetItemSubmenu(menu, TRID_MENU_DEL_SUB, subdel);
 
 	//
 
@@ -786,6 +795,14 @@ static void _proc_menu(AppDraw *p)
 			//新規テキスト
 			case TRID_MENU_NEW:
 				_textlayer_new_text(p, TRUE);
+				break;
+			//このテキストを編集
+			case TRID_MENU_EDIT_THIS:
+				_textlayer_edit_text(p, text);
+				break;
+			//このテキストを削除
+			case TRID_MENU_DEL_THIS:
+				_text_delete(p, text);
 				break;
 			//コピー
 			case TRID_MENU_COPY:

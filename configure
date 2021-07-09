@@ -194,7 +194,7 @@ cf_pkgconfig=no
 if fc_check_command pkg-config;then cf_pkgconfig=yes; fi
 
 PACKAGE=azpainter
-PACKAGE_VERSION=3.0.2
+PACKAGE_VERSION=3.0.3
 
 for opt;do
 	case $opt in
