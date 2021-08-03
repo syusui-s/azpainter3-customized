@@ -50,7 +50,7 @@
 +=Unidade
 +=Modelo
 +=Anti-aliasing
-+=Mode de pixel
++=Modo de pixel
 +=círculo\0moldura circular\0retângulo\0moldura retangular\0diamante\0moldura de diamante\0X marca\0cruz\0glitter\0
 +=Resetar
 
@@ -100,7 +100,7 @@
 +=[Shift: unidade de 45 graus] [Clique duplo Direito/Esquerdo/Enter/ESC: finalizar] [BackSpace: Conectar com o ponto inicial e finalizar]
 # Linha concentrada
 +=[Shift: unidade de 45 graus] [Clique duplo Direito/Esquerdo/Enter: finalizar] [ESC: cancelar]
-# Curva de Bezier
+# Curva de Bézier
 +=[Shift: unidade de 45 graus] [Right/ESC: cancelar] [BackSpace: Retornar ao ponto de controle 1]
 # Polígono
 +=[Shift: unidade de 45 graus] [Clique duplo Direito/Esquerdo/Enter: desenhar] [ESC: cancelar]
@@ -112,7 +112,7 @@
 0=Novo
 +=Abrir
 +=Abrir arquivos recentes
-+=Sobrescrever
++=Salvar
 +=Salvar como
 +=Salvar duplicata
 +=Desfazer
@@ -120,11 +120,11 @@
 +=Limpar camada
 +=Liberar seleção
 +=Mostrar painéis
-+=Virar a tela horizontalmente
++=Espelhar tela
 +=Exibir fundo como padrão xadrez
 +=Exibir grade
 +=Exibir linha divisória
-+=Definições de grade
++=Configurações de grade
 +=Painel da lista de filtros
 +=Zoom
 
@@ -134,7 +134,7 @@
 [10]
 0=Ferramenta
 +=Lista de ferramentas
-+=Definições de pincel
++=Configurações de pincel
 +=Opção
 +=Camada
 +=Cor
@@ -207,7 +207,7 @@
 +=Carimbo
 +=Mover tela
 +=Rotacionar tela
-+=Selecionador de Cor
++=Seletor de Cor
 
 #--------------------
 # ferramenta:subtipo
@@ -219,7 +219,7 @@
 +=Círculo
 +=Linha reta contínua
 +=Linha concentrada
-+=Curva de Bezier
++=Curva de Bézier
 
 20=linear
 +=Redondo
@@ -337,7 +337,7 @@
 +=Limpar(&C)
 +=Tela cheia(&F)
 +=Espelhar(&H)
-+=Definições(&S)...
++=Configurações(&S)...
 
 # dica
 100=Menu
@@ -360,7 +360,7 @@
 +=Especificação RGB: 255,0,128 (Separar com caracteres não-numéricos)\
 Especificação de cor HTML: #ff0080 (apenas 6 dígitos)
 
-100=Definir corde desenho(&S) [LBTT]
+100=Definir cor do desenho(&S) [LBTT]
 +=Ligar/Desligar(&T) [Ctrl+LBTT]
 +=Obter cor(&P) [Shift+LBTT]
 
@@ -377,7 +377,7 @@ Especificação de cor HTML: #ff0080 (apenas 6 dígitos)
 [1003]
 # menu da paleta
 0=Lista da paleta(&L)...
-+=Definição(&O)...
++=Configuração(&O)...
 +=Editar(&E)
 +=Arquivo(&F)
 +=Ajuda(&H)
@@ -481,7 +481,7 @@ D&D: Mover a cor da seleção para a posição especificada
 100=Carregar
 +=Salvar
 +=Linha
-+=Curva de Bezier
++=Curva de Bézier
 +=Dentro
 +=Fora
 
@@ -493,8 +493,8 @@ D&D: Mover a cor da seleção para a posição especificada
 +=Forma
 +=Força
 +=Área a preencher
-+=Mesma cor na camada [!Apenas uma camada de referência]\0Área transparente (julgamento automático anti-alias)\0Área transparente (A = 0)\0A mesma área de valores alfa\0Mesma cor na tela\0
-+=erro permitido
++=Mesma cor da camada [!Apenas uma camada de referência]\0Área transparente (anti-aliasing determinado automaticamente)\0Área transparente (A = 0)\0A mesma área de valores alfa\0Mesma cor da tela\0
++=erro tolerado
 +=Camada que referencia a cor
 +=Preencher camada de referência\0Camada atual\0Todas as camadas da tela\0
 +=Cor do desenho->cor do fundo\0Preto -> Branco\0Branco -> Preto\0Personalizado\0
@@ -566,7 +566,7 @@ com caracteres diferentes de números e '.'.\
 +=Tamanho (diâmetro)
 +=Correção de linha
 +=Nenhum\0Estabilizar(forte)\0Estabilizar(médio)\0Estabilizar(fraco)\0Distância fixa\0
-+=Intervalo de pontos (1.0 = raio)
++=Espaçamento (1.0 = raio)
 +=Largura aleatória do tamanho do pincel(%)
 +=Largura aleatória da posição do ponto
 +=Interpolação de curva
@@ -778,13 +778,13 @@ Alterar ampliação da tela\
 +=Espaçamento de caractere
 +=Espaçamento de linha
 +=Rotação
-+=Sugestão
-+=Desabilitar auto sugestão
++=Otimização
++=Desabilitar otimização automática
 +=Ruby
 +=Posição de ruby
 +=Não usar glifos ruby
 
-100=Binário monocromático
+100=Monocromático binário
 +=Escrita vertical
 +=Habilitar notação especial
 +=Negrito
@@ -887,10 +887,10 @@ Além disso, a camada de tom não funcionará.
 +=Uma imagem (Preto e branco de 1bit)
 
 ;-------------------------
-; Definição de chave
+; Configuração de atalho
 
 [2018]
-0=Definições principais de menu
+0=Definições do menu principal
 +=Definições principais de tela
 
 100=Limpar tudo
@@ -898,13 +898,13 @@ Além disso, a camada de tom não funcionará.
 +=A mesma definição já foi escolhida.
 
 1000=Alterar ferramenta
-+=Alterar o tipo de desenhoChange drawing type
++=Alterar o tipo de desenho
 +=Outros comandos
-+=Operação de ferramenta por chave+operação
-+=Operação de tipo de desenho por chave+operação
-+=Operação de ferramenta de seleção por chave+operação
-+=Operação de ferramenta de registro por chave+operação
-+=Outras operações por chave+operação
++=Operação de ferramenta por atalho+operação
++=Operação de tipo de desenho por atalho+operação
++=Operação de ferramenta de seleção por atalho+operação
++=Operação de ferramenta de registro por atalho+operação
++=Outras operações por atalho+operação
 +=Régua LIG/DES
 
 1100=Desfazer
@@ -1034,11 +1034,11 @@ ao clicar com o botão esquerdo na tela
 +=--- Separação ---
 
 ;-------------------------
-; Definição de ambiente
+; Configuração de ambiente
 
 [2022]
-0=Definição de ambiente
-+=Definição 1
+0=Configuração de ambiente
++=Configuração 1
 +=Bandeiras
 +=Operação de botão
 +=Interface
@@ -1055,7 +1055,7 @@ ao clicar com o botão esquerdo na tela
 
 150=Confirmar ao sobrescrever
 += Verificar ao sobrescrever em outro formato que não APD
-+=Não gravar uma única figura ao salvar APD
++=Não gravar como imagem unificada ao salvar APD
 +=(Painel) Itens da lista de filtros podem ser executados através de clique duplo
 
 200=Dispositivo normal
@@ -1198,17 +1198,17 @@ Deseja converter para a versão 2 do arquivo de configuração?\
 +=Selecionar a área de cor de desenho da camada(&L)
 +=Enviar a imagem da seleção para um arquivo(&P)...
 
-;== definições
-1300=Definição de ambiente(&E)...
-+=Definições de grade(&G)...
-+=Definições principais de menu(&K)...
-+=Definições principais de tela(&C)...
-+=Definição de disposição do painel(&P)...
+;== configurações
+1300=Configuração de ambiente(&E)...
++=Configurações de grade(&G)...
++=Configurações do menu principal(&K)...
++=Configurações principais de tela(&C)...
++=Configuração de disposição do painel(&P)...
 +=Sobre(&A)...
 
 ;== camada
 2000=Nova camada(&N)...
-+=Nova passta(&F)
++=Nova pasta(&F)
 +=Nova camada a partir do arquivo(&I)...
 +=Criar novo acima da camada atual(&Q)...
 +=Duplicar(&C)
@@ -1220,14 +1220,14 @@ Deseja converter para a versão 2 do arquivo de configuração?\
 +=Integração de imagem(&M)
 +=Exibir camada de tom em escala de cinza(&T)
 +=Enviar para o arquivo(&S)...
-+=Definições(&O)
++=Configurações(&O)
 +=Conversão em lote(&A)
 +=Editar(&E)
 +=Visualizar(&V)
 +=Pasta(&J)
 +=Bandeiras(&G)
 
-2100=Definições de camada(&O)...
+2100=Configurações de camada(&O)...
 +=Alterar o tipo de camada(&T)...
 +=Alterar cor da linha(&C)...
 
@@ -1257,23 +1257,23 @@ Deseja converter para a versão 2 do arquivo de configuração?\
 +=Mostrar painel(&V)
 +=Painel(&P)
 +=Espelhar tela(&Q)
-+=Mostrar fundo como padrão quadriculado(&K)
++=Mostrar fundo como padrão xadrez(&K)
 +=Mostrar grade(&G)
 +=Mostrar linha divisória(&M)
 +=Mostrar guia da régua(&L)
 +=Barra de ferramentas(&T)
 +=Barra de status(&S)
 +=Posição do cursor(&U)
-+=Exibir nome da camada ao operar com a tela(&A)
++=Exibir nome da camada ao trabalhar na tela(&A)
 +=Taxa de zoom da tela(&C)
 +=Rotação da tela(&R)
 +=Exibir coordenadas do retângulo selecionado(&Z)
 
-3100=Definir para o modo de todas as janelas(&M)
-+=Tudo armazenado em placas(&S)
+3100=Definir para o modo todas as janelas(&M)
++=Modo de Janela Única(&S)
 +=Ferramenta(&T)
 +=Lista de ferramentas(&E)
-+=Definição de pincel(&B)
++=Configuração de pincel(&B)
 +=Opção(&O)
 +=Camada(&L)
 +=Cor(&C)
@@ -1332,15 +1332,15 @@ Deseja converter para a versão 2 do arquivo de configuração?\
 
 +=(múltiplo) todos os pontos de transparência para transparente
 +=(múltiplo) qualquer único ponto opaco para transparente
-+=(múltiplo) tudo misturado e copiado
++=(múltiplo) sintetizar e copiar tudo
 +=(múltiplo) adicionar todos os valores
 +=(múltiplo) subtrair todos os valores
 +=(múltiplo) multiplicar todos os valores
-+=(individual) definir brilho reverso da camada selecionada
-+=(individual) definir brilho da camada selecionada
++=(individual) configurar brilho reverso da camada selecionada
++=(individual) configurar brilho da camada selecionada
 
-+=Definir brilho reverso
-+=Definir a partir do brilho
++=Configurar brilho reverso
++=Configurar a partir do brilho
 +=Todos os opacos para opacidade máxima
 +=Aplicação de textura
 +=Criar escala de cinza a partir do valor de alfa
