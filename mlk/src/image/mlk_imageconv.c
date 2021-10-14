@@ -275,7 +275,8 @@ void mImageConv_gray16(mImageConv *p)
 
 /**@ パレットカラー 1,2,4,8 bit からの変換
  *
- * @d:8bit PAL/RGB/RGBA への変換に対応。 */
+ * @d:8bit PAL/RGB/RGBA への変換に対応。\
+ * RGBA 変換の場合、パレットのアルファ値をセットする。 */
 
 void mImageConv_palette_1_2_4_8(mImageConv *p)
 {

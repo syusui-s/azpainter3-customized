@@ -117,3 +117,19 @@ In that case, I will need the "creator name (handle name)" and
 "email address (if you do not want to post it, you can omit it)"
 in order to list the creator, so please show it.
 
+
+* About the translation file of "[prefix][LANG]"
+--------------------------------------------------
+
+Translation files with a prefix in front of the language name,
+such as "help-en_US", are files that are read directly when using strings,
+such as when displaying long help.
+
+As with regular translation files, you need to create a file for each language.
+
+If a file such as "help-en" exists,
+create it with a file name that replaces the language name,
+leaving the first name as it is, such as "help-zh_CN".
+
+Place the converted *.mtr in the same location
+as the regular translation file (*.mtr).

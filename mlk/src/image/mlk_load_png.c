@@ -22,7 +22,7 @@ $*/
  *****************************************/
 
 #include <png.h>
-/* [!] setjmp.h はインクルードしない。コンパイルエラーが出る場合がある */
+//[!] setjmp.h はインクルードしない。コンパイルエラーが出る場合がある
 
 #include "mlk.h"
 #include "mlk_loadimage.h"
@@ -42,7 +42,8 @@ typedef struct
 	mLoadImage *pli;
 	uint8_t *palbuf;
 	int palnum,
-		prog_cur;
+		prog_cur,
+		fconvpal;	//透過付きパレット->RGBA 変換を行う
 }pngdata;
 
 //--------------------
@@ -112,7 +113,7 @@ static void _png_read_row_callback(png_struct *png,png_uint_32 row,int pass)
 //=======================
 
 
-/** ヘッダ処理 */
+/* ヘッダ処理 */
 
 static int _proc_header(pngdata *p,mLoadImage *pli)
 {
@@ -128,7 +129,7 @@ static int _proc_header(pngdata *p,mLoadImage *pli)
 	return MLKERR_OK;
 }
 
-/** 解像度取得 */
+/* 解像度取得 */
 
 static void _get_resolution(pngdata *p,mLoadImage *pli)
 {
@@ -149,7 +150,7 @@ static void _get_resolution(pngdata *p,mLoadImage *pli)
 	}
 }
 
-/** パレット読み込み */
+/* パレット読み込み */
 
 static int _read_palette(pngdata *p,mLoadImage *pli)
 {
@@ -184,7 +185,7 @@ static int _read_palette(pngdata *p,mLoadImage *pli)
 	return MLKERR_OK;
 }
 
-/** 透過色読み込み */
+/* 透過色読み込み */
 
 static int _read_transparent(pngdata *p,mLoadImage *pli,int coltype,int bits)
 {
@@ -244,7 +245,7 @@ static int _read_transparent(pngdata *p,mLoadImage *pli,int coltype,int bits)
 
 		//最初の A=0 の色を透過色にセット
 
-		if(!ptp)
+		if(ptp)
 		{
 			pli->trns.flag = 1;
 			pli->trns.r = ptp[0];
@@ -256,7 +257,7 @@ static int _read_transparent(pngdata *p,mLoadImage *pli,int coltype,int bits)
 	return MLKERR_OK;
 }
 
-/** PNG 情報読み込み＆設定 */
+/* PNG 情報読み込み＆設定 */
 
 static int _proc_info(pngdata *p,mLoadImage *pli)
 {
@@ -332,42 +333,56 @@ static int _proc_info(pngdata *p,mLoadImage *pli)
 	if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGB
 		|| pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGBA)
 	{
-		n = 0; //アルファ値があるか
-	
-		switch(coltype)
+		if(coltype == PNG_COLOR_TYPE_PALETTE && tRNS
+			&& pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGBA
+			&& !(pli->flags & MLOADIMAGE_FLAGS_TRANSPARENT_TO_ALPHA))
 		{
-			case PNG_COLOR_TYPE_PALETTE:
-				//[!] 透過色がアルファ値になる
-				png_set_expand(png);
-				if(tRNS) n = 1;
-				break;
-			case PNG_COLOR_TYPE_RGBA:
-				n = 1;
-				break;
-			case PNG_COLOR_TYPE_GRAY_ALPHA:
-				n = 1;
-			case PNG_COLOR_TYPE_GRAY:
-				png_set_gray_to_rgb(png);
-				break;
-		}
+			//パレット + tRNS の場合は、RGBA 変換を行うと、透過色がアルファ値変換されるため、
+			//透過色をそのままの色で取得したい場合は、手動で変換する必要がある。
 
-		if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGBA)
-		{
-			if(tRNS && (pli->flags & MLOADIMAGE_FLAGS_TRANSPARENT_TO_ALPHA))
-				//透過色をアルファ値に
-				png_set_tRNS_to_alpha(png);
-			else if(!n)
-				//アルファ値がない場合、追加
-				png_set_add_alpha(png, (depth == 16)? 0xffff: 0xff, PNG_FILLER_AFTER);
-
-			coltype = PNG_COLOR_TYPE_RGBA;
+			p->fconvpal = TRUE;
 		}
 		else
 		{
-			//アルファ値除去
-			if(n) png_set_strip_alpha(png);
+			//---- libpng での変換
+			
+			n = 0; //アルファ値があるか
+		
+			switch(coltype)
+			{
+				case PNG_COLOR_TYPE_PALETTE:
+					//[!] 透過色がアルファ値になる
+					png_set_expand(png);
+					if(tRNS) n = 1;
+					break;
+				case PNG_COLOR_TYPE_RGBA:
+					n = 1;
+					break;
+				case PNG_COLOR_TYPE_GRAY_ALPHA:
+					n = 1;
+				case PNG_COLOR_TYPE_GRAY:
+					png_set_gray_to_rgb(png);
+					break;
+			}
 
-			coltype = PNG_COLOR_TYPE_RGB;
+			if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGBA)
+			{
+				if(tRNS && (pli->flags & MLOADIMAGE_FLAGS_TRANSPARENT_TO_ALPHA))
+					//透過色をアルファ値に
+					png_set_tRNS_to_alpha(png);
+				else if(!n)
+					//アルファ値がない場合、追加
+					png_set_add_alpha(png, (depth == 16)? 0xffff: 0xff, PNG_FILLER_AFTER);
+
+				coltype = PNG_COLOR_TYPE_RGBA;
+			}
+			else
+			{
+				//アルファ値除去
+				if(n) png_set_strip_alpha(png);
+
+				coltype = PNG_COLOR_TYPE_RGB;
+			}
 		}
 	}
 
@@ -395,7 +410,7 @@ static int _proc_info(pngdata *p,mLoadImage *pli)
 
 	if(coltype == PNG_COLOR_TYPE_RGB)
 		n = MLOADIMAGE_COLTYPE_RGB;
-	else if(coltype == PNG_COLOR_TYPE_RGB_ALPHA)
+	else if(coltype == PNG_COLOR_TYPE_RGB_ALPHA || p->fconvpal)
 		n = MLOADIMAGE_COLTYPE_RGBA;
 	else if(coltype == PNG_COLOR_TYPE_GRAY)
 		n = MLOADIMAGE_COLTYPE_GRAY;
@@ -409,7 +424,7 @@ static int _proc_info(pngdata *p,mLoadImage *pli)
 	return MLKERR_OK;
 }
 
-/** 情報読み込み */
+/* 情報読み込み */
 
 static int _read_info(pngdata *p,mLoadImage *pli)
 {
@@ -471,6 +486,49 @@ static int _read_info(pngdata *p,mLoadImage *pli)
 	//読み込み＆設定
 
 	return _proc_info(p, pli);
+}
+
+/* 透過付きパレット8bit -> RGBA 変換
+ *
+ * - 透過色のアルファ値変換なし時。
+ * - A=0 のパレットは、A=255 にする。それ以外のアルファ値はそのまま。 */
+
+static void _convert_pal_to_rgba(pngdata *p,mLoadImage *pli)
+{
+	uint8_t **ppbuf,*pd,*ps,*ppal,*palbuf;
+	int ix,iy,src_right,dst_right;
+
+	palbuf = p->palbuf;
+
+	//パレットの A=0 を 255 に
+
+	pd = palbuf + 3;
+
+	for(ix = p->palnum; ix; ix--, pd += 4)
+	{
+		if(*pd == 0)
+			*pd = 255;
+	}
+
+	//RGBA 変換
+
+	ppbuf = pli->imgbuf;
+	src_right = pli->width - 1;
+	dst_right = src_right * 4;
+
+	for(iy = pli->height; iy; iy--)
+	{
+		pd = ps = *(ppbuf++);
+		ps += src_right;
+		pd += dst_right;
+	
+		for(ix = pli->width; ix; ix--, pd -= 4, ps--)
+		{
+			ppal = palbuf + (*ps << 2);
+
+			*((uint32_t *)pd) = *((uint32_t *)ppal);
+		}
+	}
 }
 
 
@@ -537,6 +595,11 @@ static mlkerr _png_getimage(mLoadImage *pli)
 
 	png_read_image(p->png, pli->imgbuf);
 	png_read_end(p->png, NULL);
+
+	//パレット->RGBA 変換
+
+	if(p->fconvpal)
+		_convert_pal_to_rgba(p, pli);
 
 	return MLKERR_OK;
 }

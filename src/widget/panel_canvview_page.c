@@ -349,7 +349,7 @@ static void _draw_handle(mWidget *wg,mPixbuf *pixbuf)
 
 	param.scalediv = ex->dscalediv;
 
-	if(ex->zoom < 2000 && p->dragbtt == 0)
+	if(ex->zoom != 1000 && ex->zoom < 2000 && p->dragbtt == 0)
 		//縮小時 (ドラッグ時は除く)
 		ImageCanvas_drawPixbuf_oversamp(APPDRAW->imgcanvas, pixbuf, &info);
 	else

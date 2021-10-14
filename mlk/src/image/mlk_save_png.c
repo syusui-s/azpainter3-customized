@@ -257,6 +257,8 @@ static int _main_proc(pngdata *p,mSaveImage *si,mSaveOptPNG *opt)
 
 	//イメージ書き込み
 
+	png_set_filter(p->png, 0, PNG_NO_FILTERS);
+
 	progress = si->progress;
 	height = si->height;
 	last_prog = 0;

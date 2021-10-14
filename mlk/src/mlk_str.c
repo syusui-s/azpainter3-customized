@@ -1090,7 +1090,7 @@ int mStrSetDecode_urilist(mStr *str,const char *text,mlkbool localfile)
 
 	//
 
-	for(top = buf; top; top = next)
+	for(top = buf; *top; top = next)
 	{
 		//行取得
 		

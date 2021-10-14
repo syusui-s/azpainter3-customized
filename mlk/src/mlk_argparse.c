@@ -167,7 +167,7 @@ static int _run_option(_data *p,char *str,mArgParseOpt *o)
 
 	if(p->curindex + 1 >= p->ap->argc)
 	{
-		fprintf(stderr, "option need value: %s\n", str);
+		fprintf(stderr, "option requires value: %s\n", str);
 		return -1;
 	}
 
