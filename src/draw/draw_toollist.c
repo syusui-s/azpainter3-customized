@@ -681,6 +681,7 @@ ImageMaterial *drawToolList_getBrushDrawInfo(int regno,BrushDrawParam **ppdraw,B
 
 
 #define _SELBRUSH  ((ToolListItem_brush *)APPDRAW->tlist->selitem)
+#define _REGBRUSH  ((ToolListItem_brush *)APPDRAW->tlist->regitem[APPDRAW->w.brush_regno])
 #define _EDITBRUSH (APPDRAW->tlist->brush)
 #define _DRAWPARAM (APPDRAW->tlist->dp_cur)
 
@@ -730,7 +731,6 @@ static void _set_str_to_text(char **ppdst,mStr *str)
 	}
 }
 
-
 /** 現在の値を保存
  *
  * return: TRUE で、タイプが変更されたため、アイコン更新 */
@@ -738,10 +738,16 @@ static void _set_str_to_text(char **ppdst,mStr *str)
 mlkbool drawBrushParam_save(void)
 {
 	BrushEditData *ps = _EDITBRUSH;
-	ToolListItem_brush *pi = _SELBRUSH;
+	ToolListItem_brush *pi;
 	mlkbool ret = FALSE;
 
 	if(_is_no_setparam()) return FALSE;
+
+	if (APPDRAW->w.brush_regno >= 0) {
+		pi = _REGBRUSH;
+	} else {
+		pi = _SELBRUSH;
+	}
 
 	//タイプが変更された場合、アイコン変更
 

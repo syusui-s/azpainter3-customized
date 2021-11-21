@@ -697,8 +697,58 @@ mlkbool drawOp_xorline_to_bezier(AppDraw *p)
 	pttmp[0]  : 押し時の位置
 	ntmp[0]   : 直径サイズ(キャンバス上でのpx)
 	boxtmp[0] : XOR 描画範囲
+	ptmp      : 現在のブラシの一時退避データ
 */
 
+
+mlkbool _brush_copy(BrushEditData *dst, BrushEditData *src) {
+	dst->v = src->v;
+	if (mStrIsnotEmpty(&dst->str_shape)) { mStrFree(&dst->str_shape); }
+	if (mStrIsnotEmpty(&dst->str_texture)) { mStrFree(&dst->str_texture); }
+	if (mStrIsnotEmpty(&src->str_shape)) { mStrCopy(&dst->str_shape, &src->str_shape); }
+	if (mStrIsnotEmpty(&src->str_texture)) { mStrCopy(&dst->str_texture, &src->str_texture); }
+
+	return TRUE;
+}
+
+mlkbool _brush_restore(AppDraw *p) {
+	printf("restore\n");
+
+	if (p->w.ptmp == NULL)
+		return FALSE;
+
+	BrushEditData *backup = (BrushEditData*)p->w.ptmp;
+	_brush_copy(p->tlist->brush, backup);
+
+	if (mStrIsnotEmpty(&backup->str_shape)) {
+		mStrFree(&backup->str_shape);
+	}
+	if (mStrIsnotEmpty(&backup->str_texture)) {
+		mStrFree(&backup->str_texture);
+	}
+
+	free(p->w.ptmp);
+	p->w.ptmp = NULL;
+
+	return TRUE;
+}
+
+mlkbool _brush_backup(AppDraw *p) {
+	printf("backup\n");
+
+	if (p->w.ptmp != NULL) {
+		drawBrushParam_save();
+		_brush_restore(p);
+		return FALSE;
+	}
+	BrushEditData *backup_brush = mMalloc(sizeof(BrushEditData));
+	mStrInit(&backup_brush->str_shape);
+	mStrInit(&backup_brush->str_texture);
+	_brush_copy(backup_brush, p->tlist->brush);
+	p->w.ptmp = (void*)backup_brush;
+
+	return TRUE;
+}
 
 /* 移動 */
 
@@ -740,8 +790,10 @@ static void _brushsize_motion(AppDraw *p,uint32_t state)
 
 		//更新
 
-		PanelToolList_updateBrushSize();
-		PanelBrushOpt_updateBrushSize();
+		if (p->w.brush_regno == -1) {
+			PanelToolList_updateBrushSize();
+			PanelBrushOpt_updateBrushSize();
+		}
 	}
 }
 
@@ -750,6 +802,11 @@ static void _brushsize_motion(AppDraw *p,uint32_t state)
 static mlkbool _brushsize_release(AppDraw *p)
 {
 	drawOpXor_drawBrushSizeCircle(p, TRUE);
+	printf("p->w.brush_regno = %d\n", p->w.brush_regno);
+	if (p->w.brush_regno >= 0) {
+		drawBrushParam_save();
+		_brush_restore(p);
+	}
 	
 	return TRUE;
 }
@@ -760,11 +817,23 @@ mlkbool drawOp_dragBrushSize_press(AppDraw *p)
 {
 	int size;
 
-	if(!p->tlist->selitem
-		|| (p->tlist->selitem)->type != TOOLLIST_ITEMTYPE_BRUSH)
+	ToolListItem *item;
+
+	printf("drawOp_dragBrushSize_press p->w.brush_regno = %d\n", p->w.brush_regno);
+
+	if (p->w.brush_regno >= 0) {
+		item = p->tlist->regitem[p->w.brush_regno];
+	} else {
+		item = p->tlist->selitem;
+	}
+
+	if(!item || item->type != TOOLLIST_ITEMTYPE_BRUSH)
 		return FALSE;
 
-	//
+	if (p->w.brush_regno >= 0) {
+		_brush_backup(p);
+		ToolListBrushItem_setEdit(p->tlist->brush, (ToolListItem_brush *)item);
+	}
 
 	size = p->tlist->brush->v.size;
 
