@@ -715,17 +715,11 @@ static void _brushsize_motion(AppDraw *p,uint32_t state)
 
 	if(p->w.dpt_canv_cur.x > p->w.dpt_canv_last.x)
 	{
-		if(size < 100)
-			n = size + 10;
-		else
-			n = (int)(size * 1.03);
+		n = size + (p->w.dpt_canv_cur.x - p->w.dpt_canv_last.x) * 10;
 	}
 	else
 	{
-		if(size < 100)
-			n = size - 10;
-		else
-			n = (int)(size * 0.97);
+		n = size + (p->w.dpt_canv_cur.x - p->w.dpt_canv_last.x) * 10;
 	}
 
 	size = BrushEditData_adjustSize(pb, n);
