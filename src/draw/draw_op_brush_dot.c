@@ -22,6 +22,7 @@ $*/
  * 操作 - ブラシ/ドットペン
  *****************************************/
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
@@ -757,6 +758,8 @@ static void _brushsize_motion(AppDraw *p,uint32_t state)
 	BrushEditData *pb;
 	int size,n;
 
+	// BrushEditData
+	// ブラシ編集用の現在の値 [*:メモリ確保]
 	pb = p->tlist->brush;
 
 	//サイズ
@@ -816,11 +819,12 @@ static mlkbool _brushsize_release(AppDraw *p)
 mlkbool drawOp_dragBrushSize_press(AppDraw *p)
 {
 	int size;
-
-	ToolListItem *item;
+	ToolListItem* item;
 
 	printf("drawOp_dragBrushSize_press p->w.brush_regno = %d\n", p->w.brush_regno);
 
+	// 現在の選択アイテムが、空
+	// あるいは ブラシでない場合
 	if (p->w.brush_regno >= 0) {
 		item = p->tlist->regitem[p->w.brush_regno];
 	} else {
@@ -835,17 +839,22 @@ mlkbool drawOp_dragBrushSize_press(AppDraw *p)
 		ToolListBrushItem_setEdit(p->tlist->brush, (ToolListItem_brush *)item);
 	}
 
+	// 現在のブラシサイズ
 	size = p->tlist->brush->v.size;
 
+	// 現在のポインタ一取得
 	drawOpSub_getCanvasPoint_int(p, &p->w.pttmp[0]);
 
+	// 円の描画用に ntmp にサイズを設定
 	p->w.ntmp[0] = (int)(size * 0.1 * p->viewparam.scale + 0.5);
 
 	//
 
+	// イベントハンドラを登録
 	drawOpSub_setOpInfo(p, DRAW_OPTYPE_GENERAL,
 		_brushsize_motion, _brushsize_release, 0);
 
+	// 操作時のオプション
 	p->w.opflags |= DRAW_OPFLAGS_MOTION_POS_INT;
 
 	//円描画

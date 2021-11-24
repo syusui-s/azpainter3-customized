@@ -46,6 +46,7 @@ $*/
 #include "mainwindow.h"
 #include "maincanvas.h"
 #include "statusbar.h"
+#include <stdio.h>
 
 
 
@@ -59,6 +60,8 @@ $*/
 static mlkbool _on_press_brushdot_free(AppDraw *p,int toolno)
 {
 	mlkbool is_brush;
+
+	printf("_on_press_brushdot_free: p->w.brush_regno = %d\n", p->w.brush_regno);
 
 	//ブラシか
 
@@ -341,6 +344,8 @@ static mlkbool _on_press_toollist(AppDraw *p,int regno,int subno)
 		p->w.toollist_toolopt = pitool->toolopt;
 
 		p->w.drag_cursor_type = drawCursor_getToolCursor(pitool->toolno);
+		
+		printf("_on_press_toollist TOOL_MAIN : regno = %d\n", regno);
 
 		return _on_press_tool_main(p, pitool->toolno, subno, TRUE);
 	}
@@ -365,6 +370,7 @@ static mlkbool _on_press_toollist(AppDraw *p,int regno,int subno)
 			//登録ツールの場合、常に自由線
 			subno = TOOLSUB_DRAW_FREE;
 		}
+		printf("_on_press_toollist BRUSH_DOT : regno = %d\n", regno);
 
 		return _on_press_brush_dot(p, TOOL_TOOLLIST, subno);
 	}
@@ -377,6 +383,8 @@ static mlkbool _on_press_toollist(AppDraw *p,int regno,int subno)
 
 static mlkbool _on_press_tool(AppDraw *p,int toolno,int subno)
 {
+	printf("_on_press_tool\n");
+
 	if(subno < 0)
 		subno = p->tool.subno[toolno];
 
@@ -392,6 +400,7 @@ static mlkbool _on_press_tool(AppDraw *p,int toolno,int subno)
 		if(drawOpSub_isCurLayer_text())
 			return _on_press_tool_main(p, TOOL_TEXT, 0, FALSE);
 	
+		printf("_on_press_tool: w.brash_regno = %d\n", p->w.brush_regno);
 		return _on_press_toollist(p, -1, subno);
 	}
 }
@@ -408,11 +417,13 @@ static mlkbool _on_press_tool(AppDraw *p,int toolno,int subno)
 
 static int _get_canvaskey_cmd(void)
 {
-	int key,cmd;
+	int key,mod,cmd;
 
 	//キャンバス上で現在押されているキー
 
 	key = MainCanvasPage_getPressedRawKey();
+	printf("key: %d\n", key);
+	printf("mod: %d\n", MainCanvasPage_getPressedModifiers());
 	if(key == -1) return -1;
 
 	//現在のキーにコマンドが設定されているか
@@ -439,6 +450,8 @@ static int _get_canvaskey_cmd(void)
 static int _on_press_command(AppDraw *p,int btt,int is_pentab_eraser,int is_pentab)
 {
 	int cmd,ret,can_draw;
+
+	printf("- _on_press_command -----\n");
 
 	//====== コマンドID 取得 (CANVASKEY_*)
 
@@ -470,6 +483,7 @@ static int _on_press_command(AppDraw *p,int btt,int is_pentab_eraser,int is_pent
 		//キャンバスキーのキー＋操作のコマンドがある場合、優先
 
 		cmd = _get_canvaskey_cmd();
+		printf("_on_press_command LEFT_CLICK: cmd = %d\n", cmd);
 		
 		if(cmd == -1)
 		{
@@ -552,6 +566,7 @@ static int _on_press_command(AppDraw *p,int btt,int is_pentab_eraser,int is_pent
 				break;
 			//ブラシサイズ変更
 			case CANVASKEY_OP_OTHER_BRUSHSIZE:
+				printf("CANVASKEY_OP_OTHER_BRUSHSIZE: brush = %d\n", cmd - CANVASKEY_OP_REGIST);
 				ret = drawOp_dragBrushSize_press(p);
 				break;
 			//掴んだレイヤを選択

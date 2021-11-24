@@ -40,6 +40,7 @@ typedef struct _MainCanvasPage
 	mCursor cursor_drag_restore;	//ドラッグ中カーソル戻す用
 	mBox box_update;			//タイマーでの更新範囲 (x = -1 でなし)
 	int pressed_rawkey;			//現在押されているキー (キャンバスキー判定用)。-1 でなし
+	int pressed_modifiers;      // 現在おされている修飾キー
 	uint8_t is_pressed_space,	//スペースキーが押されているか
 		is_have_drag_cursor;	//ドラッグ中のカーソルがセットされているか
 }MainCanvasPage;

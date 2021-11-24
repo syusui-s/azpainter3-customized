@@ -74,6 +74,10 @@ enum
 	_TIMERID_LAYERNAME
 };
 
+enum {
+	MODIFIER_SHIFT = 1,
+	MODIFIER_CTRL  = 1<<1,
+};
 
 /* グラブする */
 
@@ -174,6 +178,16 @@ static void _page_event_timer(MainCanvasPage *p,int id)
 
 static void _page_event_keydown(MainCanvasPage *p,mEventKey *ev)
 {
+	printf("mEventKey: state = %d, raw_code = %d, raw_keysym = %d\n", ev->state, ev->raw_code, ev->raw_keysym);
+
+	if(ev->key == MKEY_SHIFT_L || ev->key == MKEY_SHIFT_R) {
+		p->pressed_modifiers |= MODIFIER_SHIFT;
+	}
+
+	if(ev->key == MKEY_CTRL_L || ev->key == MKEY_CTRL_R) {
+		p->pressed_modifiers |= MODIFIER_CTRL;
+	}
+
 	//スペースキー
 	
 	if(ev->key == MKEY_SPACE || ev->key == MKEY_KP_SPACE)
@@ -181,7 +195,7 @@ static void _page_event_keydown(MainCanvasPage *p,mEventKey *ev)
 
 	//現在押されているキーを記録 (キャンバスキー用)
 
-	if(ev->raw_code < 256)
+	if(ev->raw_code < 256 && ev->key != MKEY_SHIFT_L)
 		p->pressed_rawkey = ev->raw_code;
 
 	//
@@ -271,6 +285,13 @@ static int _page_event_handle(mWidget *wg,mEvent *ev)
 
 		//キー離し
 		case MEVENT_KEYUP:
+			if(ev->key.key == MKEY_SHIFT_L || ev->key.key == MKEY_SHIFT_R) {
+				p->pressed_modifiers ^= MODIFIER_SHIFT;
+			}
+			if(ev->key.key == MKEY_CTRL_L || ev->key.key == MKEY_CTRL_R) {
+				p->pressed_modifiers ^= MODIFIER_CTRL;
+			}
+
 			if(ev->key.key == MKEY_SPACE || ev->key.key == MKEY_KP_SPACE)
 				p->is_pressed_space = FALSE;
 
@@ -371,6 +392,15 @@ mlkbool MainCanvasPage_isPressed_space(void)
 int MainCanvasPage_getPressedRawKey(void)
 {
 	return (APPWIDGET->canvaspage)->pressed_rawkey;
+}
+
+/** 現在押されているキーの生番号取得
+ *
+ * return: -1 でなし */
+
+int MainCanvasPage_getPressedModifiers(void)
+{
+	return (APPWIDGET->canvaspage)->pressed_modifiers;
 }
 
 /** レイヤ名のツールチップ表示 */
