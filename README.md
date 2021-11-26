@@ -1,3 +1,14 @@
+# AzPainter 3
+
+This is unofficial and customized version of AzPainter 3.
+
+* Maybe there are something non-production codes such as debug print and tricky hacks, and it may contains bugs.
+* "This program comes with ABSOLUTELY NO WARRANTY;" (GPL 3)
+
+See [commits](https://github.com/syusui-s/azpainter3/commits/master) to check the changes.
+
+---
+
 # AzPainter
 
 http://azsky2.html.xdomain.jp/
