@@ -227,13 +227,13 @@ void AppResource_init(void)
 
 	p->imglist_panelopt_type = mImageListCreate_1bit_mono(g_img1bit_option_type, 20 * 4, 14, 20);
 
-	p->imglist_panelcolor_type = mImageListLoadPNG("!/img/coltype.png", 18);
+	p->imglist_panelcolor_type = mImageListLoadPNG("!/img/coltype-150.png", 27);
 
-	p->imglist_panelcolpal_type = mImageListLoadPNG("!/img/colpal_type.png", 20);
+	p->imglist_panelcolpal_type = mImageListLoadPNG("!/img/colpal_type-150.png", 30);
 
-	p->imglist_panellayer_check = mImageListLoadPNG("!/img/layer_check.png", 13);
+	p->imglist_panellayer_check = mImageListLoadPNG("!/img/layer_check-150.png", 20);
 
-	p->imglist_panellayer_cmd = mImageListLoadPNG("!/img/layer_cmd.png", 13);
+	p->imglist_panellayer_cmd = mImageListLoadPNG("!/img/layer_cmd-150.png", 20);
 }
 
 /** ファイル開く用フィルタ文字列(通常画像用) 取得*/
