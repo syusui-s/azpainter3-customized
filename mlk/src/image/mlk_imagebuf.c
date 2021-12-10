@@ -321,6 +321,22 @@ mImageBuf2 *mImageBuf2_new_align(int w,int h,int bits,int line_bytes,int alignme
 	return _imgbuf2_new(w, h, bits, line_bytes, alignment);
 }
 
+/**@ バッファをゼロクリアする */
+
+void mImageBuf2_clear0(mImageBuf2 *p)
+{
+	uint8_t **pp;
+	int i,size;
+
+	pp = p->ppbuf;
+	size = p->line_bytes;
+
+	for(i = p->height; i; i--)
+	{
+		memset(*(pp++), 0, size);
+	}
+}
+
 /**@ イメージを切り取り (バッファは極力維持)
  *
  * @d:Y ラインのバッファは、元のまま維持する (余分なサイズが残る)。\

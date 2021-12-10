@@ -64,6 +64,7 @@ mImageBuf2 *mImageBuf2_new_align(int w,int h,int bits,int line_bytes,int alignme
 void mImageBuf2_free(mImageBuf2 *p);
 void mImageBuf2_freeImage(mImageBuf2 *p);
 
+void mImageBuf2_clear0(mImageBuf2 *p);
 mlkbool mImageBuf2_crop_keep(mImageBuf2 *p,int left,int top,int width,int height,int line_bytes);
 
 #ifdef __cplusplus

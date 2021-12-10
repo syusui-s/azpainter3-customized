@@ -79,6 +79,38 @@ fc_check_sharedlib() {
 	rm -f conftest.c conftest
 }
 
+fc_check_libfunc() {
+	echo "char $2(); int main() { return $2(); }" > conftest.c
+
+	if $CC $LDFLAGS -o conftest conftest.c -l$1 > /dev/null 2>&1;then
+		tmp=0
+	else
+		tmp=1
+	fi
+
+	rm -f conftest.c conftest
+
+	return $tmp
+}
+
+fc_check_funclink() {
+	tmp_name=$1
+	res=no
+	set $2
+	for tmp;do
+		if fc_check_libfunc $tmp_name $tmp;then
+			res=yes
+			break
+		fi
+	done
+
+	if test $res = yes;then
+		LIBS_ADD=`fc_add_string "$LIBS_ADD" -l$tmp_name`
+	fi
+
+	echo "checking lib$tmp_name...$res"
+}
+
 fc_check_lib() {
 	tmp_name=$1
 	tmp_pkgconf=$2
@@ -194,7 +226,7 @@ cf_pkgconfig=no
 if fc_check_command pkg-config;then cf_pkgconfig=yes; fi
 
 PACKAGE=azpainter
-PACKAGE_VERSION=3.0.3
+PACKAGE_VERSION=3.0.4
 
 for opt;do
 	case $opt in
@@ -255,7 +287,7 @@ elif test "$tmp1" = Darwin;then
 	cf_os=mac
 	CFLAGS=`fc_add_string "$CFLAGS" "-I/opt/X11/include"`
 	LDFLAGS=`fc_add_string "$LDFLAGS" "-L/opt/X11/lib"`
-	CFLAGS=`fc_add_string "$CFLAGS" "-DMLK_NO_SIMD -DMLK_NO_FREETYPE_VARIABLE"`
+	CFLAGS=`fc_add_string "$CFLAGS" "-DMLK_NO_SIMD"`
 elif test "$tmp1" = FreeBSD;then
 	cf_os=freebsd
 	cf_make=gmake
@@ -273,9 +305,6 @@ if test -z "$cf_docdir";then cf_docdir=$cf_datarootdir/doc/$PACKAGE; fi
 
 fc_check_command_err $cf_make
 
-if test $cf_os = linux;then
-	LIBS_ADD=`fc_add_string "$LIBS_ADD" "-lrt"`
-fi
 
 #-------------
 # compiler
@@ -312,28 +341,12 @@ fi
 
 rm -f conftest.c conftest
 
-#--------------------
-# config.h & CFLAGS
-
-touch conftmp
-
-if test $cf_bigendian = yes;then
-	echo "s|\\#undef MLK_BIG_ENDIAN|\\#define MLK_BIG_ENDIAN|" >> conftmp
-fi
-
-if test -s conftmp;then
-	sed -f conftmp config.h.in > config.h
-else
-	cp config.h.in config.h
-fi
-
-rm -f conftmp
-echo "create config.h"
-
 #------------------
-# libs
+# check
 
 fc_check_sharedlib "iconv"
+
+fc_check_funclink rt "clock_gettime"
 
 fc_check_lib libpng "libpng" "" "-lpng -lz" "png.h" "" "libpng-dev or libpng-devel or libpng or png"
 fc_check_lib zlib "zlib" "" "" "zlib.h" "" "zlib1g-dev or zlib-devel or zlib"
@@ -346,6 +359,27 @@ fc_check_lib xcursor "xcursor" "" "-lXcursor" "X11/Xlib.h X11/Xcursor/Xcursor.h"
 fc_check_lib xinput "xi" "" "-lXi" "X11/Xlib.h X11/extensions/XInput2.h" "" "libxi-dev or libXi-devel or libxi"
 fc_check_lib fontconfig "fontconfig" "" "-lfontconfig -lfreetype" "fontconfig/fontconfig.h" "/usr/include/freetype2 /usr/local/include/freetype2 /opt/X11/include/freetype2" "libfontconfig1-dev or libfontconfig-devel or fontconfig"
 fc_check_lib freetype2 "freetype2" "" "" "ft2build.h" "" "libfreetype6-dev or libfreetype6-devel or freetype2"
+
+#--------------------
+# config.h
+
+touch conftmp
+
+if test $cf_bigendian = yes;then
+	echo "s|\\#undef MLK_BIG_ENDIAN|\\#define MLK_BIG_ENDIAN|" >> conftmp
+fi
+if ! fc_check_libfunc freetype FT_Get_MM_Var;then
+	echo "s|\\#undef MLK_NO_FREETYPE_VARIABLE|\\#define MLK_NO_FREETYPE_VARIABLE|" >> conftmp
+fi
+
+if test -s conftmp;then
+	sed -f conftmp config.h.in > config.h
+else
+	cp config.h.in config.h
+fi
+
+rm -f conftmp
+echo "create config.h"
 
 #------------------
 # Makefile

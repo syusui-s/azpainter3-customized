@@ -272,11 +272,9 @@ static mlkerr _loadv3_open(_loadv3 **dst,const char *filename,mPopupProgress *pr
 	}
 
 	//ファイルサイズ
-	
-	fseek(fp, 0, SEEK_END);
-	p->filesize = ftell(fp);
-	rewind(fp);
 
+	p->filesize = mFILEgetSize(fp);
+	
 	//
 
 	mZlibSetIO_stdio(p->zlib, fp);

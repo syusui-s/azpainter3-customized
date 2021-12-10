@@ -1216,10 +1216,10 @@ Do you want to convert the ver 2 configuration file?\
 +=Duplicate(&C)
 +=Delete(&D)
 +=Erase(&X)
-+=Drop to lower layer(&Z)
-+=Combine to lower layer(&B)
-+=Combine multiple layers(&W)...
-+=Image integration(&M)
++=Move image down to layer below(&Z)
++=Merge with layer below(&B)
++=Merge various layers(&W)...
++=Merge all(&M)
 +=Display tone layer in grayscale(&T)
 +=Output to file(&S)...
 +=Settings(&O)

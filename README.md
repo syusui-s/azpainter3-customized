@@ -9,6 +9,26 @@ http://azsky2.html.xdomain.jp/
 - Linux/FreeBSD/macOS(要XQuartz)
 - X11R6 以降
 
-## インストール
+## コンパイル/インストール
 
-詳細は、ReadMe をご覧ください。
+※各ライブラリの開発用ファイルが必要です。
+
+~~~
+## Linux
+
+$ ./configure
+$ make
+$ sudo make install
+
+## FreeBSD
+
+$ ./configure
+$ gmake
+# gmake install
+
+## macOS
+
+$ ./configure --prefix=/opt/X11
+$ make
+$ sudo make install
+~~~

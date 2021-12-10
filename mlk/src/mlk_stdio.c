@@ -24,6 +24,7 @@ $*/
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <sys/stat.h>
 
 #include "mlk.h"
 #include "mlk_stdio.h"
@@ -50,20 +51,18 @@ FILE *mFILEopen(const char *filename,const char *mode)
 	return fp;
 }
 
-/**@ ファイルサイズ取得
- *
- * @d:終端へシークして位置を取得する。\
- * 取得後は位置を先頭へ移動する。 */
+/**@ ファイルサイズ取得 */
 
 mlkfoff mFILEgetSize(FILE *fp)
 {
-	mlkfoff size;
+	struct stat st;
 
-	fseeko(fp, 0, SEEK_END);
-	size = ftello(fp);
-	rewind(fp);
-
-	return size;
+	if(fstat(fileno(fp), &st) == -1)
+		return 0;
+	else if((st.st_mode & S_IFMT) == S_IFREG)
+		return st.st_size;
+	else
+		return 0;
 }
 
 
