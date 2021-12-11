@@ -368,7 +368,7 @@ touch conftmp
 if test $cf_bigendian = yes;then
 	echo "s|\\#undef MLK_BIG_ENDIAN|\\#define MLK_BIG_ENDIAN|" >> conftmp
 fi
-if ! fc_check_libfunc freetype FT_Get_MM_Var;then
+if ! fc_check_libfunc freetype FT_Done_MM_Var;then
 	echo "s|\\#undef MLK_NO_FREETYPE_VARIABLE|\\#define MLK_NO_FREETYPE_VARIABLE|" >> conftmp
 fi
 
