@@ -397,12 +397,8 @@ mlkerr mZlibDecReadOnce(mZlib *p,void *buf,int bufsize,uint32_t insize)
 	{
 		//ファイルからバッファへ読み込み
 
-		if(z->avail_in == 0)
+		if(z->avail_in == 0 && p->size)
 		{
-			//データが足りない
-			if(p->size == 0)
-				return MLKERR_NEED_MORE;
-
 			ret = _decode_read(p);
 			if(ret <= 0) return MLKERR_IO;
 
@@ -447,12 +443,11 @@ mlkerr mZlibDecRead(mZlib *p,void *buf,int size)
 	while(z->avail_out)
 	{
 		//ファイルからバッファへ読み込み
+		// :終端のデータにおいて、avail_in が 0 で、p->size も 0 の場合がある (入力データはすでに内部にある)
+		// :その場合、直接 inflate を呼ぶ。
 
-		if(z->avail_in == 0)
+		if(z->avail_in == 0 && p->size)
 		{
-			if(p->size == 0)
-				return MLKERR_NEED_MORE;
-
 			ret = _decode_read(p);
 			if(ret <= 0) return MLKERR_IO;
 

@@ -570,16 +570,28 @@ static mlkbool _press_textlayer(AppDraw *p,mlkbool dblclk)
 
 	pi = _get_textitem_press(p, &p->w.pttmp[0]);
 
-	//+Alt 時、テキスト編集。テキストがなければ何もしない
+	//テキストがない場合、何もしない
 
 	if(p->w.press_state & MLK_STATE_ALT)
 	{
+		//+Alt: テキスト編集
+
 		if(pi) _textlayer_edit_text(p, pi);
 
 		return FALSE;
 	}
+	else if(p->w.press_state & MLK_STATE_CTRL)
+	{
+		//+Ctrl: 位置移動
 
-	//
+		if(!pi)
+			return FALSE;
+		else
+			return _press_start_move(p, pi);
+	}
+
+	//----------
+	//以下、テキストがない場合は新規
 
 	if(!pi)
 		//テキストがなければ新規
@@ -590,12 +602,6 @@ static mlkbool _press_textlayer(AppDraw *p,mlkbool dblclk)
 		{
 			//ダブルクリック時は編集
 			_textlayer_edit_text(p, pi);
-		}
-		else if(p->w.press_state & MLK_STATE_CTRL)
-		{
-			//+Ctrl で位置移動
-
-			return _press_start_move(p, pi);
 		}
 		else
 		{
