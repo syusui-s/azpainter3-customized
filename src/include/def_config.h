@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -119,6 +119,7 @@ typedef struct
 
 	uint8_t color_type,		//カラー:色タイプ
 		colpal_type,		//カラーパレット:タイプ
+		colpal_flags,		//カラーパレット:フラグ
 		colwheel_type,		//カラーホイール:タイプ
 		option_type,		//オプション:タイプ
 		toollist_sizelist_h;	//ツールリストのブラシサイズリストの高さ
@@ -126,6 +127,13 @@ typedef struct
 		water_preset[CONFIG_WATER_PRESET_NUM];	//水彩プリセット(各10bit)
 }ConfigPanel;
 
+//カラーパレット:フラグ
+enum
+{
+	CONFIG_PANEL_COLPAL_F_COMPACT = 1<<0	//コンパクト表示
+};
+
+//ブラシ設定:フラグ
 enum
 {
 	CONFIG_PANEL_BRUSHOPT_F_HIDE_WATER = 1<<0,	//水彩

@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -1178,6 +1178,19 @@ void mPanelSetWindowMode(mPanel *p,int type)
 		else
 			//未作成なら、フラグだけ変更
 			p->stflags ^= MPANEL_F_WINDOW_MODE;
+	}
+}
+
+/**@ パネルの再レイアウトを行う
+ *
+ * @d:パネルの中身の状態が変わった時など。 */
+
+void mPanelReLayout(mPanel *p)
+{
+	if(p)
+	{
+		mWidgetReLayout((p->winmode_win)?
+			MLK_WIDGET(p->winmode_win): p->store_parent);
 	}
 }
 

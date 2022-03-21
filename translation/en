@@ -390,6 +390,14 @@ HTML color specification: #ff0080 (6 digit only)
 +=Get palette from image color(&I)...
 +=Save to file(&S)...
 
++=Gradation settings(&O)
+
++=Color Palette
++=Compact mode(&C)
++=Palette(&P)
++=HSL(&S)
++=Gradation(&M)
+
 100=Make all drawing colors.\nAre you sure?
 
 # Neutral color dialog

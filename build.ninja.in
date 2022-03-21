@@ -1,0 +1,419 @@
+
+ninja_required_version = 1.3
+
+ccomp = @CC@
+cflags = @CFLAGS@ -pthread -I../mlk/include  -I. -DHAVE_CONFIG_H
+ldflags = @LDFLAGS@ -pthread
+libs = @LIBS@ -lm
+
+rule cc
+  deps = gcc
+  depfile = $out.d
+  command = $ccomp $cflags -I../src/include -c -MMD -MF $out.d $in -o $out
+  description = cc $in
+
+rule ccmlk
+  deps = gcc
+  depfile = $out.d
+  command = $ccomp $cflags -I../mlk/src/gui -c -MMD -MF $out.d $in -o $out
+  description = cc $in
+
+rule link
+  command = $ccomp $ldflags -o $out $in $libs
+  description = link $out
+
+rule ar
+  command = ar rc $out $in
+  description = ar $out
+
+rule install_cmd
+  command = sh install.sh $instcom
+
+# build
+
+build inst_install: install_cmd
+  instcom = install
+build inst_uninstall: install_cmd
+  instcom = uninstall
+build inst_dist: install_cmd
+  instcom = dist
+
+build install: phony inst_install
+build uninstall: phony inst_uninstall
+build dist: phony inst_dist
+
+build azpainter: link apphelp.o configfile.o appconfig.o appcursor.o main.o appresource.o draw_op_func2.o draw_toollist.o draw_image.o $
+ draw_calc.o draw_op_sub.o draw_select.o draw_load_apd_v1v2.o draw_save_image.o draw_load_apd_v3.o draw_loadfile.o $
+ draw_op_main.o draw_canvas.o draw_op_text.o draw_loadsave_psd.o draw_op_brush_dot.o draw_loadsave_apd_v4.o $
+ draw_rule.o draw_update.o draw_load_adw.o draw_boxsel.o draw_op_func1.o draw_layer.o draw_op_xor.o draw_main.o $
+ filter_transform.o filter_draw.o filter_antialiasing.o filter_edge.o perlin_noise.o filter_sub_proc.o $
+ filter_other.o filter_sub.o filter_pixelate.o filter_blur.o filter_comic_draw.o filter_sub_color.o filter_color_alpha.o $
+ filter_effect.o filter_comic_tone.o blendcolor_16bit.o imagecanvas_resize.o imagecanvas_8bit.o imagecanvas.o $
+ tileimage_edit.o tileimage_brush.o tileimage_bitfunc.o tileimage_col_alpha1bit.o drawpixbuf.o imagecanvas_16bit.o $
+ tileimage_col_gray.o imagematerial.o tileimage_col_rgba.o tileimage_pv.o tileimage.o tileimage_imagefile.o $
+ blendcolor_8bit.o tileimage_col_alpha.o tileimage_select.o tileimage_pixel.o image32.o tileimage_draw.o $
+ tileimage_pixelcol.o load_thumbnail.o undo_compress.o undoitem_dat.o table_data.o regfont.o undoitem_sub.o $
+ changecol.o layerlist.o brushsize_list.o apd_v4_format.o toollist.o filter_save_param.o undoitem_run.o $
+ curve_spline.o undoitem_tileimg.o undo.o drawfill.o pointbuf.o colorvalue.o palettelist.o materiallist.o $
+ layer_template.o conv_ver2to3.o textword_list.o dotshape.o font.o fillpolygon.o font_str.o gradation_list.o $
+ layeritem.o fontcache.o undoitem_base.o panel_canvview.o dlg_text.o dlg_gradedit_wg.o panel_toollist_list.o $
+ dlg_saveopt.o maincanvas.o panel_option_other.o dlg_layercolor.o dlg_gradedit.o filterbar.o panel_filterlist.o $
+ panel_colorpalette.o panel_toollist.o panel_color_coltype.o panel_colorpalette_gradbar.o dlg_transform_sub.o $
+ dlg_textword.o dlg_gridopt.o dlg_toollist_edit.o filedialog.o panel_colorpalette_dlg.o mainwin_cmd.o $
+ statusbar.o panel_imgviewer_page.o panel_layer_subwg.o panel_brushopt.o panel_layer.o panel_color.o $
+ dlg_other.o sel_material.o dlg_layer.o canvas_slider.o dlg_imagepos.o panel_colorpalette_hls.o mainwin_file.o $
+ mainwin_menu.o panel_imgviewer.o panel_option_tool.o mainwin_layer.o panel_canvasctrl.o rotate_widget.o $
+ panel_colorpalette_page.o mainwindow.o dlg_opt_canvaskey.o panel_option.o filterdlg.o dlg_opt_menukey.o $
+ panel_colorwheel.o dlg_sel_material.o dlg_canvas.o widget_func.o imgmatprev.o panel_layer_list.o panel_toollist_size.o $
+ popup_thread.o panel_colorpalette_paledit.o dlg_gradlist.o panel_colorpalette_palview.o dlg_regfont.o $
+ panel_tool.o dlg_vieweropt.o panel_canvview_page.o dlg_transform_view.o dlg_panel_layout.o dlg_envopt_page.o $
+ prev_tileimg.o filterprev.o dlg_toollist.o panel_color_widget.o popup_zoomslider.o colorwheel.o dlg_opt_toolbar.o $
+ filter_wg_level.o dlg_layer_newopt.o filter_wg_repcol.o panel.o dlg_transform.o valuebar.o panel_toollist_list_menu.o $
+ dlg_envopt_btt.o dlg_pressure.o mainwin_filter.o dlg_envopt.o dlg_newcanvas.o libmlk.a
+default azpainter
+
+build libmlk.a: ar mlk.o mlk_argparse.o mlk_buf.o mlk_bufio.o mlk_charset.o mlk_color.o mlk_dir.o mlk_file.o mlk_file_util.o $
+ mlk_filelist.o mlk_iniread.o mlk_iniwrite.o mlk_io.o mlk_list.o mlk_nanotime.o mlk_packbits.o mlk_rand.o $
+ mlk_rectbox.o mlk_stdio.o mlk_str.o mlk_string.o mlk_textparam.o mlk_thread.o mlk_translation.o mlk_tree.o $
+ mlk_undo.o mlk_unicode.o mlk_util.o mlk_util_sys.o mlk_zlib.o mlk_font.o mlk_font_freetype.o mlk_fontconfig.o $
+ mlk_fontinfo.o mlk_fontlist.o mlk_opentype.o mlk_opentype_layout.o mlk_accelerator.o mlk_clipboard.o $
+ mlk_clipboard_unix.o mlk_columnitem_manager.o mlk_cursor.o mlk_eventlist.o mlk_font_pixbuf.o mlk_gui.o $
+ mlk_gui_style.o mlk_guicol.o mlk_guitimer.o mlk_imagelist.o mlk_key.o mlk_menu.o mlk_mimelist.o mlk_pixbuf.o $
+ mlk_pv_event.o mlk_pv_menu.o mlk_x11_clipboard.o mlk_x11_cursor.o mlk_x11_dnd.o mlk_x11_event.o mlk_x11_event_sub.o $
+ mlk_x11_inputmethod.o mlk_x11_main.o mlk_x11_pixbuf.o mlk_x11_util.o mlk_x11_window.o mlk_x11_xinput2.o $
+ mlk_gifdec.o mlk_gifenc.o mlk_imagebuf.o mlk_imageconv.o mlk_load_bmp.o mlk_load_gif.o mlk_load_jpeg.o $
+ mlk_load_png.o mlk_load_psd.o mlk_load_tiff.o mlk_load_webp.o mlk_loadimage.o mlk_psd_load.o mlk_psd_save.o $
+ mlk_save_bmp.o mlk_save_gif.o mlk_save_jpeg.o mlk_save_png.o mlk_save_tiff.o mlk_save_webp.o mlk_saveimage.o $
+ mlk_arrowbutton.o mlk_button.o mlk_checkbutton.o mlk_colorbutton.o mlk_colorprev.o mlk_combobox.o mlk_conflistview.o $
+ mlk_container.o mlk_container_layout.o mlk_containerview.o mlk_dlg_about.o mlk_dlg_inputtext.o mlk_dlg_openfont.o $
+ mlk_dlg_selectcolor.o mlk_dlg_selectfont.o mlk_expander.o mlk_filedialog.o mlk_fileinput.o mlk_filelistview.o $
+ mlk_fontbutton.o mlk_groupbox.o mlk_hsvpicker.o mlk_iconbar.o mlk_imgbutton.o mlk_inputaccel.o mlk_label.o $
+ mlk_lineedit.o mlk_listheader.o mlk_listview.o mlk_listviewpage.o mlk_menubar.o mlk_menuwindow.o mlk_messagebox.o $
+ mlk_multiedit.o mlk_multieditpage.o mlk_pager.o mlk_panel.o mlk_panelheader.o mlk_popup_progress.o mlk_popuplistview.o $
+ mlk_progressbar.o mlk_pv_widget.o mlk_pv_window.o mlk_scrollbar.o mlk_scrollview.o mlk_sliderbar.o mlk_splitter.o $
+ mlk_tab.o mlk_widget.o mlk_widgettextedit.o mlk_window.o $
+
+build apphelp.o: cc ../src/apphelp.c
+build configfile.o: cc ../src/configfile.c
+build appconfig.o: cc ../src/appconfig.c
+build appcursor.o: cc ../src/appcursor.c
+build main.o: cc ../src/main.c
+build appresource.o: cc ../src/appresource.c
+build draw_op_func2.o: cc ../src/draw/draw_op_func2.c
+build draw_toollist.o: cc ../src/draw/draw_toollist.c
+build draw_image.o: cc ../src/draw/draw_image.c
+build draw_calc.o: cc ../src/draw/draw_calc.c
+build draw_op_sub.o: cc ../src/draw/draw_op_sub.c
+build draw_select.o: cc ../src/draw/draw_select.c
+build draw_load_apd_v1v2.o: cc ../src/draw/draw_load_apd_v1v2.c
+build draw_save_image.o: cc ../src/draw/draw_save_image.c
+build draw_load_apd_v3.o: cc ../src/draw/draw_load_apd_v3.c
+build draw_loadfile.o: cc ../src/draw/draw_loadfile.c
+build draw_op_main.o: cc ../src/draw/draw_op_main.c
+build draw_canvas.o: cc ../src/draw/draw_canvas.c
+build draw_op_text.o: cc ../src/draw/draw_op_text.c
+build draw_loadsave_psd.o: cc ../src/draw/draw_loadsave_psd.c
+build draw_op_brush_dot.o: cc ../src/draw/draw_op_brush_dot.c
+build draw_loadsave_apd_v4.o: cc ../src/draw/draw_loadsave_apd_v4.c
+build draw_rule.o: cc ../src/draw/draw_rule.c
+build draw_update.o: cc ../src/draw/draw_update.c
+build draw_load_adw.o: cc ../src/draw/draw_load_adw.c
+build draw_boxsel.o: cc ../src/draw/draw_boxsel.c
+build draw_op_func1.o: cc ../src/draw/draw_op_func1.c
+build draw_layer.o: cc ../src/draw/draw_layer.c
+build draw_op_xor.o: cc ../src/draw/draw_op_xor.c
+build draw_main.o: cc ../src/draw/draw_main.c
+build filter_transform.o: cc ../src/filter/filter_transform.c
+build filter_draw.o: cc ../src/filter/filter_draw.c
+build filter_antialiasing.o: cc ../src/filter/filter_antialiasing.c
+build filter_edge.o: cc ../src/filter/filter_edge.c
+build perlin_noise.o: cc ../src/filter/perlin_noise.c
+build filter_sub_proc.o: cc ../src/filter/filter_sub_proc.c
+build filter_other.o: cc ../src/filter/filter_other.c
+build filter_sub.o: cc ../src/filter/filter_sub.c
+build filter_pixelate.o: cc ../src/filter/filter_pixelate.c
+build filter_blur.o: cc ../src/filter/filter_blur.c
+build filter_comic_draw.o: cc ../src/filter/filter_comic_draw.c
+build filter_sub_color.o: cc ../src/filter/filter_sub_color.c
+build filter_color_alpha.o: cc ../src/filter/filter_color_alpha.c
+build filter_effect.o: cc ../src/filter/filter_effect.c
+build filter_comic_tone.o: cc ../src/filter/filter_comic_tone.c
+build blendcolor_16bit.o: cc ../src/image/blendcolor_16bit.c
+build imagecanvas_resize.o: cc ../src/image/imagecanvas_resize.c
+build imagecanvas_8bit.o: cc ../src/image/imagecanvas_8bit.c
+build imagecanvas.o: cc ../src/image/imagecanvas.c
+build tileimage_edit.o: cc ../src/image/tileimage_edit.c
+build tileimage_brush.o: cc ../src/image/tileimage_brush.c
+build tileimage_bitfunc.o: cc ../src/image/tileimage_bitfunc.c
+build tileimage_col_alpha1bit.o: cc ../src/image/tileimage_col_alpha1bit.c
+build drawpixbuf.o: cc ../src/image/drawpixbuf.c
+build imagecanvas_16bit.o: cc ../src/image/imagecanvas_16bit.c
+build tileimage_col_gray.o: cc ../src/image/tileimage_col_gray.c
+build imagematerial.o: cc ../src/image/imagematerial.c
+build tileimage_col_rgba.o: cc ../src/image/tileimage_col_rgba.c
+build tileimage_pv.o: cc ../src/image/tileimage_pv.c
+build tileimage.o: cc ../src/image/tileimage.c
+build tileimage_imagefile.o: cc ../src/image/tileimage_imagefile.c
+build blendcolor_8bit.o: cc ../src/image/blendcolor_8bit.c
+build tileimage_col_alpha.o: cc ../src/image/tileimage_col_alpha.c
+build tileimage_select.o: cc ../src/image/tileimage_select.c
+build tileimage_pixel.o: cc ../src/image/tileimage_pixel.c
+build image32.o: cc ../src/image/image32.c
+build tileimage_draw.o: cc ../src/image/tileimage_draw.c
+build tileimage_pixelcol.o: cc ../src/image/tileimage_pixelcol.c
+build load_thumbnail.o: cc ../src/image/load_thumbnail.c
+build undo_compress.o: cc ../src/other/undo_compress.c
+build undoitem_dat.o: cc ../src/other/undoitem_dat.c
+build table_data.o: cc ../src/other/table_data.c
+build regfont.o: cc ../src/other/regfont.c
+build undoitem_sub.o: cc ../src/other/undoitem_sub.c
+build changecol.o: cc ../src/other/changecol.c
+build layerlist.o: cc ../src/other/layerlist.c
+build brushsize_list.o: cc ../src/other/brushsize_list.c
+build apd_v4_format.o: cc ../src/other/apd_v4_format.c
+build toollist.o: cc ../src/other/toollist.c
+build filter_save_param.o: cc ../src/other/filter_save_param.c
+build undoitem_run.o: cc ../src/other/undoitem_run.c
+build curve_spline.o: cc ../src/other/curve_spline.c
+build undoitem_tileimg.o: cc ../src/other/undoitem_tileimg.c
+build undo.o: cc ../src/other/undo.c
+build drawfill.o: cc ../src/other/drawfill.c
+build pointbuf.o: cc ../src/other/pointbuf.c
+build colorvalue.o: cc ../src/other/colorvalue.c
+build palettelist.o: cc ../src/other/palettelist.c
+build materiallist.o: cc ../src/other/materiallist.c
+build layer_template.o: cc ../src/other/layer_template.c
+build conv_ver2to3.o: cc ../src/other/conv_ver2to3.c
+build textword_list.o: cc ../src/other/textword_list.c
+build dotshape.o: cc ../src/other/dotshape.c
+build font.o: cc ../src/other/font.c
+build fillpolygon.o: cc ../src/other/fillpolygon.c
+build font_str.o: cc ../src/other/font_str.c
+build gradation_list.o: cc ../src/other/gradation_list.c
+build layeritem.o: cc ../src/other/layeritem.c
+build fontcache.o: cc ../src/other/fontcache.c
+build undoitem_base.o: cc ../src/other/undoitem_base.c
+build panel_canvview.o: cc ../src/widget/panel_canvview.c
+build dlg_text.o: cc ../src/widget/dlg_text.c
+build dlg_gradedit_wg.o: cc ../src/widget/dlg_gradedit_wg.c
+build panel_toollist_list.o: cc ../src/widget/panel_toollist_list.c
+build dlg_saveopt.o: cc ../src/widget/dlg_saveopt.c
+build maincanvas.o: cc ../src/widget/maincanvas.c
+build panel_option_other.o: cc ../src/widget/panel_option_other.c
+build dlg_layercolor.o: cc ../src/widget/dlg_layercolor.c
+build dlg_gradedit.o: cc ../src/widget/dlg_gradedit.c
+build filterbar.o: cc ../src/widget/filterbar.c
+build panel_filterlist.o: cc ../src/widget/panel_filterlist.c
+build panel_colorpalette.o: cc ../src/widget/panel_colorpalette.c
+build panel_toollist.o: cc ../src/widget/panel_toollist.c
+build panel_color_coltype.o: cc ../src/widget/panel_color_coltype.c
+build panel_colorpalette_gradbar.o: cc ../src/widget/panel_colorpalette_gradbar.c
+build dlg_transform_sub.o: cc ../src/widget/dlg_transform_sub.c
+build dlg_textword.o: cc ../src/widget/dlg_textword.c
+build dlg_gridopt.o: cc ../src/widget/dlg_gridopt.c
+build dlg_toollist_edit.o: cc ../src/widget/dlg_toollist_edit.c
+build filedialog.o: cc ../src/widget/filedialog.c
+build panel_colorpalette_dlg.o: cc ../src/widget/panel_colorpalette_dlg.c
+build mainwin_cmd.o: cc ../src/widget/mainwin_cmd.c
+build statusbar.o: cc ../src/widget/statusbar.c
+build panel_imgviewer_page.o: cc ../src/widget/panel_imgviewer_page.c
+build panel_layer_subwg.o: cc ../src/widget/panel_layer_subwg.c
+build panel_brushopt.o: cc ../src/widget/panel_brushopt.c
+build panel_layer.o: cc ../src/widget/panel_layer.c
+build panel_color.o: cc ../src/widget/panel_color.c
+build dlg_other.o: cc ../src/widget/dlg_other.c
+build sel_material.o: cc ../src/widget/sel_material.c
+build dlg_layer.o: cc ../src/widget/dlg_layer.c
+build canvas_slider.o: cc ../src/widget/canvas_slider.c
+build dlg_imagepos.o: cc ../src/widget/dlg_imagepos.c
+build panel_colorpalette_hls.o: cc ../src/widget/panel_colorpalette_hls.c
+build mainwin_file.o: cc ../src/widget/mainwin_file.c
+build mainwin_menu.o: cc ../src/widget/mainwin_menu.c
+build panel_imgviewer.o: cc ../src/widget/panel_imgviewer.c
+build panel_option_tool.o: cc ../src/widget/panel_option_tool.c
+build mainwin_layer.o: cc ../src/widget/mainwin_layer.c
+build panel_canvasctrl.o: cc ../src/widget/panel_canvasctrl.c
+build rotate_widget.o: cc ../src/widget/rotate_widget.c
+build panel_colorpalette_page.o: cc ../src/widget/panel_colorpalette_page.c
+build mainwindow.o: cc ../src/widget/mainwindow.c
+build dlg_opt_canvaskey.o: cc ../src/widget/dlg_opt_canvaskey.c
+build panel_option.o: cc ../src/widget/panel_option.c
+build filterdlg.o: cc ../src/widget/filterdlg.c
+build dlg_opt_menukey.o: cc ../src/widget/dlg_opt_menukey.c
+build panel_colorwheel.o: cc ../src/widget/panel_colorwheel.c
+build dlg_sel_material.o: cc ../src/widget/dlg_sel_material.c
+build dlg_canvas.o: cc ../src/widget/dlg_canvas.c
+build widget_func.o: cc ../src/widget/widget_func.c
+build imgmatprev.o: cc ../src/widget/imgmatprev.c
+build panel_layer_list.o: cc ../src/widget/panel_layer_list.c
+build panel_toollist_size.o: cc ../src/widget/panel_toollist_size.c
+build popup_thread.o: cc ../src/widget/popup_thread.c
+build panel_colorpalette_paledit.o: cc ../src/widget/panel_colorpalette_paledit.c
+build dlg_gradlist.o: cc ../src/widget/dlg_gradlist.c
+build panel_colorpalette_palview.o: cc ../src/widget/panel_colorpalette_palview.c
+build dlg_regfont.o: cc ../src/widget/dlg_regfont.c
+build panel_tool.o: cc ../src/widget/panel_tool.c
+build dlg_vieweropt.o: cc ../src/widget/dlg_vieweropt.c
+build panel_canvview_page.o: cc ../src/widget/panel_canvview_page.c
+build dlg_transform_view.o: cc ../src/widget/dlg_transform_view.c
+build dlg_panel_layout.o: cc ../src/widget/dlg_panel_layout.c
+build dlg_envopt_page.o: cc ../src/widget/dlg_envopt_page.c
+build prev_tileimg.o: cc ../src/widget/prev_tileimg.c
+build filterprev.o: cc ../src/widget/filterprev.c
+build dlg_toollist.o: cc ../src/widget/dlg_toollist.c
+build panel_color_widget.o: cc ../src/widget/panel_color_widget.c
+build popup_zoomslider.o: cc ../src/widget/popup_zoomslider.c
+build colorwheel.o: cc ../src/widget/colorwheel.c
+build dlg_opt_toolbar.o: cc ../src/widget/dlg_opt_toolbar.c
+build filter_wg_level.o: cc ../src/widget/filter_wg_level.c
+build dlg_layer_newopt.o: cc ../src/widget/dlg_layer_newopt.c
+build filter_wg_repcol.o: cc ../src/widget/filter_wg_repcol.c
+build panel.o: cc ../src/widget/panel.c
+build dlg_transform.o: cc ../src/widget/dlg_transform.c
+build valuebar.o: cc ../src/widget/valuebar.c
+build panel_toollist_list_menu.o: cc ../src/widget/panel_toollist_list_menu.c
+build dlg_envopt_btt.o: cc ../src/widget/dlg_envopt_btt.c
+build dlg_pressure.o: cc ../src/widget/dlg_pressure.c
+build mainwin_filter.o: cc ../src/widget/mainwin_filter.c
+build dlg_envopt.o: cc ../src/widget/dlg_envopt.c
+build dlg_newcanvas.o: cc ../src/widget/dlg_newcanvas.c
+
+build mlk.o: ccmlk ../mlk/src/mlk.c
+build mlk_argparse.o: ccmlk ../mlk/src/mlk_argparse.c
+build mlk_buf.o: ccmlk ../mlk/src/mlk_buf.c
+build mlk_bufio.o: ccmlk ../mlk/src/mlk_bufio.c
+build mlk_charset.o: ccmlk ../mlk/src/mlk_charset.c
+build mlk_color.o: ccmlk ../mlk/src/mlk_color.c
+build mlk_dir.o: ccmlk ../mlk/src/mlk_dir.c
+build mlk_file.o: ccmlk ../mlk/src/mlk_file.c
+build mlk_file_util.o: ccmlk ../mlk/src/mlk_file_util.c
+build mlk_filelist.o: ccmlk ../mlk/src/mlk_filelist.c
+build mlk_iniread.o: ccmlk ../mlk/src/mlk_iniread.c
+build mlk_iniwrite.o: ccmlk ../mlk/src/mlk_iniwrite.c
+build mlk_io.o: ccmlk ../mlk/src/mlk_io.c
+build mlk_list.o: ccmlk ../mlk/src/mlk_list.c
+build mlk_nanotime.o: ccmlk ../mlk/src/mlk_nanotime.c
+build mlk_packbits.o: ccmlk ../mlk/src/mlk_packbits.c
+build mlk_rand.o: ccmlk ../mlk/src/mlk_rand.c
+build mlk_rectbox.o: ccmlk ../mlk/src/mlk_rectbox.c
+build mlk_stdio.o: ccmlk ../mlk/src/mlk_stdio.c
+build mlk_str.o: ccmlk ../mlk/src/mlk_str.c
+build mlk_string.o: ccmlk ../mlk/src/mlk_string.c
+build mlk_textparam.o: ccmlk ../mlk/src/mlk_textparam.c
+build mlk_thread.o: ccmlk ../mlk/src/mlk_thread.c
+build mlk_translation.o: ccmlk ../mlk/src/mlk_translation.c
+build mlk_tree.o: ccmlk ../mlk/src/mlk_tree.c
+build mlk_undo.o: ccmlk ../mlk/src/mlk_undo.c
+build mlk_unicode.o: ccmlk ../mlk/src/mlk_unicode.c
+build mlk_util.o: ccmlk ../mlk/src/mlk_util.c
+build mlk_util_sys.o: ccmlk ../mlk/src/mlk_util_sys.c
+build mlk_zlib.o: ccmlk ../mlk/src/mlk_zlib.c
+build mlk_font.o: ccmlk ../mlk/src/font/mlk_font.c
+build mlk_font_freetype.o: ccmlk ../mlk/src/font/mlk_font_freetype.c
+build mlk_fontconfig.o: ccmlk ../mlk/src/font/mlk_fontconfig.c
+build mlk_fontinfo.o: ccmlk ../mlk/src/font/mlk_fontinfo.c
+build mlk_fontlist.o: ccmlk ../mlk/src/font/mlk_fontlist.c
+build mlk_opentype.o: ccmlk ../mlk/src/font/mlk_opentype.c
+build mlk_opentype_layout.o: ccmlk ../mlk/src/font/mlk_opentype_layout.c
+build mlk_accelerator.o: ccmlk ../mlk/src/gui/mlk_accelerator.c
+build mlk_clipboard.o: ccmlk ../mlk/src/gui/mlk_clipboard.c
+build mlk_clipboard_unix.o: ccmlk ../mlk/src/gui/mlk_clipboard_unix.c
+build mlk_columnitem_manager.o: ccmlk ../mlk/src/gui/mlk_columnitem_manager.c
+build mlk_cursor.o: ccmlk ../mlk/src/gui/mlk_cursor.c
+build mlk_eventlist.o: ccmlk ../mlk/src/gui/mlk_eventlist.c
+build mlk_font_pixbuf.o: ccmlk ../mlk/src/gui/mlk_font_pixbuf.c
+build mlk_gui.o: ccmlk ../mlk/src/gui/mlk_gui.c
+build mlk_gui_style.o: ccmlk ../mlk/src/gui/mlk_gui_style.c
+build mlk_guicol.o: ccmlk ../mlk/src/gui/mlk_guicol.c
+build mlk_guitimer.o: ccmlk ../mlk/src/gui/mlk_guitimer.c
+build mlk_imagelist.o: ccmlk ../mlk/src/gui/mlk_imagelist.c
+build mlk_key.o: ccmlk ../mlk/src/gui/mlk_key.c
+build mlk_menu.o: ccmlk ../mlk/src/gui/mlk_menu.c
+build mlk_mimelist.o: ccmlk ../mlk/src/gui/mlk_mimelist.c
+build mlk_pixbuf.o: ccmlk ../mlk/src/gui/mlk_pixbuf.c
+build mlk_pv_event.o: ccmlk ../mlk/src/gui/mlk_pv_event.c
+build mlk_pv_menu.o: ccmlk ../mlk/src/gui/mlk_pv_menu.c
+build mlk_x11_clipboard.o: ccmlk ../mlk/src/gui/x11/mlk_x11_clipboard.c
+build mlk_x11_cursor.o: ccmlk ../mlk/src/gui/x11/mlk_x11_cursor.c
+build mlk_x11_dnd.o: ccmlk ../mlk/src/gui/x11/mlk_x11_dnd.c
+build mlk_x11_event.o: ccmlk ../mlk/src/gui/x11/mlk_x11_event.c
+build mlk_x11_event_sub.o: ccmlk ../mlk/src/gui/x11/mlk_x11_event_sub.c
+build mlk_x11_inputmethod.o: ccmlk ../mlk/src/gui/x11/mlk_x11_inputmethod.c
+build mlk_x11_main.o: ccmlk ../mlk/src/gui/x11/mlk_x11_main.c
+build mlk_x11_pixbuf.o: ccmlk ../mlk/src/gui/x11/mlk_x11_pixbuf.c
+build mlk_x11_util.o: ccmlk ../mlk/src/gui/x11/mlk_x11_util.c
+build mlk_x11_window.o: ccmlk ../mlk/src/gui/x11/mlk_x11_window.c
+build mlk_x11_xinput2.o: ccmlk ../mlk/src/gui/x11/mlk_x11_xinput2.c
+build mlk_gifdec.o: ccmlk ../mlk/src/image/mlk_gifdec.c
+build mlk_gifenc.o: ccmlk ../mlk/src/image/mlk_gifenc.c
+build mlk_imagebuf.o: ccmlk ../mlk/src/image/mlk_imagebuf.c
+build mlk_imageconv.o: ccmlk ../mlk/src/image/mlk_imageconv.c
+build mlk_load_bmp.o: ccmlk ../mlk/src/image/mlk_load_bmp.c
+build mlk_load_gif.o: ccmlk ../mlk/src/image/mlk_load_gif.c
+build mlk_load_jpeg.o: ccmlk ../mlk/src/image/mlk_load_jpeg.c
+build mlk_load_png.o: ccmlk ../mlk/src/image/mlk_load_png.c
+build mlk_load_psd.o: ccmlk ../mlk/src/image/mlk_load_psd.c
+build mlk_load_tiff.o: ccmlk ../mlk/src/image/mlk_load_tiff.c
+build mlk_load_webp.o: ccmlk ../mlk/src/image/mlk_load_webp.c
+build mlk_loadimage.o: ccmlk ../mlk/src/image/mlk_loadimage.c
+build mlk_psd_load.o: ccmlk ../mlk/src/image/mlk_psd_load.c
+build mlk_psd_save.o: ccmlk ../mlk/src/image/mlk_psd_save.c
+build mlk_save_bmp.o: ccmlk ../mlk/src/image/mlk_save_bmp.c
+build mlk_save_gif.o: ccmlk ../mlk/src/image/mlk_save_gif.c
+build mlk_save_jpeg.o: ccmlk ../mlk/src/image/mlk_save_jpeg.c
+build mlk_save_png.o: ccmlk ../mlk/src/image/mlk_save_png.c
+build mlk_save_tiff.o: ccmlk ../mlk/src/image/mlk_save_tiff.c
+build mlk_save_webp.o: ccmlk ../mlk/src/image/mlk_save_webp.c
+build mlk_saveimage.o: ccmlk ../mlk/src/image/mlk_saveimage.c
+build mlk_arrowbutton.o: ccmlk ../mlk/src/widget/mlk_arrowbutton.c
+build mlk_button.o: ccmlk ../mlk/src/widget/mlk_button.c
+build mlk_checkbutton.o: ccmlk ../mlk/src/widget/mlk_checkbutton.c
+build mlk_colorbutton.o: ccmlk ../mlk/src/widget/mlk_colorbutton.c
+build mlk_colorprev.o: ccmlk ../mlk/src/widget/mlk_colorprev.c
+build mlk_combobox.o: ccmlk ../mlk/src/widget/mlk_combobox.c
+build mlk_conflistview.o: ccmlk ../mlk/src/widget/mlk_conflistview.c
+build mlk_container.o: ccmlk ../mlk/src/widget/mlk_container.c
+build mlk_container_layout.o: ccmlk ../mlk/src/widget/mlk_container_layout.c
+build mlk_containerview.o: ccmlk ../mlk/src/widget/mlk_containerview.c
+build mlk_dlg_about.o: ccmlk ../mlk/src/widget/mlk_dlg_about.c
+build mlk_dlg_inputtext.o: ccmlk ../mlk/src/widget/mlk_dlg_inputtext.c
+build mlk_dlg_openfont.o: ccmlk ../mlk/src/widget/mlk_dlg_openfont.c
+build mlk_dlg_selectcolor.o: ccmlk ../mlk/src/widget/mlk_dlg_selectcolor.c
+build mlk_dlg_selectfont.o: ccmlk ../mlk/src/widget/mlk_dlg_selectfont.c
+build mlk_expander.o: ccmlk ../mlk/src/widget/mlk_expander.c
+build mlk_filedialog.o: ccmlk ../mlk/src/widget/mlk_filedialog.c
+build mlk_fileinput.o: ccmlk ../mlk/src/widget/mlk_fileinput.c
+build mlk_filelistview.o: ccmlk ../mlk/src/widget/mlk_filelistview.c
+build mlk_fontbutton.o: ccmlk ../mlk/src/widget/mlk_fontbutton.c
+build mlk_groupbox.o: ccmlk ../mlk/src/widget/mlk_groupbox.c
+build mlk_hsvpicker.o: ccmlk ../mlk/src/widget/mlk_hsvpicker.c
+build mlk_iconbar.o: ccmlk ../mlk/src/widget/mlk_iconbar.c
+build mlk_imgbutton.o: ccmlk ../mlk/src/widget/mlk_imgbutton.c
+build mlk_inputaccel.o: ccmlk ../mlk/src/widget/mlk_inputaccel.c
+build mlk_label.o: ccmlk ../mlk/src/widget/mlk_label.c
+build mlk_lineedit.o: ccmlk ../mlk/src/widget/mlk_lineedit.c
+build mlk_listheader.o: ccmlk ../mlk/src/widget/mlk_listheader.c
+build mlk_listview.o: ccmlk ../mlk/src/widget/mlk_listview.c
+build mlk_listviewpage.o: ccmlk ../mlk/src/widget/mlk_listviewpage.c
+build mlk_menubar.o: ccmlk ../mlk/src/widget/mlk_menubar.c
+build mlk_menuwindow.o: ccmlk ../mlk/src/widget/mlk_menuwindow.c
+build mlk_messagebox.o: ccmlk ../mlk/src/widget/mlk_messagebox.c
+build mlk_multiedit.o: ccmlk ../mlk/src/widget/mlk_multiedit.c
+build mlk_multieditpage.o: ccmlk ../mlk/src/widget/mlk_multieditpage.c
+build mlk_pager.o: ccmlk ../mlk/src/widget/mlk_pager.c
+build mlk_panel.o: ccmlk ../mlk/src/widget/mlk_panel.c
+build mlk_panelheader.o: ccmlk ../mlk/src/widget/mlk_panelheader.c
+build mlk_popup_progress.o: ccmlk ../mlk/src/widget/mlk_popup_progress.c
+build mlk_popuplistview.o: ccmlk ../mlk/src/widget/mlk_popuplistview.c
+build mlk_progressbar.o: ccmlk ../mlk/src/widget/mlk_progressbar.c
+build mlk_pv_widget.o: ccmlk ../mlk/src/widget/mlk_pv_widget.c
+build mlk_pv_window.o: ccmlk ../mlk/src/widget/mlk_pv_window.c
+build mlk_scrollbar.o: ccmlk ../mlk/src/widget/mlk_scrollbar.c
+build mlk_scrollview.o: ccmlk ../mlk/src/widget/mlk_scrollview.c
+build mlk_sliderbar.o: ccmlk ../mlk/src/widget/mlk_sliderbar.c
+build mlk_splitter.o: ccmlk ../mlk/src/widget/mlk_splitter.c
+build mlk_tab.o: ccmlk ../mlk/src/widget/mlk_tab.c
+build mlk_widget.o: ccmlk ../mlk/src/widget/mlk_widget.c
+build mlk_widgettextedit.o: ccmlk ../mlk/src/widget/mlk_widgettextedit.c
+build mlk_window.o: ccmlk ../mlk/src/widget/mlk_window.c
+

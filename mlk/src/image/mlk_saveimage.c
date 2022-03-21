@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -28,6 +28,7 @@ $*/
 #include "mlk_saveimage.h"
 #include "mlk_stdio.h"
 #include "mlk_util.h"
+#include "mlk_bufio.h"
 
 
 
@@ -296,6 +297,79 @@ void mSaveImage_convertImage_RGB8array_to_palette(uint8_t **ppbuf,int width,int 
 			*(pd++) = i;
 		}
 	}
+}
+
+/* EXIF, IFD フィールドを書き込み */
+
+static void _exif_write_ifd(mBufIO *p,uint16_t tag,uint16_t type,uint32_t val)
+{
+	uint8_t d[4] = {0,0,0,0};
+
+	mBufIO_write16(p, &tag);
+	mBufIO_write16(p, &type);
+	mBufIO_set32(p, 1);
+
+	if(type != 3)
+		mBufIO_write32(p, &val);
+	else
+	{
+		//SHORT
+		
+		d[0] = val >> 8;
+		d[1] = val & 255;
+		
+		mBufIO_write(p, d, 4);
+	}
+}
+
+/**@ EXIF データを作成 (解像度)
+ *
+ * @d:解像度が設定されていない場合、作成しない。\
+ * "Exif\\0\\0" からのデータで、ビッグエンディアン。
+ * @r:1 で作成された */
+
+int mSaveImage_createEXIF_resolution(mSaveImage *p,mBufSize *dst)
+{
+	mBufIO io;
+	int horz,vert;
+
+	if(!mSaveImage_getDPI(p, &horz, &vert))
+		return 0;
+
+	//確保
+
+	dst->buf = mMalloc(72);
+	if(!dst->buf) return 0;
+
+	dst->size = 72;
+
+	//
+
+	mBufIO_init(&io, dst->buf, dst->size, MBUFIO_ENDIAN_BIG);
+
+	mBufIO_write(&io, "Exif\0\0MM", 8);
+	mBufIO_set16(&io, 0x2a);
+	mBufIO_set32(&io, 8);
+
+	//--- IFD
+
+	mBufIO_set16(&io, 3);
+
+	_exif_write_ifd(&io, 282, 5, 50);
+	_exif_write_ifd(&io, 283, 5, 58);
+	_exif_write_ifd(&io, 296, 3, 2);
+
+	mBufIO_set32(&io, 0);
+
+	//data
+
+	mBufIO_set32(&io, horz);
+	mBufIO_set32(&io, 0);
+
+	mBufIO_set32(&io, vert);
+	mBufIO_set32(&io, 0);
+
+	return 1;
 }
 
 

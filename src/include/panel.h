@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -34,6 +34,7 @@ mlkbool Panel_isVisible(int no);
 void *Panel_getExPtr(int no);
 mWidget *Panel_getContents(int no);
 mWindow *Panel_getDialogParent(int no);
+void Panel_relayout(int no);
 
 int Panel_id_to_no(int id);
 int Panel_getPaneNo(int no);

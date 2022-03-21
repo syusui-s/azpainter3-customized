@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -206,6 +206,13 @@ mWindow *Panel_getDialogParent(int no)
 	if(!win) win = MLK_WINDOW(APPWIDGET->mainwin);
 
 	return win;
+}
+
+/** パネルの再レイアウト */
+
+void Panel_relayout(int no)
+{
+	mPanelReLayout(APPWIDGET->panel[no]);
 }
 
 /** ID からパネル番号を取得

@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -45,10 +45,13 @@ $*/
 #include "trid.h"
 #include "trid_colorpalette.h"
 
+#include "pv_panel_colpal.h"
+
 
 //---------------
 
-/* 上部のボタンが押された時、mPager に NOTIFY イベントが送られる。
+/* カラーパレット上のボタンが押された時、mPager に NOTIFY イベントが送られる。
+ * 
  * [メニューボタン] id = -1, widget_from = メニューボタン
  * [移動ボタン] id = -2, param1 = 0:left, 1:right */
 
@@ -59,6 +62,19 @@ enum
 };
 
 //---------------
+
+//カラーパレットメニュー
+static const uint16_t g_menudat_colpal[] = {
+	TRID_MENU_COLPAL_GROUP,
+	MMENU_ARRAY16_SUB_START,
+		TRID_MENU_COLPAL_PALETTE | MMENU_ARRAY16_RADIO,
+		TRID_MENU_COLPAL_HSL | MMENU_ARRAY16_RADIO,
+		TRID_MENU_COLPAL_GRAD | MMENU_ARRAY16_RADIO,
+		MMENU_ARRAY16_SEP,
+		TRID_MENU_COLPAL_COMPACT,
+	MMENU_ARRAY16_SUB_END,
+	MMENU_ARRAY16_END
+};
 
 //パレットメニュー
 static const uint16_t g_menudat_pal[] = {
@@ -99,16 +115,111 @@ mlkbool PanelColorPalette_dlg_paledit(mWindow *parent,PaletteListItem *pi);
 //---------------
 
 
+//==============================
+// メニュー (共通)
+//==============================
+
+
+/* メニュー実行
+ *
+ * 共通の項目は、処理される。
+ *
+ * addmenu: NULL 以外で、メニューを追加する関数
+ * return: 追加項目の選択ID。-1 でキャンセル、-2 で処理済み */
+
+static int _common_run_menu(mWidget *menubtt,void (*addmenu)(mMenu *))
+{
+	mMenu *menu;
+	mMenuItem *mi;
+	mBox box;
+	int no;
+
+	//----- メニュー
+
+	MLK_TRGROUP(TRGROUP_PANEL_COLOR_PALETTE);
+
+	menu = mMenuNew();
+
+	//カラーパレット
+
+	mMenuAppendTrText_array16_radio(menu, g_menudat_colpal);
+
+	mMenuSetItemCheck(menu, TRID_MENU_COLPAL_PALETTE + APPCONF->panel.colpal_type, 1);
+	mMenuSetItemCheck(menu, TRID_MENU_COLPAL_COMPACT, APPCONF->panel.colpal_flags & CONFIG_PANEL_COLPAL_F_COMPACT);
+
+	//追加メニュー
+
+	if(addmenu)
+	{
+		mMenuAppendSep(menu);
+
+		(addmenu)(menu);
+	}
+
+	//
+
+	mWidgetGetBox_rel(menubtt, &box);
+
+	mi = mMenuPopup(menu, menubtt, 0, 0, &box,
+		MPOPUP_F_LEFT | MPOPUP_F_BOTTOM | MPOPUP_F_GRAVITY_RIGHT | MPOPUP_F_FLIP_XY, NULL);
+
+	no = (mi)? mMenuItemGetID(mi): -1;
+
+	mMenuDestroy(menu);
+
+	if(no == -1) return -1;
+
+	//-------- 処理
+
+	switch(no)
+	{
+		//タイプ切り替え
+		case TRID_MENU_COLPAL_PALETTE:
+		case TRID_MENU_COLPAL_HSL:
+		case TRID_MENU_COLPAL_GRAD:
+			PanelColorPalette_changeType(no - TRID_MENU_COLPAL_PALETTE);
+			return -2;
+
+		//コンパクト
+		case TRID_MENU_COLPAL_COMPACT:
+			PanelColorPalette_ToggleMode();
+			return -2;
+	}
+
+	return no;
+}
+
+
 /***************************************
  * HSL パレット
  ***************************************/
 
+
+/* イベント */
+
+static int _hsl_event(mPager *p,mEvent *ev,void *pagedat)
+{
+	if(ev->type == MEVENT_NOTIFY)
+	{
+		switch(ev->notify.id)
+		{
+			//メニューボタン
+			case _NOTIFY_ID_MENUBTT:
+				_common_run_menu(ev->notify.widget_from, NULL);
+				break;
+		}
+	}
+
+	return 1;
+}
 
 /** HSL ページ作成 */
 
 mlkbool PanelColorPalette_createPage_HSL(mPager *p,mPagerInfo *info)
 {
 	mWidget *wg;
+
+	info->event = _hsl_event;
 
 	mContainerSetType_vert(MLK_CONTAINER(p), 0);
 
@@ -144,13 +255,37 @@ enum
 };
 
 
+/* メニュー追加 */
+
+static void _grad_add_menu(mMenu *menu)
+{
+	mMenuAppendText(menu, TRID_MENU_GRAD_OPT, MLK_TR(TRID_MENU_GRAD_OPT));
+}
+
+/* メニュー実行 */
+
+static void _grad_menu(mPager *p,mWidget *menubtt,_pagedat_grad *pd)
+{
+	int no,i;
+
+	no = _common_run_menu(menubtt, _grad_add_menu);
+	if(no < 0) return;
+
+	//設定
+
+	if(PanelColorPalette_dlg_gradopt(MLK_WINDOW(p->wg.toplevel)))
+	{
+		for(i = 0; i < DRAW_GRADBAR_NUM; i++)
+			GradationBar_setStep(pd->bar[i], APPDRAW->col.gradcol[i][0] >> 24);
+	}
+}
+
 /* イベント */
 
 static int _grad_event(mPager *p,mEvent *ev,void *pagedat)
 {
 	if(ev->type == MEVENT_NOTIFY)
 	{
-		_pagedat_grad *pd = (_pagedat_grad *)pagedat;
 		int id = ev->notify.id;
 
 		if(id >= WID_GRAD_BAR_TOP && id < WID_GRAD_BAR_TOP + DRAW_GRADBAR_NUM)
@@ -184,12 +319,7 @@ static int _grad_event(mPager *p,mEvent *ev,void *pagedat)
 			{
 				//(mPager から) メニューボタン
 				case _NOTIFY_ID_MENUBTT:
-					if(PanelColorPalette_dlg_gradopt(MLK_WINDOW(p->wg.toplevel)))
-					{
-						int i;
-						for(i = 0; i < DRAW_GRADBAR_NUM; i++)
-							GradationBar_setStep(pd->bar[i], APPDRAW->col.gradcol[i][0] >> 24);
-					}
+					_grad_menu(p, ev->notify.widget_from, (_pagedat_grad *)pagedat);
 					break;
 			}
 		}
@@ -334,23 +464,17 @@ static void _pal_cmd_savefile(mWindow *parent,PaletteListItem *pi)
 	mStrFree(&str);
 }
 
-/* メニュー実行 */
+/* メニュー項目追加 */
 
-static int _pal_run_menu(mWidget *menubtt)
+static void _pal_add_menu(mMenu *menu)
 {
-	mMenu *menu;
-	mMenuItem *mi;
 	PaletteListItem *pi;
 	int no;
-	mBox box;
-
-	MLK_TRGROUP(TRGROUP_PANEL_COLOR_PALETTE);
-
-	menu = mMenuNew();
 
 	//パレットリスト
 
 	no = 0;
+
 	MLK_LIST_FOR(APPDRAW->col.list_pal, pi, PaletteListItem)
 	{
 		mMenuAppendRadio(menu, CMDID_PAL_LIST_TOP + no, pi->name);
@@ -374,19 +498,6 @@ static int _pal_run_menu(mWidget *menubtt)
 		mMenuSetItemEnable(menu, TRID_PAL_EDIT, 0);
 		mMenuSetItemEnable(menu, TRID_PAL_FILE, 0);
 	}
-
-	//
-
-	mWidgetGetBox_rel(menubtt, &box);
-
-	mi = mMenuPopup(menu, menubtt, 0, 0, &box,
-		MPOPUP_F_RIGHT | MPOPUP_F_BOTTOM | MPOPUP_F_GRAVITY_LEFT | MPOPUP_F_FLIP_XY, NULL);
-
-	no = (mi)? mMenuItemGetID(mi): -1;
-
-	mMenuDestroy(menu);
-
-	return no;
 }
 	
 /* メニューを実行して処理 */
@@ -398,7 +509,7 @@ static void _pal_proc_menu(mWidget *menubtt,mWidget *palview)
 	PaletteListItem *pi;
 	mlkbool update = FALSE;
 
-	id = _pal_run_menu(menubtt);
+	id = _common_run_menu(menubtt, _pal_add_menu);
 	if(id < 0) return;
 
 	if(id >= CMDID_PAL_LIST_TOP)

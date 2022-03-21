@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -40,6 +40,7 @@ extern "C" {
 
 mWidget *mWidgetNew(mWidget *parent,int size);
 void mWidgetDestroy(mWidget *p);
+void mWidgetDestroy_child(mWidget *p);
 
 void mWidgetDrawHandle_bkgnd(mWidget *p,mPixbuf *pixbuf);
 void mWidgetDrawHandle_bkgndAndFrame(mWidget *p,mPixbuf *pixbuf);

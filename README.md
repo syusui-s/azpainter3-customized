@@ -2,7 +2,8 @@
 
 http://azsky2.html.xdomain.jp/
 
-イラストや画像編集用のペイントソフト。
+イラストや画像編集用のペイントソフト。<br>
+8bit/16bit カラーに対応。
 
 ## 動作環境
 
@@ -11,24 +12,12 @@ http://azsky2.html.xdomain.jp/
 
 ## コンパイル/インストール
 
-※各ライブラリの開発用ファイルが必要です。
+ビルドツールとして、ninja が必要です。<br>
+パッケージ名は、**ninja** または **ninja-build** です。
 
 ~~~
-## Linux
-
 $ ./configure
-$ make
-$ sudo make install
-
-## FreeBSD
-
-$ ./configure
-$ gmake
-# gmake install
-
-## macOS
-
-$ ./configure --prefix=/opt/X11
-$ make
-$ sudo make install
+$ cd build
+$ ninja
+# ninja install
 ~~~

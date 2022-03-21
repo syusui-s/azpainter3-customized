@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -46,7 +46,7 @@ $*/
 //==========================
 
 
-/** デフォルトイベントハンドラ */
+/* デフォルトイベントハンドラ */
 
 static int _handle_event(mWidget *wg,mEvent *ev)
 {
@@ -59,7 +59,7 @@ static int _handle_event(mWidget *wg,mEvent *ev)
 	return 0;
 }
 
-/** ウィジェット削除処理 */
+/* ウィジェット削除処理 */
 
 static void _delete_widget(mWidget *p)
 {
@@ -128,7 +128,7 @@ static void _delete_widget(mWidget *p)
 	mFree(p);
 }
 
-/** 通知先ウィジェット取得
+/* 通知先ウィジェット取得
  *
  * enable_replace: 置き換えの値を適用する */
 
@@ -255,6 +255,16 @@ void mWidgetDestroy(mWidget *p)
 
 		_delete_widget(pw);
 	}
+}
+
+/**@ すべての子ウィジェットを削除
+ *
+ * @d:自身は削除しない。 */
+
+void mWidgetDestroy_child(mWidget *p)
+{
+	while(p->first)
+		mWidgetDestroy(p->first);
 }
 
 /**@ ウィジェット新規作成

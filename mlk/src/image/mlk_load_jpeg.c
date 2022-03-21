@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -64,7 +64,7 @@ typedef struct
 //==========================
 
 
-/** エラー終了時 */
+/* エラー終了時 */
 
 static void _jpeg_error_exit(j_common_ptr ptr)
 {
@@ -87,7 +87,7 @@ static void _jpeg_error_exit(j_common_ptr ptr)
 		longjmp(p->jmpbuf, 1);
 }
 
-/** メッセージ表示 */
+/* メッセージ表示 */
 
 static void _jpeg_output_message(j_common_ptr p)
 {
@@ -100,9 +100,27 @@ static void _jpeg_output_message(j_common_ptr p)
 //=================================
 
 
-/** 解像度単位を取得 */
+/* EXIF から解像度取得 */
 
-static int _get_resolution_unit(int unit)
+static void _get_exif_resolution(jpegdata *p,mLoadImage *pli)
+{
+	struct jpeg_marker_struct *plist;
+
+	for(plist = p->jpg.marker_list; plist; plist = plist->next)
+	{
+		if(plist->marker == 0xe1)
+		{
+			mLoadImage_getEXIF_resolution(pli,
+				(uint8_t *)plist->data, plist->data_length);
+
+			break;
+		}
+	}
+}
+
+/* JFIF の解像度単位を変換 */
+
+static int _get_JFIF_resounit(int unit)
 {
 	if(unit == 0)
 		return MLOADIMAGE_RESOUNIT_ASPECT;
@@ -114,104 +132,7 @@ static int _get_resolution_unit(int unit)
 		return MLOADIMAGE_RESOUNIT_NONE;
 }
 
-/** EXIF 値取得 */
-
-static uint32_t _get_exif_value(uint8_t **pp,int size,uint8_t bigendian)
-{
-	uint8_t *p = *pp;
-
-	*pp += size;
-
-	if(bigendian)
-	{
-		if(size == 2)
-			return (p[0] << 8) | p[1];
-		else
-			return (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
-	}
-	else
-	{
-		if(size == 2)
-			return (p[1] << 8) | p[0];
-		else
-			return (p[3] << 24) | (p[2] << 16) | (p[1] << 8) | p[0];
-	}
-}
-
-/** EXIF から解像度取得 */
-
-static void _get_exif_resolution(jpegdata *p,mLoadImage *pli)
-{
-	struct jpeg_marker_struct *plist;
-	uint8_t *ps,*ps2,*tifftop,endian,flags = 0;
-	int fnum,tag,dattype,unit;
-	uint32_t pos,horz,vert;
-
-	for(plist = p->jpg.marker_list; plist; plist = plist->next)
-	{
-		if(plist->marker == 0xe1 && plist->data_length >= 16)
-		{
-			ps = (uint8_t *)plist->data;
-			tifftop = ps + 6;
-
-			if(strcmp((char *)ps, "Exif") != 0) return;
-
-			endian = (ps[6] == 'M');  //0=little-endian, 1=big-endian
-
-			ps += 14;
-
-			//IFD-0th
-
-			fnum = _get_exif_value(&ps, 2, endian);
-
-			for(; fnum > 0 && flags != 7; fnum--)
-			{
-				tag = _get_exif_value(&ps, 2, endian);
-				dattype = _get_exif_value(&ps, 2, endian);
-				ps += 4;
-				pos = _get_exif_value(&ps, 4, endian);
-
-				if(tag == 0x011a && dattype == 5)
-				{
-					//解像度水平
-
-					ps2 = tifftop + pos;
-					horz = _get_exif_value(&ps2, 4, endian);
-					flags |= 1;
-				}
-				else if(tag == 0x011b && dattype == 5)
-				{
-					//解像度垂直
-
-					ps2 = tifftop + pos;
-					vert = _get_exif_value(&ps2, 4, endian);
-					flags |= 2;
-				}
-				else if(tag == 0x0128 && dattype == 3)
-				{
-					//解像度単位 (short)
-					/* 1:none 2:dpi 3:dpcm */
-
-					unit = pos;
-					flags |= 4;
-				}
-			}
-
-			//終了
-
-			if(flags == 7 && (unit == 2 || unit == 3))
-			{
-				pli->reso_unit = _get_resolution_unit(unit - 1);
-				pli->reso_horz = horz;
-				pli->reso_vert = vert;
-			}
-
-			break;
-		}
-	}
-}
-
-/** ヘッダ部分読み込み */
+/* ヘッダ部分読み込み */
 
 static int _read_info(jpegdata *p,mLoadImage *pli)
 {
@@ -338,7 +259,7 @@ static int _read_info(jpegdata *p,mLoadImage *pli)
 		//JFIF
 		pli->reso_horz = jpg->X_density;
 		pli->reso_vert = jpg->Y_density;
-		pli->reso_unit = _get_resolution_unit(jpg->density_unit);
+		pli->reso_unit = _get_JFIF_resounit(jpg->density_unit);
 	}
 	else
 		//EXIF

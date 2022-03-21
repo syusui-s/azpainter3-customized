@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -496,7 +496,7 @@ void mSplitterHandle_draw(mWidget *wg,mPixbuf *pixbuf)
 
 	//背景
 
-	mWidgetDrawBkgnd(wg, NULL);
+	mWidgetDrawBkgnd_force(wg, NULL);
 
 	//つまみ
 

@@ -1,6 +1,6 @@
 **********************************************
   AzPainter for Linux
-  Copyright (C) 2013-2021 Azel
+  Copyright (C) 2013-2022 Azel
 
   http://azsky2.html.xdomain.jp/
   https://gitlab.com/azelpg/azpainter
@@ -35,37 +35,34 @@
 =====================================
 
 - C コンパイラ
-- make
-- 各種ライブラリの開発用ファイル
-
-[必要なライブラリ]
+- ninja (ビルドツール)
+- 以下のライブラリの開発用ファイル
   x11 xext xcursor xinput
   zlib libpng jpeglib(jpeg-turbo) fontconfig freetype2
   tiff webp
 
 
-＃ 各ディストリビューションごとの必要なパッケージ
----------------------------------------------------
+--- 必要なパッケージ ---
 
 ※パッケージ名は変化している場合があります。
 
 (Debian/Ubuntu 系)
 
-  gcc or clang, make
+  gcc or clang, ninja-build
   libx11-dev libxext-dev libxcursor-dev libxi-dev
   libfreetype6-dev libfontconfig1-dev
   zlib1g-dev libpng-dev libjpeg-dev libtiff-dev libwebp-dev
 
 (RedHat 系)
 
-  gcc or clang, make
+  gcc or clang, ninja-build
   libX11-devel libXext-devel libXcursor-devel libXi-devel
   libfreetype6-devel libfontconfig-devel
   zlib-devel libpng-devel libjpeg-devel libtiff-devel libwebp-devel
 
 (Arch Linux)
 
-  gcc or clang, make
+  gcc or clang, ninja
   libx11 libxext libxcursor libxi
   freetype2 fontconfig
   zlib libpng libjpeg-turbo libtiff libwebp
@@ -74,14 +71,11 @@
 
 (FreeBSD)
 
-  gmake png jpeg-turbo tiff webp
-
-  [*] xorg がインストールされていれば、ほぼインストールされています。
-  [*] BSD make には対応していません。
+  ninja png jpeg-turbo tiff webp
 
 (macOS)
 
-  xcode libpng jpeg-turbo libtiff webp
+  xcode ninja libpng jpeg-turbo libtiff webp
 
   [*] XQuartz がインストールされていることが前提です。
 
@@ -90,26 +84,13 @@
  * コンパイル/インストール
 =====================================
 
-アーカイブの展開後、展開したディレクトリ内に移動して、
-以下を実行してください。
-
-## Linux
+アーカイブの展開後、展開されたディレクトリ内に移動して、以下を実行してください。
+build ディレクトリ内に、ファイルが生成されます。
 
 $ ./configure
-$ make
-$ sudo make install
-
-## FreeBSD
-
-$ ./configure
-$ gmake
-# gmake install
-
-## macOS
-
-$ ./configure --prefix=/opt/X11
-$ make
-$ sudo make install
+$ cd build
+$ ninja
+# ninja install
 
 
 デフォルトで /usr/local 下にインストールされます。
@@ -117,22 +98,16 @@ $ sudo make install
 ./configure 実行時にオプションを指定すると、コンパイルの設定を変更できます。
 configure のヘルプは、$ ./configure --help で表示できます。
 
-
 [例] /usr にインストール
 
 $ ./configure --prefix=/usr
 
 
-=====================================
- * アンインストール
-=====================================
+## アンインストール
+# ninja uninstall
 
-make install 時に使った Makefile が残っている場合は、
-Makefile があるディレクトリ上で以下を実行すると、ファイルが削除されます。
-
-$ sudo make uninstall
-
-または、手動で各ファイルを削除してください。
+## パッケージファイル用にファイルを生成
+$ DESTDIR=<DIR> ninja install
 
 
 =====================================

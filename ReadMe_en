@@ -1,6 +1,6 @@
 **********************************************
   AzPainter for Linux
-  Copyright (C) 2013-2021 Azel
+  Copyright (C) 2013-2022 Azel
 
   http://azsky2.html.xdomain.jp/
   https://gitlab.com/azelpg/azpainter
@@ -31,105 +31,73 @@ Paint software for editing illustrations and images.
  * What you need to compile
 =====================================
 
-You need the C compiler, make, and development files for various libraries.
-
-[Required libraries]
+- C compiler
+- ninja (build tool)
+- development files for various libraries:
   x11 xext xcursor xinput
   zlib libpng jpeglib(jpeg-turbo) fontconfig freetype2
   tiff webp
 
 
-## Required packages in each distribution
-----------------------------------------------
+--- Required packages  ---
 
 (Debian/Ubuntu)
 
-  gcc or clang, make
+  gcc or clang, ninja-build
   libx11-dev libxext-dev libxcursor-dev libxi-dev
   libfreetype6-dev libfontconfig1-dev
   zlib1g-dev libpng-dev libjpeg-dev libtiff-dev libwebp-dev
 
 (RedHat)
 
-  gcc or clang, make
+  gcc or clang, ninja-build
   libX11-devel libXext-devel libXcursor-devel libXi-devel
   libfreetype6-devel libfontconfig-devel
   zlib-devel libpng-devel libjpeg-devel libtiff-devel libwebp-devel
 
 (Arch Linux)
 
-  gcc or clang, make
-  libx11 libxext libxcursor libxi
-  freetype2 fontconfig
+  gcc or clang, ninja
+  libx11 libxext libxcursor libxi freetype2 fontconfig
   zlib libpng libjpeg-turbo libtiff libwebp
   
 (FreeBSD)
 
-  gmake png jpeg-turbo tiff webp
-
-  - Not compatible with BSD make.
+  ninja png jpeg-turbo tiff webp
 
 (macOS)
 
-  xcode libpng jpeg-turbo libtiff webp
+  xcode ninja libpng jpeg-turbo libtiff webp
 
-  - It is assumed that XQuartz is installed.
+  [*] It is assumed that XQuartz is installed.
 
 
 =====================================
  * Compile and install
 =====================================
 
-After extracting the source archive,
-go to the directory where it was extracted, and execute the following.
-
-## Linux
+After extracting the archive, go to the extracted directory and do the following.
 
 $ ./configure
-$ make
-$ sudo make install
-
-## FreeBSD
-
-$ ./configure
-$ gmake
-# gmake install
-
-## macOS
-
-$ ./configure --prefix=/opt/X11
-$ make
-$ sudo make install
+$ cd build
+$ ninja
+# ninja install
 
 
-It will be installed in the "/usr/local" by default.
+By default, it will be installed under "/usr/local".
 
-You can change the compile configuration by specifying options at configure runtime.
-The help for configure can be found at . /configure --help for help with configure.
+You can change the settings by specifying options when you run ./configure.
+You can get help with $ ./configure --help.
 
-
-[exsample] Install to /usr
-
+[Exsample] Install in /usr
 $ ./configure --prefix=/usr
 
 
-=====================================
- * Setting files
-=====================================
+## Uninstall
+# ninja uninstall
 
-'~/.azpainter'
-
-
-=====================================
- * How to use
-=====================================
-
-Shortcut to the "graphics" category of the main menu of the desktop
-has been created, you can start from there.
-
-If you want to start from the terminal, you can start with the following command.
-
-$ azpainter
+## Generate files for package file
+$ DESTDIR=<DIR> ninja install
 
 
 =====================================
@@ -155,6 +123,18 @@ INSTDIR is "/usr/local" by default.
 
 A "~/.config/azpainter" directory will be created
 where each configuration file will be saved.
+
+
+=====================================
+ * How to use
+=====================================
+
+Shortcut to the "graphics" category of the main menu of the desktop
+has been created, you can start from there.
+
+If you want to start from the terminal, you can start with the following command.
+
+$ azpainter
 
 
 =====================================

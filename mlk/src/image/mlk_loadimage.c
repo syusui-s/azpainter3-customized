@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -150,7 +150,11 @@ mlkerr mLoadImage_setPalette(mLoadImage *p,uint8_t *buf,int size,int palnum)
 	return MLKERR_OK;
 }
 
-/**@ イメージ変換用の構造体に共通データをセット */
+/**@ mLoadImage の値を元に、mImageConv の値をセット
+ *
+ * @d:srcbits は 8。dstbits は bits_per_sample から。\
+ * convtype は、RGB/RGBA/なしのいずれか。\
+ * dstbuf,srcbuf,srcbits,endian,flags は必要に応じでセットする。 */
 
 void mLoadImage_setImageConv(mLoadImage *p,mImageConv *dst)
 {
@@ -404,5 +408,170 @@ mlkbool mLoadImage_getDPI(mLoadImage *p,int *horz,int *vert)
 	}
 
 	return FALSE;
+}
+
+
+//==============================
+// EXIF
+//==============================
+
+typedef struct
+{
+	const uint8_t *cur,*top;
+	int remain,
+		size,
+		fbig;
+}_exifval;
+
+
+/* 解像度単位を取得 */
+
+static int _exif_getunit(int unit)
+{
+	if(unit == 2)
+		return MLOADIMAGE_RESOUNIT_DPI;
+	else if(unit == 3)
+		return MLOADIMAGE_RESOUNIT_DPCM;
+	else
+		return MLOADIMAGE_RESOUNIT_NONE;
+}
+
+/* EXIF 値取得
+ *
+ * pos: 値のオフセット位置。
+ *  0 で現在位置。値分だけ進める。
+ *  負の値で現在位置からのオフセット。位置はそのまま。 */
+
+static int _exif_getval(_exifval *p,int pos,int vsize,void *dst)
+{
+	const uint8_t *ps;
+	int remain;
+
+	if(pos <= 0)
+	{
+		//現在位置から
+		
+		ps = p->cur + pos;
+		remain = p->remain - pos;
+
+		if(pos == 0)
+		{
+			p->cur += vsize;
+			p->remain -= vsize;
+		}
+	}
+	else
+	{
+		//指定オフセット
+		
+		if(pos >= p->size) return 1;
+
+		ps = p->top + pos;
+		remain = p->size - pos;
+	}
+
+	if(remain < vsize) return 1;
+
+	if(vsize == 2)
+	{
+		if(p->fbig)
+			*((uint16_t *)dst) = mGetBufBE16(ps);
+		else
+			*((uint16_t *)dst) = mGetBufLE16(ps);
+	}
+	else
+	{
+		if(p->fbig)
+			*((uint32_t *)dst) = mGetBufBE32(ps);
+		else
+			*((uint32_t *)dst) = mGetBufLE32(ps);
+	}
+
+	return 0;
+}
+
+/**@ EXIF データから解像度取得
+ *
+ * @d:先頭が "Exif\\0\\0" で始まる場合と、"MM" or "II" で始まる場合の両方に対応。
+ * 
+ * @r:セットされた値のフラグ。\
+ *  bit0=resoH, bit1=resoV, bit2=unit */
+
+int mLoadImage_getEXIF_resolution(mLoadImage *p,const uint8_t *buf,int size)
+{
+	_exifval v;
+	uint16_t fnum,tag,dattype,v16;
+	uint32_t cnt,pos;
+	int flags = 0;
+
+	//Exif
+
+	if(size >= 6 && memcmp(buf, "Exif\0\0", 6) == 0)
+		buf += 6, size -= 6;
+
+	if(size < 10) return 0;
+
+	//エンディアン
+
+	if(memcmp(buf, "MM\0*", 4) == 0)
+		v.fbig = 1;
+	else if(memcmp(buf, "II*\0", 4) == 0)
+		v.fbig = 0;
+	else
+		return 0;
+
+	//
+
+	v.top = buf;
+	v.size = size;
+	v.cur = buf + 8;
+	v.remain = size - 8;
+
+	//IFD
+
+	_exif_getval(&v, 0, 2, &fnum);
+
+	for(; fnum && flags != 7; fnum--)
+	{
+		if(_exif_getval(&v, 0, 2, &tag)
+			|| _exif_getval(&v, 0, 2, &dattype)
+			|| _exif_getval(&v, 0, 4, &cnt)
+			|| _exif_getval(&v, 0, 4, &pos))
+			break;
+		
+		if(tag == 0x011a && dattype == 5)
+		{
+			//解像度水平
+
+			if(_exif_getval(&v, pos, 4, &pos) == 0)
+			{
+				p->reso_horz = pos;
+				flags |= 1;
+			}
+		}
+		else if(tag == 0x011b && dattype == 5)
+		{
+			//解像度垂直
+
+			if(_exif_getval(&v, pos, 4, &pos) == 0)
+			{
+				p->reso_vert = pos;
+				flags |= 2;
+			}
+		}
+		else if(tag == 0x0128 && dattype == 3)
+		{
+			//解像度単位 (short)
+			// 2:dpi 3:dpcm
+
+			_exif_getval(&v, -4, 2, &v16);
+
+			p->reso_unit = _exif_getunit(v16);
+
+			flags |= 4;
+		}
+	}
+
+	return flags;
 }
 

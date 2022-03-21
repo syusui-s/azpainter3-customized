@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -40,6 +40,7 @@ typedef void (*mFuncLoadImageProgress)(mLoadImage *p,int percent);
 #define MLOADIMAGE_FORMAT_TAG_TIFF 0x54494646
 #define MLOADIMAGE_FORMAT_TAG_TGA  0x54474120
 #define MLOADIMAGE_FORMAT_TAG_PSD  0x50534420
+#define MLOADIMAGE_FORMAT_TAG_AVIF 0x41564946
 
 
 /*---- enum ----*/
@@ -161,6 +162,7 @@ mlkbool mLoadImage_allocImageFromBuf(mLoadImage *p,void *buf,int line_bytes);
 void mLoadImage_freeImage(mLoadImage *p);
 int mLoadImage_getLineBytes(mLoadImage *p);
 mlkbool mLoadImage_getDPI(mLoadImage *p,int *horz,int *vert);
+int mLoadImage_getEXIF_resolution(mLoadImage *p,const uint8_t *buf,int size);
 
 mlkbool mLoadImage_checkBMP(mLoadImageType *p,uint8_t *buf,int size);
 mlkbool mLoadImage_checkPNG(mLoadImageType *p,uint8_t *buf,int size);
@@ -170,6 +172,7 @@ mlkbool mLoadImage_checkWEBP(mLoadImageType *p,uint8_t *buf,int size);
 mlkbool mLoadImage_checkTIFF(mLoadImageType *p,uint8_t *buf,int size);
 mlkbool mLoadImage_checkTGA(mLoadImageType *p,uint8_t *buf,int size);
 mlkbool mLoadImage_checkPSD(mLoadImageType *p,uint8_t *buf,int size);
+mlkbool mLoadImage_checkAVIF(mLoadImageType *p,uint8_t *buf,int size);
 
 mlkbool mLoadImagePNG_getGamma(mLoadImage *p,uint32_t *dst);
 uint8_t *mLoadImagePNG_getICCProfile(mLoadImage *p,uint32_t *psize);

@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -34,10 +34,12 @@ $*/
 
 struct _mIO
 {
-	FILE *fp;
+	FILE *fp; //NULL でバッファ
 
-	uint8_t *bufcur,*buftop;
-	mlksize bufsize,remain;
+	uint8_t *bufcur,
+		*buftop;
+	mlksize bufsize,
+		remain;		//バッファの残りサイズ
 
 	off_t top_pos;	//先頭位置 (FILE* の場合、開いた時の位置)
 	
@@ -206,6 +208,36 @@ int mIO_seekCur(mIO *p,mlkfoff seek)
 		p->remain = p->bufsize - pos;
 
 		return 0;
+	}
+}
+
+/**@ 指定サイズ分のデータが存在するか
+ *
+ * @d:ファイル/FILE* の場合は、size - 1 までシークできるか。
+ *
+ * @r:1 で存在する */
+
+int mIO_isExistSize(mIO *p,mlksize size)
+{
+	int ret;
+	off_t pos;
+
+	if(!size) return 1;
+
+	if(p->fp)
+	{
+		pos = ftello(p->fp);
+		if(pos == -1) return 0;
+		
+		ret = fseeko(p->fp, p->top_pos + size - 1, SEEK_SET);
+
+		fseeko(p->fp, pos, SEEK_SET);
+
+		return (ret == 0);
+	}
+	else
+	{
+		return (size <= p->bufsize);
 	}
 }
 

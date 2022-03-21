@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -101,6 +101,7 @@ void mPanelShowWindow(mPanel *p);
 void mPanelSetCreate(mPanel *p,int type);
 void mPanelSetVisible(mPanel *p,int type);
 void mPanelSetWindowMode(mPanel *p,int type);
+void mPanelReLayout(mPanel *p);
 void mPanelStoreReLayout(mPanel *p);
 void mPanelStoreReArrange(mPanel *p,mlkbool relayout);
 

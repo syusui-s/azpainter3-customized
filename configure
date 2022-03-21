@@ -1,8 +1,5 @@
 #!/bin/sh
 
-#--------------
-# function
-
 fc_put_help() {
 cat <<_ZYXW_
 [Usage] ./configure [option] [VAR=VALUE]...
@@ -12,16 +9,16 @@ Options:
   --debug        create debug exe (CFLAGS='-g -Wall')
   --arch=[ARCH]  CFLAGS += "-march=ARCH"
 
-  --prefix=[PREFIX]   install dir
+  --prefix=[PREFIX]   install directory
                       [/usr/local]
-  --bindir=[DIR]      install dir of executables
+  --bindir=[DIR]      install directory of executables
                       [PREFIX/bin]
-  --datarootdir=[DIR] install dir of system data files
+  --datarootdir=[DIR] install directory of system data files
                       [PREFIX/share]
-  --datadir=[DIR]     install dir of application data files
+  --datadir=[DIR]     install directory of application data files
                       [DATAROOTDIR]
-  --docdir=[DIR]      install dir of document files
-                      [DATAROOTDIR/doc/$PACKAGE]
+  --docdir=[DIR]      install directory of document files
+                      [DATAROOTDIR/doc/PACKAGE]
 
   --no-check-lib      do not check library
   --no-pkgconfig      do not use pkg-config command
@@ -43,8 +40,9 @@ fc_check_command() {
 
 fc_check_command_err() {
 	if ! type "$1" > /dev/null 2>&1;then
-		echo "! '$1' command not found."
-		echo "please install '$1'"
+		echo "[!] '$1' command not found."
+		if test -z "$2";then tmp=$1; else tmp=$2; fi
+		echo "please install '$tmp'"
 		exit 1
 	fi
 }
@@ -119,6 +117,7 @@ fc_check_lib() {
 	tmp_includes=$5
 	tmp_incdirs=$6
 	tmp_help=$7
+	tmp_without=$8
 
 	echo "checking $tmp_name"
 
@@ -166,8 +165,12 @@ fc_check_lib() {
 		rm -f conftest.c conftest
 
 		if test $tmp1 != 0;then
-			echo "! '$tmp_name': include file not found."
-			echo "please install $tmp_help"
+			echo "--- Error '$tmp_name' ---"
+			echo "library not found."
+			echo "please install $tmp_help."
+			if test -n "$tmp_without";then
+				echo "--without-$tmp_without : disable support"
+			fi
 			exit 1
 		fi
 	fi
@@ -188,13 +191,13 @@ s|@PACKAGE_NAME@|$PACKAGE|
 s|@PACKAGE_VERSION@|$PACKAGE_VERSION|
 _ZYXW_
 
+
 	sed -f conftmp $1 > $2
 	rm -f conftmp
 	echo "create $2"
 }
 
 #----------------
-# command check
 
 fc_check_command_err sed
 
@@ -218,15 +221,13 @@ cf_docdir=
 
 cf_os=unknown
 cf_debug=no
-cf_bigendian=no
-cf_make=make
 cf_check_lib=yes
 cf_pkgconfig=no
 
 if fc_check_command pkg-config;then cf_pkgconfig=yes; fi
 
 PACKAGE=azpainter
-PACKAGE_VERSION=3.0.4
+PACKAGE_VERSION=3.0.5
 
 for opt;do
 	case $opt in
@@ -290,7 +291,6 @@ elif test "$tmp1" = Darwin;then
 	CFLAGS=`fc_add_string "$CFLAGS" "-DMLK_NO_SIMD"`
 elif test "$tmp1" = FreeBSD;then
 	cf_os=freebsd
-	cf_make=gmake
 	CFLAGS=`fc_add_string "$CFLAGS" "-I/usr/local/include"`
 	LDFLAGS=`fc_add_string "$LDFLAGS" "-L/usr/local/lib"`
 fi
@@ -301,9 +301,6 @@ if test -z "$cf_bindir";then cf_bindir=$cf_prefix/bin; fi
 if test -z "$cf_datarootdir";then cf_datarootdir=$cf_prefix/share; fi
 if test -z "$cf_datadir";then cf_datadir=$cf_datarootdir; fi
 if test -z "$cf_docdir";then cf_docdir=$cf_datarootdir/doc/$PACKAGE; fi
-
-
-fc_check_command_err $cf_make
 
 
 #-------------
@@ -320,6 +317,8 @@ echo "c compiler = $CC"
 
 #---------------
 # bigendian
+
+cf_bigendian=no
 
 cat - <<_SRC > conftest.c
 int main()
@@ -342,23 +341,23 @@ fi
 rm -f conftest.c conftest
 
 #------------------
-# check
 
 fc_check_sharedlib "iconv"
 
 fc_check_funclink rt "clock_gettime"
+fc_check_lib libpng "libpng" "" "-lpng -lz" "png.h" "" "libpng-dev or libpng-devel or libpng or png" ""
+fc_check_lib zlib "zlib" "" "" "zlib.h" "" "zlib1g-dev or zlib-devel or zlib" ""
+fc_check_lib libjpeg "libjpeg" "" "-ljpeg" "stdio.h jpeglib.h" "" "libjpeg-dev or libjpeg-devel or libjpeg-turbo or jpeg-turbo" ""
+fc_check_lib libtiff "libtiff-4" "" "-ltiff" "tiff.h" "" "libtiff-dev or libtiff-devel or libtiff or tiff" ""
+fc_check_lib libwebp "libwebp" "" "-lwebp" "webp/decode.h" "" "libwebp-dev or libwebp-devel or libwebp or webp" ""
+fc_check_lib x11 "x11" "" "-lX11" "X11/Xlib.h" "" "libx11-dev or libX11-devel or libx11" ""
+fc_check_lib xext "xext" "" "-lXext" "X11/Xlib.h X11/extensions/XShm.h" "" "libxext-dev or libXext-devel or libxext" ""
+fc_check_lib xcursor "xcursor" "" "-lXcursor" "X11/Xlib.h X11/Xcursor/Xcursor.h" "" "libxcursor-dev or libXcursor-devel or libxcursor" ""
+fc_check_lib xinput "xi" "" "-lXi" "X11/Xlib.h X11/extensions/XInput2.h" "" "libxi-dev or libXi-devel or libxi" ""
+fc_check_lib fontconfig "fontconfig" "" "-lfontconfig -lfreetype" "fontconfig/fontconfig.h" "/usr/include/freetype2 /usr/local/include/freetype2 /opt/X11/include/freetype2" "libfontconfig1-dev or libfontconfig-devel or fontconfig" ""
+fc_check_lib freetype2 "freetype2" "" "" "ft2build.h" "" "libfreetype6-dev or libfreetype6-devel or freetype2" ""
 
-fc_check_lib libpng "libpng" "" "-lpng -lz" "png.h" "" "libpng-dev or libpng-devel or libpng or png"
-fc_check_lib zlib "zlib" "" "" "zlib.h" "" "zlib1g-dev or zlib-devel or zlib"
-fc_check_lib libjpeg "libjpeg" "" "-ljpeg" "stdio.h jpeglib.h" "" "libjpeg-dev or libjpeg-devel or libjpeg-turbo or jpeg-turbo"
-fc_check_lib libtiff "libtiff-4" "" "-ltiff" "tiff.h" "" "libtiff-dev or libtiff-devel or libtiff or tiff"
-fc_check_lib libwebp "libwebp" "" "-lwebp" "webp/decode.h" "" "libwebp-dev or libwebp-devel or libwebp or webp"
-fc_check_lib x11 "x11" "" "-lX11" "X11/Xlib.h" "" "libx11-dev or libX11-devel or libx11"
-fc_check_lib xext "xext" "" "-lXext" "X11/Xlib.h X11/extensions/XShm.h" "" "libxext-dev or libXext-devel or libxext"
-fc_check_lib xcursor "xcursor" "" "-lXcursor" "X11/Xlib.h X11/Xcursor/Xcursor.h" "" "libxcursor-dev or libXcursor-devel or libxcursor"
-fc_check_lib xinput "xi" "" "-lXi" "X11/Xlib.h X11/extensions/XInput2.h" "" "libxi-dev or libXi-devel or libxi"
-fc_check_lib fontconfig "fontconfig" "" "-lfontconfig -lfreetype" "fontconfig/fontconfig.h" "/usr/include/freetype2 /usr/local/include/freetype2 /opt/X11/include/freetype2" "libfontconfig1-dev or libfontconfig-devel or fontconfig"
-fc_check_lib freetype2 "freetype2" "" "" "ft2build.h" "" "libfreetype6-dev or libfreetype6-devel or freetype2"
+if test ! -d build;then mkdir build; fi
 
 #--------------------
 # config.h
@@ -373,31 +372,35 @@ if ! fc_check_libfunc freetype FT_Done_MM_Var;then
 fi
 
 if test -s conftmp;then
-	sed -f conftmp config.h.in > config.h
+	sed -f conftmp config.h.in > build/config.h
 else
-	cp config.h.in config.h
+	cp config.h.in build/config.h
 fi
 
 rm -f conftmp
-echo "create config.h"
+echo "create build/config.h"
 
 #------------------
-# Makefile
 
 CFLAGS=`fc_add_string "$CFLAGS" "$CFLAGS_ADD"`
 LDFLAGS=`fc_add_string "$LDFLAGS" "$LDFLAGS_ADD"`
 LIBS=`fc_add_string "$LIBS" "$LIBS_ADD"`
 
-fc_create_makefile Makefile.in Makefile
-fc_create_makefile mlk/Makefile.in mlk/Makefile
+fc_create_makefile build.ninja.in build/build.ninja
+fc_create_makefile install.sh.in build/install.sh
 
 cat <<_ZYXW_
 ---------------
+
 CFLAGS = $CFLAGS
 LDFLAGS = $LDFLAGS
 LIBS = $LIBS
 
 please run...
-$ ${cf_make}
-# ${cf_make} install
+ $ cd build
+ $ ninja
+ # ninja install
+---------------
 _ZYXW_
+
+fc_check_command_err ninja "ninja or ninja-build"

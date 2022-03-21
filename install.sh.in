@@ -1,0 +1,81 @@
+#!/bin/sh
+
+exefile=azpainter
+
+bindir="${DESTDIR}@BINDIR@"
+docdir="${DESTDIR}@DOCDIR@"
+datarootdir="${DESTDIR}@DATAROOTDIR@"
+datadir="${DESTDIR}@DATADIR@/azpainter3"
+
+package_name="@PACKAGE_NAME@"
+package_version="@PACKAGE_VERSION@"
+package_full=${package_name}-${package_version}
+
+inst_exe="install -m 755 -v"
+inst_dir="install -m 755 -d"
+inst_file="install -m 644 -v"
+
+update_cache() {
+	if test -z "$DESTDIR";then
+		echo "** Updating cache"
+		gtk-update-icon-cache -f -t @DATAROOTDIR@/icons/hicolor
+		update-desktop-database @DATAROOTDIR@/applications
+		update-mime-database @DATAROOTDIR@/mime
+	fi
+}
+
+if test "$1" = install;then
+	$inst_dir $bindir \
+	 $datarootdir/applications \
+	 $datarootdir/icons/hicolor/48x48/apps \
+	 $datarootdir/icons/hicolor/scalable/apps \
+	 $datarootdir/mime/packages \
+	 $docdir \
+	 $datadir/brush \
+	 $datadir/confdef \
+	 $datadir/img \
+	 $datadir/texture/various \
+	 $datadir/tr
+
+	$inst_exe $exefile $bindir
+
+	cd ..
+	$inst_file desktop/azpainter.desktop $datarootdir/applications
+	$inst_file desktop/*.png $datarootdir/icons/hicolor/48x48/apps
+	$inst_file desktop/*.svg $datarootdir/icons/hicolor/scalable/apps
+	$inst_file desktop/azpainter.xml $datarootdir/mime/packages
+
+	$inst_file COPYING ReadMe_en ReadMe_ja manual_ja.html about_mlk_en.txt about_mlk_ja.txt \
+	 $docdir
+
+	$inst_file data/brush/* $datadir/brush
+	$inst_file data/confdef/* $datadir/confdef
+	$inst_file data/img/* $datadir/img
+	$inst_file data/texture/various/* $datadir/texture/various
+	$inst_file data/tr/* $datadir/tr
+
+	update_cache
+
+elif test "$1" = uninstall;then
+	rm -fv $bindir/$exefile \
+	 $datarootdir/applications/azpainter.desktop \
+	 $datarootdir/icons/hicolor/48x48/apps/azpainter.png \
+	 $datarootdir/icons/hicolor/48x48/apps/application-x-azpainter-apd.png \
+	 $datarootdir/icons/hicolor/scalable/apps/azpainter.svg \
+	 $datarootdir/icons/hicolor/scalable/apps/application-x-azpainter-apd.svg \
+	 $datarootdir/mime/packages/azpainter.xml
+
+	rm -rfv $docdir $datadir
+
+	update_cache
+
+elif test "$1" = dist;then
+	cd ..
+	tar czf $package_full.tar.gz --anchored --exclude build --exclude .git *
+
+	if test ! -d $package_full;then mkdir $package_full; fi
+	tar xf $package_full.tar.gz -C $package_full
+	tar cf $package_full.tar.xz -I "xz -9" $package_full
+	rm $package_full.tar.gz
+	rm -r $package_full
+fi

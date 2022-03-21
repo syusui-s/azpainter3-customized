@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -322,6 +322,7 @@ static void _load_configdata(mIniRead *ini,AppConfig *cf)
 	cf->panel.color_type = mIniRead_getInt(ini, "color_type", 0);
 	cf->panel.colwheel_type = mIniRead_getInt(ini, "colwheel_type", 0);
 	cf->panel.colpal_type = mIniRead_getInt(ini, "colpal_type", 0);
+	cf->panel.colpal_flags = mIniRead_getInt(ini, "colpal_flags", 0);
 	cf->panel.option_type = mIniRead_getInt(ini, "option_type", 0);
 	cf->panel.toollist_sizelist_h = mIniRead_getInt(ini, "toollist_sizelist_h", 60);
 
@@ -788,6 +789,7 @@ static void _save_configdata(FILE *fp,AppConfig *cf)
 	mIniWrite_putInt(fp, "color_type", cf->panel.color_type);
 	mIniWrite_putInt(fp, "colwheel_type", cf->panel.colwheel_type);
 	mIniWrite_putInt(fp, "colpal_type", cf->panel.colpal_type);
+	mIniWrite_putInt(fp, "colpal_flags", cf->panel.colpal_flags);
 	mIniWrite_putInt(fp, "option_type", cf->panel.option_type);
 	mIniWrite_putInt(fp, "toollist_sizelist_h", cf->panel.toollist_sizelist_h);
 

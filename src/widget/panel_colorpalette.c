@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -39,6 +39,8 @@ $*/
 #include "panel_func.h"
 #include "draw_main.h"
 
+#include "pv_panel_colpal.h"
+
 
 //------------------------
 
@@ -47,7 +49,8 @@ typedef struct
 	MLK_CONTAINER_DEF
 
 	mPager *pager;
-	mWidget *ct_top;
+	mIconBar *ib_type;
+	mWidget *ct_top; //ボタンのコンテナ
 }_topct;
 
 enum
@@ -90,7 +93,7 @@ static void _event_notify(_topct *p,mEventNotify *ev)
 {
 	if(ev->widget_from->parent == p->ct_top)
 	{
-		//通知元の親が ct_top = 上部のウィジェット
+		//通知元の親が ct_top = 各ボタンのウィジェット
 		// :各ページごとに処理を行うため、mPager に通知を送る。
 		
 		switch(ev->id)
@@ -129,13 +132,9 @@ static int _event_handle(mWidget *wg,mEvent *ev)
 			_event_notify(p, (mEventNotify *)ev);
 			break;
 
-		//タイプ変更 -> ページ切り替え
+		//(mIconBar) タイプ変更 -> ページ切り替え
 		case MEVENT_COMMAND:
-			APPCONF->panel.colpal_type = ev->cmd.id - CMDID_PALETTE;
-
-			mPagerSetPage(p->pager, g_pagefunc[APPCONF->panel.colpal_type]);
-
-			mWidgetReLayout(wg);
+			PanelColorPalette_changeType(ev->cmd.id - CMDID_PALETTE);
 			break;
 	}
 
@@ -144,37 +143,27 @@ static int _event_handle(mWidget *wg,mEvent *ev)
 
 
 //===========================
-// main
+// ウィジェット作成
 //===========================
 
 
-/* mPanel 内容作成 */
+/* 通常モードで作成 */
 
-static mWidget *_panel_create_handle(mPanel *panel,int id,mWidget *parent)
+static void _create_normal_mode(_topct *p)
 {
-	_topct *p;
-	mWidget *ct,*wg;
 	mIconBar *ib;
+	mWidget *wg,*ct;
 	int i;
 
-	//コンテナ (トップ)
+	mContainerSetType_vert(MLK_CONTAINER(p), 0);
 
-	p = (_topct *)mContainerNew(parent, sizeof(_topct));
+	//---- ボタン
 
-	p->wg.event = _event_handle;
-	p->wg.flayout = MLF_EXPAND_WH;
-	p->wg.notify_to = MWIDGET_NOTIFYTO_SELF;
-	p->ct.sep = 3;
-
-	mContainerSetPadding_pack4(MLK_CONTAINER(p), MLK_MAKE32_4(3,2,3,0));
-
-	//-------
-
-	p->ct_top = ct = mContainerCreateHorz(MLK_WIDGET(p), 4, MLF_EXPAND_W, 0);
+	ct = p->ct_top = mContainerCreateHorz(MLK_WIDGET(p), 4, MLF_EXPAND_W, 0);
 
 	//mIconBar
 
-	ib = mIconBarCreate(ct, 0, MLF_EXPAND_X | MLF_MIDDLE, 0, 0);
+	p->ib_type = ib = mIconBarCreate(ct, 0, MLF_EXPAND_X | MLF_MIDDLE, 0, 0);
 
 	mIconBarSetImageList(ib, APPRES->imglist_panelcolpal_type);
 
@@ -192,7 +181,7 @@ static mWidget *_panel_create_handle(mPanel *panel,int id,mWidget *parent)
 		MARROWBUTTON_S_RIGHT, 19);
 
 	//メニューボタン
-
+	
 	wg = (mWidget *)mImgButtonCreate(ct, WID_MENUBTT, MLF_MIDDLE, 0, 0);
 
 	wg->hintRepW = wg->hintRepH = APPRES_MENUBTT_SIZE + 12;
@@ -200,13 +189,98 @@ static mWidget *_panel_create_handle(mPanel *panel,int id,mWidget *parent)
 	mImgButton_setBitImage(MLK_IMGBUTTON(wg), MIMGBUTTON_TYPE_1BIT_TP_TEXT,
 		AppResource_get1bitImg_menubtt(), APPRES_MENUBTT_SIZE, APPRES_MENUBTT_SIZE);
 
-	//----- mPager
+	//--- mPager
 
 	p->pager = mPagerCreate(MLK_WIDGET(p), MLF_EXPAND_WH, 0);
+}
+
+/* 通常 -> コンパクトモードにセット */
+
+static void _set_compact_mode(_topct *p)
+{
+	mWidget *ct = p->ct_top;
+
+	//mIconBar 非表示
+
+	mWidgetShow(MLK_WIDGET(p->ib_type), 0);
+
+	//
+
+	mContainerSetType_horz(MLK_CONTAINER(p), 5);
+
+	//ボタンコンテナ
+
+	mContainerSetType_vert(MLK_CONTAINER(ct), 3);
+	ct->flayout = MLF_EXPAND_H;
+
+	//ボタンの順を入れ替え (メニューを先頭に)
+
+	mWidgetTreeMove(ct->last, ct, ct->first);
+}
+
+/* コンパクト -> 通常モードにセット */
+
+static void _set_normal_mode(_topct *p)
+{
+	mWidget *ct = p->ct_top;
+
+	//mIconBar 表示
+
+	mWidgetShow(MLK_WIDGET(p->ib_type), 1);
+
+	//
+	
+	mContainerSetType_vert(MLK_CONTAINER(p), 0);
+
+	//ボタンコンテナ
+
+	mContainerSetType_horz(MLK_CONTAINER(ct), 4);
+	ct->flayout = MLF_EXPAND_W;
+
+	//ボタンの順を入れ替え (メニューを終端に)
+
+	mWidgetTreeMove(ct->first, ct, NULL);
+}
+
+/* mPanel 内容作成 */
+
+static mWidget *_panel_create_handle(mPanel *panel,int id,mWidget *parent)
+{
+	_topct *p;
+
+	//コンテナ (トップ)
+
+	p = (_topct *)mContainerNew(parent, sizeof(_topct));
+
+	p->wg.event = _event_handle;
+	p->wg.flayout = MLF_EXPAND_WH;
+	p->wg.notify_to = MWIDGET_NOTIFYTO_SELF;
+
+	mContainerSetPadding_pack4(MLK_CONTAINER(p), MLK_MAKE32_4(3,2,3,0));
+
+	//
+
+	_create_normal_mode(p);
+
+	if(APPCONF->panel.colpal_flags & CONFIG_PANEL_COLPAL_F_COMPACT)
+		_set_compact_mode(p);
 
 	mPagerSetPage(p->pager, g_pagefunc[APPCONF->panel.colpal_type]);
 
 	return (mWidget *)p;
+}
+
+
+//===========================
+// main
+//===========================
+
+
+/* _topct 取得 */
+
+static _topct *_get_topct(void)
+{
+	return (_topct *)Panel_getContents(PANEL_COLOR_PALETTE);
 }
 
 /** カラーパレット作成 */
@@ -218,5 +292,43 @@ void PanelColorPalette_new(mPanelState *state)
 	p = Panel_new(PANEL_COLOR_PALETTE, 0, 0, 0, state, _panel_create_handle);
 
 	mPanelCreateWidget(p);
+}
+
+/** 選択タイプの変更 */
+
+void PanelColorPalette_changeType(int no)
+{
+	_topct *p = _get_topct();
+
+	if(p)
+	{
+		APPCONF->panel.colpal_type = no;
+
+		if(p->ib_type)
+			mIconBarSetCheck(p->ib_type, CMDID_PALETTE + no, 1);
+		
+		mPagerSetPage(p->pager, g_pagefunc[no]);
+
+		mWidgetReLayout(MLK_WIDGET(p));
+	}
+}
+
+/** UI モードの切り替え */
+
+void PanelColorPalette_ToggleMode(void)
+{
+	_topct *p = _get_topct();
+
+	APPCONF->panel.colpal_flags ^= CONFIG_PANEL_COLPAL_F_COMPACT;
+
+	if(p)
+	{
+		if(APPCONF->panel.colpal_flags & CONFIG_PANEL_COLPAL_F_COMPACT)
+			_set_compact_mode(p);
+		else
+			_set_normal_mode(p);
+
+		Panel_relayout(PANEL_COLOR_PALETTE);
+	}
 }
 

@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -198,6 +198,26 @@ typedef struct _mSaveOptPSD
 	uint32_t profile_size;
 }mSaveOptPSD;
 
+/* AVIF option */
+
+enum MSAVEOPT_AVIF_MASK
+{
+	MSAVEOPT_AVIF_MASK_LOSSLESS = 1<<0,
+	MSAVEOPT_AVIF_MASK_QUALITY = 1<<1,
+	MSAVEOPT_AVIF_MASK_SPEED = 1<<2,
+	MSAVEOPT_AVIF_MASK_CHROMA = 1<<3
+};
+
+typedef struct _mSaveOptAVIF
+{
+	uint32_t mask;
+	int lossless,
+		quality,
+		speed,
+		chroma;
+}mSaveOptAVIF;
+
+
 /*-----*/
 
 typedef union _mSaveImageOpt
@@ -209,6 +229,7 @@ typedef union _mSaveImageOpt
 	mSaveOptTIFF tiff;
 	mSaveOptWEBP webp;
 	mSaveOptPSD psd;
+	mSaveOptAVIF avif;
 }mSaveImageOpt;
 
 
@@ -227,6 +248,7 @@ mlkbool mSaveImage_getDPM(mSaveImage *p,int *horz,int *vert);
 uint8_t *mSaveImage_createPaletteRGB(mSaveImage *p);
 mlkbool mSaveImage_createPalette_fromRGB8_array(uint8_t **ppbuf,int width,int height,uint8_t **dst_buf,int *dst_palnum);
 void mSaveImage_convertImage_RGB8array_to_palette(uint8_t **ppbuf,int width,int height,uint8_t *palbuf,int palnum);
+int mSaveImage_createEXIF_resolution(mSaveImage *p,mBufSize *dst);
 
 mlkerr mSaveImageBMP(mSaveImage *p,void *opt);
 mlkerr mSaveImagePNG(mSaveImage *p,void *opt);
@@ -236,6 +258,7 @@ mlkerr mSaveImageWEBP(mSaveImage *si,void *opt);
 mlkerr mSaveImageTIFF(mSaveImage *si,void *opt);
 mlkerr mSaveImageTGA(mSaveImage *si,void *opt);
 mlkerr mSaveImagePSD(mSaveImage *si,void *opt);
+mlkerr mSaveImageAVIF(mSaveImage *si,void *opt);
 
 #ifdef __cplusplus
 }

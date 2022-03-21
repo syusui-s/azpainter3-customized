@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -36,6 +36,15 @@ enum
 	TRID_PAL_FILE_LOAD_IMAGE,
 	TRID_PAL_FILE_SAVE,
 
+	TRID_MENU_GRAD_OPT,
+
+	TRID_MENU_COLPAL_GROUP,
+	TRID_MENU_COLPAL_COMPACT,
+	TRID_MENU_COLPAL_PALETTE,
+	TRID_MENU_COLPAL_HSL,
+	TRID_MENU_COLPAL_GRAD, //タイプが増える場合、連番にすること
+
+	//メッセージ
 	TRID_PAL_MESSAGE_ALL_DRAWCOL = 100,
 
 	//中間色設定

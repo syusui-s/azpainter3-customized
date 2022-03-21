@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -386,7 +386,10 @@ void mImageConv_rgb555(mImageConv *p)
 	}
 }
 
-/**@ RGB 8bit から R-G-B-[A] への変換 */
+/**@ RGB 8bit から R-G-B-[A] への変換
+ *
+ * @d:RGB → RGB(raw,conv), RGBA(conv,A=255)\
+ * B-G-R 順なら入れ替え。*/
 
 void mImageConv_rgb8(mImageConv *p)
 {
@@ -437,8 +440,9 @@ void mImageConv_rgb8(mImageConv *p)
 
 /**@ RGBA 8bit から R-G-B-[A] への変換
  *
- * @d:INVALID_ALPHA の場合、src のアルファ値は使われず、
- * 生データでの出力は RGB とする。 */
+ * @d:RGBA → RGB(conv), RGBA(raw,conv)\
+ * B-G-R 順なら入れ替え。\
+ * INVALID_ALPHA 時: RGBA への変換なら、A は常に 255。生での出力は RGB とする。 */
 
 void mImageConv_rgba8(mImageConv *p)
 {

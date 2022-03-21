@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -46,6 +46,7 @@ void *mIO_getFILE(mIO *p);
 mlksize mIO_getPos(mIO *p);
 int mIO_seekTop(mIO *p,mlksize pos);
 int mIO_seekCur(mIO *p,mlkfoff seek);
+int mIO_isExistSize(mIO *p,mlksize size);
 
 int mIO_read(mIO *p,void *buf,int32_t size);
 int mIO_readOK(mIO *p,void *buf,int32_t size);

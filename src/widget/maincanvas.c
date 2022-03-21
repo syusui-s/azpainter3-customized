@@ -1,5 +1,5 @@
 /*$
- Copyright (C) 2013-2021 Azel.
+ Copyright (C) 2013-2022 Azel.
 
  This file is part of AzPainter.
 
@@ -388,7 +388,7 @@ void MainCanvasPage_showLayerName(void)
 		APPDRAW->ttip_layer = APPDRAW->curlayer;
 
 		p->ttip_layername = mTooltipShow(p->ttip_layername, MLK_WIDGET(p),
-			APPDRAW->w.pt_canv_last.x, APPDRAW->w.pt_canv_last.y - 15, NULL,
+			APPDRAW->w.pt_canv_last.x, APPDRAW->w.pt_canv_last.y - 10, NULL,
 			MPOPUP_F_GRAVITY_TOP, APPDRAW->curlayer->name, 0);
 
 		mWidgetTimerAdd(MLK_WIDGET(p), _TIMERID_LAYERNAME, 500, 0);
