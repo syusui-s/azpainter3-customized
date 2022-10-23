@@ -62,10 +62,6 @@ Compile "mlktrconv.c" to generate the executable file "mlktrconv".
 
 $ cc -O2 -o mlktrconv mlktrconv.c
 
-It can also be generated using a "Makefile" located in the same directory.
-
-$ make
-
 
 4. Using tools, generate the binary data
 ------------------------------------------

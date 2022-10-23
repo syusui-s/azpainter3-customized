@@ -22,6 +22,8 @@ $*/
  *****************************************/
 
 #include <string.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -99,6 +101,38 @@ mlkerr mFileOpen_write(mFile *file,const char *filename,int perm)
 	*file = fd;
 
 	return (fd == MFILE_NONE)? MLKERR_OPEN: MLKERR_OK;
+}
+
+/**@ 作業ファイルとして開く
+ *
+ * @d:読み書き、パーミッション 600 で作成される。\
+ * すでに存在するファイルの場合はエラー。
+ *
+ * @r:EXIST(ファイルが存在する)/OPEN(他エラー) */
+
+mlkerr mFileOpen_temp(mFile *file,const char *filename)
+{
+	char *str;
+	int fd;
+
+	str = mUTF8toLocale(filename, -1, NULL);
+	if(!str) return MLKERR_ALLOC;
+
+	*file = fd = open(str, O_CREAT | O_RDWR | O_EXCL, 0600);
+
+	//unlink() すると、EEXIST エラーにならない
+
+	mFree(str);
+
+	if(fd == -1)
+	{
+		if(errno == EEXIST)
+			return MLKERR_EXIST;
+		else
+			return MLKERR_OPEN;
+	}
+
+	return MLKERR_OK;
 }
 
 /**@ ファイルサイズ取得 */
@@ -356,6 +390,27 @@ mlkbool mGetFileStat(const char *path,mFileStat *dst)
 	}
 }
 
+/**@ ファイルから更新日時を取得
+ *
+ * @p:dst ファイルが存在しない場合は、0 が入る
+ * @r:取得できたか */
+
+mlkbool mGetFileModifyTime(const char *path,int64_t *dst)
+{
+	struct stat st;
+
+	if(!_get_filestat(path, &st))
+	{
+		*dst = 0;
+		return FALSE;
+	}
+	else
+	{
+		*dst = st.st_mtime;
+		return TRUE;
+	}
+}
+
 /**@ ファイルサイズ取得 */
 
 mlkbool mGetFileSize(const char *path,mlkfoff *dst)
@@ -492,4 +547,25 @@ mlkbool mDeleteDir(const char *path)
 	mFree(str);
 
 	return ret;
+}
+
+/**@ 2つのファイルの更新日時を比較
+ *
+ * @d:ファイルが存在しない場合は、日時を 0 とする。
+ *
+ * @r:-1 で、path2 の方が新しい。0 で等しい。1 で path1 の方が新しい。 */
+
+int mCompareFileModify(const char *path1,const char *path2)
+{
+	int64_t t1,t2;
+
+	mGetFileModifyTime(path1, &t1);
+	mGetFileModifyTime(path2, &t2);
+
+	if(t1 < t2)
+		return -1;
+	else if(t1 > t2)
+		return 1;
+
+	return 0;
 }

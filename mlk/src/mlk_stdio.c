@@ -51,6 +51,28 @@ FILE *mFILEopen(const char *filename,const char *mode)
 	return fp;
 }
 
+/**@ ファイルを閉じる
+ *
+ * @p:fp NULL の場合は何もしない */
+
+void mFILEclose(FILE *fp)
+{
+	if(fp) fclose(fp);
+}
+
+/**@ ファイルを閉じて、NULL をセット
+ *
+ * @p:fp (*fp) が NULL の場合は何もしない */
+
+void mFILEclose_null(FILE **fp)
+{
+	if(*fp)
+	{
+		fclose(*fp);
+		*fp = NULL;
+	}
+}
+
 /**@ ファイルサイズ取得 */
 
 mlkfoff mFILEgetSize(FILE *fp)

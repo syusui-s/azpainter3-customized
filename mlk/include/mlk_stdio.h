@@ -25,6 +25,8 @@ extern "C" {
 #endif
 
 FILE *mFILEopen(const char *filename,const char *mode);
+void mFILEclose(FILE *fp);
+void mFILEclose_null(FILE **fp);
 
 mlkfoff mFILEgetSize(FILE *fp);
 

@@ -40,6 +40,7 @@ mlkbool mLocaleCharsetIsUTF8(void);
 mlkbool mIconvOpen(mIconv *p,const char *from,const char *to);
 void mIconvClose(mIconv p);
 char *mIconvConvert(mIconv p,const void *src,int srclen,int *dstlen,int nullsize);
+void mIconvConvert_outfunc(mIconv p,const void *src,int srclen,int (*func)(void *buf,int size,void *param),void *param);
 mlkbool mIconvConvert_callback(mIconv p,int inbufsize,int outbufsize,mIconvCallback *cb,void *param);
 
 void *mConvertCharset(const void *src,int srclen,const char *from,const char *to,int *dstlen,int nullsize);
@@ -52,6 +53,7 @@ char *mWidetoUTF8(const void *src,int len,int *dstlen);
 mlkuchar *mWidetoUTF32(const void *src,int len,int *dstlen);
 void *mLocaletoWide(const char *src,int len,int *dstlen);
 
+void mPutUTF8(void *fp,const char *str,int len);
 void mPutUTF8_stdout(const char *str);
 void mPutUTF8_format_stdout(const char *format,const char *str);
 void mPutUTF8_stderr(const char *str);

@@ -34,7 +34,7 @@ typedef void (*mFuncLoadImageProgress)(mLoadImage *p,int percent);
 
 #define MLOADIMAGE_FORMAT_TAG_BMP  0x424d5020
 #define MLOADIMAGE_FORMAT_TAG_PNG  0x504e4720
-#define MLOADIMAGE_FORMAT_TAG_JPEG 0x4a504548
+#define MLOADIMAGE_FORMAT_TAG_JPEG 0x4a504547
 #define MLOADIMAGE_FORMAT_TAG_GIF  0x47494620
 #define MLOADIMAGE_FORMAT_TAG_WEBP 0x57454250
 #define MLOADIMAGE_FORMAT_TAG_TIFF 0x54494646
@@ -126,6 +126,7 @@ struct _mLoadImage
 	int32_t width,
 		height,
 		coltype,
+		src_coltype,
 		bits_per_sample,
 		reso_unit,
 		reso_horz,

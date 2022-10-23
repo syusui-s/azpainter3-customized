@@ -1627,6 +1627,26 @@ void mStrPathJoin(mStr *str,const char *path)
 	mStrAppendText(str, path);
 }
 
+/**@ パスを前に結合
+ *
+ * @d:str の前に、path のパスを追加する。
+ *
+ * @p:path NULL または空文字列で、何もしない */
+
+void mStrPathJoin_before(mStr *str,const char *path)
+{
+	mStr tmp;
+
+	if(!path || !(*path)) return;
+
+	mStrCopy_init(&tmp, str);
+
+	mStrSetText(str, path);
+	mStrPathJoin(str, tmp.buf);
+
+	mStrFree(&tmp);
+}
+
 /**@ パスを正規化
  *
  * @d:途中にある "." ".." を除去し、正確な絶対パスにする。 */
@@ -1739,8 +1759,6 @@ void mStrPathRemoveExt(mStr *str)
 	int pos;
 	char *pc;
 
-	if(!str->buf) return;
-
 	pos = mStrFindChar_rev(str, MLK_DIRSEP);
 	if(pos == -1)
 		pos = 0;
@@ -1753,6 +1771,23 @@ void mStrPathRemoveExt(mStr *str)
 
 	if(pc && pc != str->buf + pos)
 		mStrSetLen(str, pc - str->buf);
+}
+
+/**@ パスからディレクトリを除外して、ファイル名部分のみにする */
+
+void mStrPathRemoveDir(mStr *str)
+{
+	int pos,len;
+
+	pos = mStrFindChar_rev(str, MLK_DIRSEP);
+	if(pos == -1) return;
+
+	pos++;
+	len = str->len - pos;
+
+	memmove(str->buf, str->buf + pos, len + 1);
+
+	str->len = len;
 }
 
 /**@ ファイル名として無効な文字を置き換える

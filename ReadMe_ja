@@ -8,7 +8,7 @@
 **********************************************
 
 このソフトウェアは、GPL3 ライセンスです。
-詳しくは GPL3 ファイルをご覧ください。
+詳しくは COPYING ファイルをご覧ください。
 
 
 =====================================
@@ -24,7 +24,7 @@
  * 動作環境
 =====================================
 
-- Linux/FreeBSD/macOS(要XQuartz)
+- Linux、macOS(要XQuartz) ほか
 
 - X11R6 以降
   (筆圧を認識したい場合は X11R7.5 以降)
@@ -36,10 +36,11 @@
 
 - C コンパイラ
 - ninja (ビルドツール)
+- pkg-config
 - 以下のライブラリの開発用ファイル
   x11 xext xcursor xinput
-  zlib libpng jpeglib(jpeg-turbo) fontconfig freetype2
-  tiff webp
+  zlib libpng jpeglib(jpeg-turbo) tiff webp fontconfig freetype2
+  Linux 以外: libiconv
 
 
 --- 必要なパッケージ ---
@@ -48,34 +49,27 @@
 
 (Debian/Ubuntu 系)
 
-  gcc or clang, ninja-build
+  gcc or clang, ninja-build pkg-config
   libx11-dev libxext-dev libxcursor-dev libxi-dev
   libfreetype6-dev libfontconfig1-dev
   zlib1g-dev libpng-dev libjpeg-dev libtiff-dev libwebp-dev
 
 (RedHat 系)
 
-  gcc or clang, ninja-build
+  gcc or clang, ninja-build pkg-config
   libX11-devel libXext-devel libXcursor-devel libXi-devel
   libfreetype6-devel libfontconfig-devel
   zlib-devel libpng-devel libjpeg-devel libtiff-devel libwebp-devel
 
 (Arch Linux)
 
-  gcc or clang, ninja
-  libx11 libxext libxcursor libxi
-  freetype2 fontconfig
+  gcc or clang, ninja pkgconf
+  libx11 libxext libxcursor libxi freetype2 fontconfig
   zlib libpng libjpeg-turbo libtiff libwebp
   
-  [*] GUI 環境がインストールされていれば、ほぼインストールされています。
-
-(FreeBSD)
-
-  ninja png jpeg-turbo tiff webp
-
 (macOS)
 
-  xcode ninja libpng jpeg-turbo libtiff webp
+  xcode ninja pkg-config libpng jpeg-turbo libtiff webp
 
   [*] XQuartz がインストールされていることが前提です。
 
@@ -93,20 +87,16 @@ $ ninja
 # ninja install
 
 
-デフォルトで /usr/local 下にインストールされます。
+- デフォルトのインストール先は、/usr/local です。
+- "$ ./configure --help" でヘルプを表示できます。
 
-./configure 実行時にオプションを指定すると、コンパイルの設定を変更できます。
-configure のヘルプは、$ ./configure --help で表示できます。
-
-[例] /usr にインストール
-
+## インストール先を /usr にする
 $ ./configure --prefix=/usr
 
-
-## アンインストール
+## アンインストール (build/)
 # ninja uninstall
 
-## パッケージファイル用にファイルを生成
+## パッケージファイル用にファイルを生成 (build/)
 $ DESTDIR=<DIR> ninja install
 
 

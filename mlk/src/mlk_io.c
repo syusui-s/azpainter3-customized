@@ -354,6 +354,40 @@ int mIO_read16(mIO *p,void *buf)
 	return 0;
 }
 
+/**@ 24bit 読み込み
+ *
+ * @d:バッファは、4byte。
+ * @r:0 で成功、それ以外で失敗 */
+
+int mIO_read24(mIO *p,void *buf)
+{
+	uint8_t d[3];
+	uint32_t v;
+	int endian;
+
+	if(mIO_read(p, d, 3) != 3)
+		return 1;
+
+	endian = p->endian;
+	if(endian == MIO_ENDIAN_HOST)
+	{
+	#if defined(MLK_BIG_ENDIAN)
+		endian = MIO_ENDIAN_BIG;
+	#else
+		endian = MIO_ENDIAN_LITTLE;
+	#endif
+	}
+
+	if(endian == MIO_ENDIAN_BIG)
+		v = (d[0] << 16) | (d[1] << 8) | d[2];
+	else
+		v = (d[2] << 16) | (d[1] << 8) | d[0];
+
+	*((uint32_t *)buf) = v;
+
+	return 0;
+}
+
 /**@ 32bit 数値読み込み
  *
  * @r:0 で成功、それ以外で失敗 */
@@ -391,6 +425,7 @@ int mIO_read32(mIO *p,void *buf)
  * |||数字||フォーマットの前に置くと、指定数の配列||
  * |||b||8bit||
  * |||h||16bit||
+ * |||j||24bit||
  * |||i||32bit||
  * |||s||文字列 (最後に NULL 文字が追加される)||
  * |||S||前に数字を指定して、指定バイト分をスキップ||
@@ -467,6 +502,17 @@ int mIO_readFormat(mIO *p,const char *format,...)
 				
 				if(c == 's')
 					pd8[num] = 0;
+				break;
+
+			//j (24bit)
+			case 'j':
+				pd32 = va_arg(ap, uint32_t *);
+
+				for(; num; num--, pd32++)
+				{
+					if(mIO_read24(p, pd32))
+						goto ERR;
+				}
 				break;
 
 			//skip

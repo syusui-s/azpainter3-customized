@@ -28,6 +28,80 @@ $*/
 #include "mlk_util.h"
 
 
+/**@ 指定数のポインタの配列を確保し、各配列は指定サイズで確保する
+ *
+ * @p:size 各配列のバイト数
+ * @p:num 配列の数
+ * @r:一つでも配列が確保できなかった場合、NULL */
+
+void **mAllocArrayBuf(int size,int num)
+{
+	void **ppbuf,**pp;
+	int i;
+
+	pp = ppbuf = (void **)mMalloc0(num * sizeof(void *));
+	if(!ppbuf) return NULL;
+
+	for(i = num; i > 0; i--, pp++)
+	{
+		*pp = mMalloc(size);
+		if(!(*pp))
+		{
+			mFreeArrayBuf(ppbuf, num);
+			return NULL;
+		}
+	}
+
+	return ppbuf;
+}
+
+/**@ 指定数のポインタの配列を確保し、各配列は指定サイズで確保する (アラインメント指定)
+ *
+ * @p:size 各配列のバイト数。アラインメントの倍数に合わせられる。
+ * @p:alignment アラインメントのバイト数
+ * @p:num 配列の数
+ * @r:一つでも配列が確保できなかった場合、NULL */
+
+void **mAllocArrayBuf_align(int size,int alignment,int num)
+{
+	void **ppbuf,**pp;
+	int i;
+
+	pp = ppbuf = (void **)mMalloc0(num * sizeof(void *));
+	if(!ppbuf) return NULL;
+
+	size = (size + alignment - 1) & ~(alignment - 1);
+
+	for(i = num; i > 0; i--, pp++)
+	{
+		*pp = mMallocAlign(size, alignment);
+		if(!(*pp))
+		{
+			mFreeArrayBuf(ppbuf, num);
+			return NULL;
+		}
+	}
+
+	return ppbuf;
+}
+
+/**@ 配列確保バッファを解放
+ *
+ * @p:ppbuf NULL で何もしない */
+
+void mFreeArrayBuf(void **ppbuf,int num)
+{
+	void **pp;
+
+	if(!ppbuf) return;
+
+	for(pp = ppbuf; num > 0; num--, pp++)
+		mFree(*pp);
+
+	mFree(ppbuf);
+}
+
+
 /**@ ホストのバイト順がリトルエンディアンか */
 
 mlkbool mIsByteOrderLE(void)
@@ -567,7 +641,7 @@ void mCopyBuf_16bit_BEtoHOST(void *dst,const void *src,uint32_t cnt)
 
 /**@ バッファをコピー (32bit、BE とホストエンディアンの変換)
  * 
- * @d:BE -> HOST または HOST -> BE 時。
+ * @d:BE -> HOST または HOST -> BE 時。同じバッファで指定するのは不可。
  *
  * @p:src ビッグエンディアンのソースデータ
  * @p:cnt 32bit 単位の個数 */
@@ -589,6 +663,24 @@ void mCopyBuf_32bit_BEtoHOST(void *dst,const void *src,uint32_t cnt)
 		pd[2] = ps[1];
 		pd[3] = ps[0];
 	}
+#endif
+}
+
+/**@ バッファを 16bit BE -> HOST に変換 */
+
+void mConvBuf_16bit_BEtoHOST(void *buf,uint32_t cnt)
+{
+#if !defined(MLK_BIG_ENDIAN)
+	mSwapByte_16bit(buf, cnt);
+#endif
+}
+
+/**@ バッファを 32bit BE -> HOST に変換 */
+
+void mConvBuf_32bit_BEtoHOST(void *buf,uint32_t cnt)
+{
+#if !defined(MLK_BIG_ENDIAN)
+	mSwapByte_32bit(buf, cnt);
 #endif
 }
 

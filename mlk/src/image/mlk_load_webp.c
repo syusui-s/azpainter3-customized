@@ -131,6 +131,10 @@ static int _proc_open(webpdata *p,mLoadImage *pli)
 
 	p->have_alpha = bf.has_alpha;
 
+	//元のカラータイプ
+
+	pli->src_coltype = (bf.has_alpha)? MLOADIMAGE_COLTYPE_RGBA: MLOADIMAGE_COLTYPE_RGB;
+
 	//カラータイプ
 
 	if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGB)
@@ -138,7 +142,7 @@ static int _proc_open(webpdata *p,mLoadImage *pli)
 	else if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGBA)
 		pli->coltype = MLOADIMAGE_COLTYPE_RGBA;
 	else
-		pli->coltype = (bf.has_alpha)? MLOADIMAGE_COLTYPE_RGBA: MLOADIMAGE_COLTYPE_RGB;
+		pli->coltype = pli->src_coltype;
 
 	return MLKERR_OK;
 }

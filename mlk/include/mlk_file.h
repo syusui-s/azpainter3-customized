@@ -39,6 +39,7 @@ extern "C" {
 mlkerr mFileClose(mFile file);
 mlkerr mFileOpen_read(mFile *file,const char *filename);
 mlkerr mFileOpen_write(mFile *file,const char *filename,int perm);
+mlkerr mFileOpen_temp(mFile *file,const char *filename);
 
 mlkfoff mFileGetSize(mFile file);
 
@@ -60,10 +61,12 @@ mlkbool mIsExistFile(const char *path);
 mlkbool mIsExistDir(const char *path);
 mlkbool mGetFileStat(const char *path,mFileStat *dst);
 mlkbool mGetFileSize(const char *path,mlkfoff *dst);
+mlkbool mGetFileModifyTime(const char *path,int64_t *dst);
 mlkerr mCreateDir(const char *path,int perm);
 mlkerr mCreateDir_parents(const char *path,int perm);
 mlkbool mDeleteFile(const char *path);
 mlkbool mDeleteDir(const char *path);
+int mCompareFileModify(const char *path1,const char *path2);
 
 /* util */
 

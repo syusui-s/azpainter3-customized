@@ -82,11 +82,12 @@ int mBufIO_seek(mBufIO *p,int32_t size)
 
 /**@ 位置をセット
  *
+ * @d:終端位置は成功とする。
  * @r:0 以外で、バッファサイズを超えるため、エラー */
 
 int mBufIO_setPos(mBufIO *p,mlksize pos)
 {
-	if(pos >= p->bufsize)
+	if(pos > p->bufsize)
 		return 1;
 	else
 	{

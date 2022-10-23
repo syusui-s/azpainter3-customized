@@ -90,6 +90,19 @@ static mlkerr _proc_open(psdload *p,mLoadImage *pli)
 	pli->bits_per_sample = (hd.bits == 16
 		&& (pli->flags & MLOADIMAGE_FLAGS_ALLOW_16BIT))? 16: 8;
 
+	//元のカラータイプ
+	
+	if(hd.colmode == MPSD_COLMODE_CMYK)
+		h = MLOADIMAGE_COLTYPE_CMYK;
+	else if(hd.colmode == MPSD_COLMODE_RGB)
+		//RGB/A
+		h = (hd.img_channels == 3)?	MLOADIMAGE_COLTYPE_RGB: MLOADIMAGE_COLTYPE_RGBA;
+	else
+		//GRAY/MONO
+		h = (hd.img_channels == 2)? MLOADIMAGE_COLTYPE_GRAY_A: MLOADIMAGE_COLTYPE_GRAY;
+
+	pli->src_coltype = h;
+
 	//カラータイプ
 
 	if(hd.colmode == MPSD_COLMODE_CMYK)
@@ -109,20 +122,8 @@ static mlkerr _proc_open(psdload *p,mLoadImage *pli)
 	else if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGBA)
 		//変換:RGBA
 		pli->coltype = MLOADIMAGE_COLTYPE_RGBA;
-	else if(hd.colmode == MPSD_COLMODE_RGB)
-	{
-		//RGB/A
-
-		pli->coltype = (hd.img_channels == 3)?
-			MLOADIMAGE_COLTYPE_RGB: MLOADIMAGE_COLTYPE_RGBA;
-	}
 	else
-	{
-		//GRAY/MONO
-
-		pli->coltype = (hd.img_channels == 2)?
-			MLOADIMAGE_COLTYPE_GRAY_A: MLOADIMAGE_COLTYPE_GRAY;
-	}
+		pli->coltype = pli->src_coltype;
 
 	//リソース
 

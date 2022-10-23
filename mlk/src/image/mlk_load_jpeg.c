@@ -80,8 +80,8 @@ static void _jpeg_error_exit(j_common_ptr ptr)
 	p->loadimg->errmessage = mStrdup(msg);
 
 	//setjmp の位置に飛ぶ
-	/* jpeg_finish_decompress() 時に来た場合、
-	 * longjmp() が Segmentation fault になるので、回避 */
+	// :jpeg_finish_decompress() 時に来た場合、
+	// :longjmp() が Segmentation fault になるので、回避 
 
 	if(ptr->global_state != 210) //DSTATE_STOPPING
 		longjmp(p->jmpbuf, 1);
@@ -219,18 +219,25 @@ static int _read_info(jpegdata *p,mLoadImage *pli)
 	pli->height = jpg->image_height;
 	pli->bits_per_sample = 8;
 
-	//
+	//元のカラータイプ
 
-	if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGB)
-		coltype = MLOADIMAGE_COLTYPE_RGB;
-	else if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGBA)
-		coltype = MLOADIMAGE_COLTYPE_RGBA;
-	else if(colspace == JCS_GRAYSCALE)
+	if(colspace == JCS_GRAYSCALE)
 		coltype = MLOADIMAGE_COLTYPE_GRAY;
 	else if(colspace == JCS_CMYK || colspace == JCS_YCCK)
 		coltype = MLOADIMAGE_COLTYPE_CMYK;
 	else
 		coltype = MLOADIMAGE_COLTYPE_RGB;
+
+	pli->src_coltype = coltype;
+
+	//カラータイプ
+
+	if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGB)
+		coltype = MLOADIMAGE_COLTYPE_RGB;
+	else if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGBA)
+		coltype = MLOADIMAGE_COLTYPE_RGBA;
+	else
+		coltype = pli->src_coltype;
 
 	pli->coltype = coltype;
 

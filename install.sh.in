@@ -2,10 +2,10 @@
 
 exefile=azpainter
 
-bindir="${DESTDIR}@BINDIR@"
-docdir="${DESTDIR}@DOCDIR@"
-datarootdir="${DESTDIR}@DATAROOTDIR@"
-datadir="${DESTDIR}@DATADIR@/azpainter3"
+bindir="${DESTDIR}@PREFIX@/bin"
+docdir="${DESTDIR}@PREFIX@/share/doc/@PACKAGE_NAME@"
+datarootdir="${DESTDIR}@PREFIX@/share"
+datadir="${DESTDIR}@PREFIX@/share/azpainter3"
 
 package_name="@PACKAGE_NAME@"
 package_version="@PACKAGE_VERSION@"
@@ -18,9 +18,9 @@ inst_file="install -m 644 -v"
 update_cache() {
 	if test -z "$DESTDIR";then
 		echo "** Updating cache"
-		gtk-update-icon-cache -f -t @DATAROOTDIR@/icons/hicolor
-		update-desktop-database @DATAROOTDIR@/applications
-		update-mime-database @DATAROOTDIR@/mime
+		gtk-update-icon-cache -f -t @PREFIX@/share/icons/hicolor
+		update-desktop-database @PREFIX@/share/applications
+		update-mime-database @PREFIX@/share/mime
 	fi
 }
 

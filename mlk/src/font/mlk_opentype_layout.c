@@ -75,7 +75,7 @@ static int _compfunc(const void *p1,const void *p2)
  *
  * 先頭 2byte は、データ個数。
  *
- * datasize: 1個のデータサイズ */
+ * datasize: 1個のデータサイズ (GID 含む) */
 
 void __mOpenType_sortData(uint8_t *buf,int datasize)
 {
@@ -449,6 +449,64 @@ static mlkerr _func_gpos_lookup1(mOTLayout *p,mOT_LOOKUP_SUBTABLE *dat,void *par
 	return MLKERR_OK;
 }
 
+/* lookup 関数 (GPOS lookup 1、GID リストのデータ作成) */
+
+static mlkerr _func_gpos_lookup1_gids(mOTLayout *p,mOT_LOOKUP_SUBTABLE *dat,void *param)
+{
+	mBufIO *io;
+	mBuf *buf;
+	coverage_dat cvg;
+	uint16_t i,format,pos,gid,range[3];
+
+	if(dat->lookup_type != 1) return MLKERR_OK;
+
+	io = dat->io;
+	buf = (mBuf *)param;
+
+	//------ サブテーブル
+
+	if(mBufIO_read16(io, &format)
+		|| (format != 1 && format != 2)
+		|| mBufIO_read16(io, &pos))		//coverageOffset
+		return MLKERR_DAMAGED;
+
+	//----- Coverage
+
+	if(_read_coverage(io, pos, dat, &cvg))
+		return MLKERR_DAMAGED;
+
+	if(cvg.format == 1)
+	{
+		//GID 配列
+
+		for(i = 0; i < cvg.num; i++)
+		{
+			mBufIO_read16(io, &gid);
+
+			if(!mBufAppend(buf, &gid, 2))
+				return MLKERR_ALLOC;
+		}
+	}
+	else
+	{
+		//GID 範囲
+
+		for(i = 0; i < cvg.num; i++)
+		{
+			//[0]start [1]end [2]startindex
+			mBufIO_read16_array(io, range, 3);
+
+			for(gid = range[0]; gid <= range[1]; gid++)
+			{
+				if(!mBufAppend(buf, &gid, 2))
+					return MLKERR_ALLOC;
+			}
+		}
+	}
+
+	return MLKERR_OK;
+}
+
 
 //===========================
 // main
@@ -535,11 +593,11 @@ uint32_t mOTLayout_readScriptLangTag(const mOT_TABLE *tbl,int index)
 		return mGetBufBE32(tbl->buf + index * 6);
 }
 
-/**@ 指定 Script タグを検索し、最初に見つかったものを返す
+/**@ Script タグを検索し、最初に見つかったものを返す
  *
  * @p:tags 検索対象のタグの配列。先頭から順に検索される。値が 0 で終了。\
  *  'DFLT' = デフォルト、'latn' = ローマ字、'kana' = ひらかな、'hani' = CJK
- * @p:dsttag 見つかったタグが入る。エラー時や、見つからなかった場合は 0。
+ * @p:dsttag 見つかったタグが入る。エラー時や、見つからなかった場合は 0 がセットされる。
  * @r:見つからなかった場合、MLKERR_UNFOUND。 */
 
 mlkerr mOTLayout_searchScriptList(mOTLayout *p,const uint32_t *tags,uint32_t *dsttag)
@@ -576,13 +634,15 @@ mlkerr mOTLayout_searchScriptList(mOTLayout *p,const uint32_t *tags,uint32_t *ds
 	return MLKERR_UNFOUND;
 }
 
-/**@ Script タグを指定し、Script テーブルの位置を取得
+/**@ Script タグを指定して、Script テーブルの位置を取得
  *
- * @d:Script テーブルからは、言語タグの一覧が取得できる。\
- *  ※デフォルトの言語指定しかない場合、一つもタグがない場合あり。
+ * @d:タグが見つからなかった場合、'DFLT' か先頭の Script が返る。\
+ *  Script テーブルからは、言語タグの一覧が取得できる。\
+ *  ※デフォルトの言語指定しかない場合は、一つもタグがない場合あり。
  *
- * @p:dst offset には、Script テーブルのオフセット位置、\
- *  value には、デフォルトの LangSys へのオフセット位置、\
+ * @p:script_tag 0 で、デフォルトか先頭の Script を取得できる
+ * @p:dst offset には、Script テーブルのオフセット位置。\
+ *  value には、デフォルトの LangSys へのオフセット位置。\
  *  tag には、実際に使われた Script タグが入っている。 */
 
 mlkerr mOTLayout_getScript(mOTLayout *p,uint32_t script_tag,mOT_TABLE *dst)
@@ -646,7 +706,7 @@ mlkerr mOTLayout_getScript(mOTLayout *p,uint32_t script_tag,mOT_TABLE *dst)
  *
  * @p:lang_tag  言語タグ。0 でデフォルト (なければ先頭)。\
  *  指定タグが見つからなかった場合、デフォルトか、最初に格納されている言語が使われる。
- * @p:script Script テーブルの情報
+ * @p:script 検索する Script テーブル
  * @p:dst 結果が入る。script と同じポインタを指定しても良い。\
  *  value には、必須となる FeatureList インデックスが入っている (0xffff でなし)。\
  *  tag には、実際に使われた Lang タグが入っている (0 でデフォルト)。 */
@@ -864,7 +924,8 @@ mlkerr mOTLayout_getLookup(mOTLayout *p,const mOT_TABLE *feature,mFuncOTLayoutLo
  * 
  * @p:ppdst 確保されたバッファが入る。\
  *  uint16: データ数\
- *  4byte x num: [置換元GID (uint16)] + [置換先GID (uint16)] */
+ *  4byte x num: [置換元GID (uint16)] + [置換先GID (uint16)]\
+ *  置換元 GID の小さい順に並んでいる。*/
 
 mlkerr mOTLayout_createGSUB_single(mOTLayout *p,const mOT_TABLE *feature,uint8_t **ppdst)
 {
@@ -994,3 +1055,50 @@ ERR:
 	mBufFree(&buf2);
 	return ret;
 }
+
+/**@ Feature テーブルから、GPOS lookup 1 の GID のリストを取得
+ *
+ * @d:'halt' などで、幅が変化するグリフの一覧を取得したい時。
+ * @r:確保されたバッファが入る。\
+ *  uint16: 数, uint16 x num: GID */
+
+mlkerr mOTLayout_createGPOS_single_gids(mOTLayout *p,const mOT_TABLE *feature,uint8_t **ppdst)
+{
+	mBuf buf;
+	mlkerr ret;
+
+	//バッファ
+
+	mBufInit(&buf);
+
+	if(!mBufAlloc(&buf, 1024, 1024))
+		return MLKERR_ALLOC;
+
+	mBufAppend0(&buf, 2); //個数
+
+	//サブテーブル
+
+	ret = mOTLayout_getLookup(p, feature, _func_gpos_lookup1_gids, &buf);
+	if(ret) goto ERR;
+
+	//個数
+
+	*((uint16_t *)buf.buf) = (buf.cursize - 2) / 2;
+
+	//GID 順にソート
+
+	__mOpenType_sortData(buf.buf, 2);
+
+	//
+
+	mBufCutCurrent(&buf);
+
+	*ppdst = buf.buf;
+
+	return MLKERR_OK;
+
+ERR:
+	mBufFree(&buf);
+	return ret;
+}
+

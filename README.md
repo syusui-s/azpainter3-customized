@@ -7,13 +7,13 @@ http://azsky2.html.xdomain.jp/
 
 ## 動作環境
 
-- Linux/FreeBSD/macOS(要XQuartz)
+- Linux、macOS(要XQuartz) ほか
 - X11R6 以降
 
 ## コンパイル/インストール
 
-ビルドツールとして、ninja が必要です。<br>
-パッケージ名は、**ninja** または **ninja-build** です。
+ninja、pkg-config コマンドが必要です。<br>
+各開発用ファイルのパッケージも必要になります。ReadMe を参照してください。
 
 ~~~
 $ ./configure

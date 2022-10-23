@@ -77,6 +77,7 @@ static int _read_info(mGIFDec *gif,mLoadImage *pli)
 	pli->width  = size.w;
 	pli->height = size.h;
 	pli->bits_per_sample = 8;
+	pli->src_coltype = MLOADIMAGE_COLTYPE_PALETTE;
 
 	//カラータイプ
 

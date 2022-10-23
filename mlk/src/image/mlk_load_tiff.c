@@ -248,7 +248,7 @@ static int _proc_open(tiffdata *p,mLoadImage *pli)
 	TIFF *tiff;
 	uint32_t width,height;
 	uint16_t pm,u16;
-	int ret;
+	int ret,n;
 
 	//ファイルサイズ
 
@@ -306,24 +306,33 @@ static int _proc_open(tiffdata *p,mLoadImage *pli)
 
 	_get_resolution(tiff, pli);
 
+	//元のカラータイプ
+
+	if(p->coltype == COLTYPE_GRAY_BLACK || p->coltype == COLTYPE_GRAY_WHITE)
+		//2値/グレイスケール
+		n = MLOADIMAGE_COLTYPE_GRAY;
+	else if(p->coltype == COLTYPE_PALETTE)
+		//パレット
+		n = MLOADIMAGE_COLTYPE_PALETTE;
+	else if(p->coltype == COLTYPE_CMYK)
+		//CMYK
+		n = MLOADIMAGE_COLTYPE_CMYK;
+	else
+		//RGB
+		n = (p->coltype == COLTYPE_RGBA)? MLOADIMAGE_COLTYPE_RGBA: MLOADIMAGE_COLTYPE_RGB;
+
+	pli->src_coltype = n;
+
 	//カラータイプ
 
 	if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGB)
-		pli->coltype = MLOADIMAGE_COLTYPE_RGB;
+		n = MLOADIMAGE_COLTYPE_RGB;
 	else if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGBA)
-		pli->coltype = MLOADIMAGE_COLTYPE_RGBA;
-	else if(p->coltype == COLTYPE_GRAY_BLACK || p->coltype == COLTYPE_GRAY_WHITE)
-		//2値/グレイスケール
-		pli->coltype = MLOADIMAGE_COLTYPE_GRAY;
-	else if(p->coltype == COLTYPE_PALETTE)
-		//パレット
-		pli->coltype = MLOADIMAGE_COLTYPE_PALETTE;
-	else if(p->coltype == COLTYPE_CMYK)
-		//CMYK
-		pli->coltype = MLOADIMAGE_COLTYPE_CMYK;
+		n = MLOADIMAGE_COLTYPE_RGBA;
 	else
-		//RGB
-		pli->coltype = (p->coltype == COLTYPE_RGBA)? MLOADIMAGE_COLTYPE_RGBA: MLOADIMAGE_COLTYPE_RGB;
+		n = pli->src_coltype;
+
+	pli->coltype = n;
 
 	return MLKERR_OK;
 }

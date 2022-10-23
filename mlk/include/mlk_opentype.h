@@ -88,6 +88,7 @@ mlkerr mOTLayout_getLookup(mOTLayout *p,const mOT_TABLE *feature,mFuncOTLayoutLo
 
 mlkerr mOTLayout_createGSUB_single(mOTLayout *p,const mOT_TABLE *feature,uint8_t **ppdst);
 mlkerr mOTLayout_createGPOS_single(mOTLayout *p,const mOT_TABLE *feature,uint8_t **ppdst);
+mlkerr mOTLayout_createGPOS_single_gids(mOTLayout *p,const mOT_TABLE *feature,uint8_t **ppdst);
 
 #ifdef __cplusplus
 }

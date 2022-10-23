@@ -408,7 +408,8 @@ int mUnicharToUTF8(mlkuchar c,char *dst,int maxlen)
 
 /**@ Unicode 1文字を UTF-16 に変換
  *
- * @p:dst NULL で必要なバイト数のみ計算
+ * @p:dst NULL で必要なバイト数のみ計算。\
+ *  BE として、最初に上位の値、2番目に下位の値が入る。
  * @p:maxlen 出力先の最大文字数 (16bit 単位)。\
  * 負の値で制限なし。\
  * dst が NULL の場合は無視。

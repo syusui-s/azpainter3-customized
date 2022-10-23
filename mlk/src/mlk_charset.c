@@ -232,10 +232,88 @@ char *mIconvConvert(mIconv p,const void *src,int srclen,int *dstlen,int nullsize
 	return mRealloc(dstbuf, pos + nullsize);
 }
 
+/**@ 文字コードを変換して関数で出力
+ *
+ * @d:ソースバッファから変換し、関数を使って出力する。
+ *
+ * @p:src 変換元文字列
+ * @p:srclen 変換元文字列のバイト数。\
+ *  負の値で、char * として扱った時の、ヌル文字まで。
+ * @p:func 出力用関数。戻り値が 0 以外で強制終了する。
+ * @p:param 関数に渡されるパラメータ */
+
+void mIconvConvert_outfunc(mIconv p,const void *src,int srclen,
+	int (*func)(void *buf,int size,void *param),void *param)
+{
+	char *ps,*pd,*dstbuf;
+	size_t ssize,dsize,ret;
+	int freset = FALSE;
+
+	if(p == (mIconv)-1) return;
+
+	if(srclen < 0)
+		srclen = strlen((const char *)src);
+	
+	dstbuf = (char *)mMalloc(1024);
+	if(!dstbuf) return;
+
+	//
+
+	ps = (char *)src;
+	pd = dstbuf;
+	ssize = srclen;
+	dsize = 1024;
+
+	while(1)
+	{
+		ret = iconv((iconv_t)p, (freset)? NULL: &ps, &ssize, &pd, &dsize);
+
+		if(ret == (size_t)-1)
+		{
+			//エラー
+			
+			if(errno == E2BIG)
+			{
+				//出力バッファが足りない
+
+				if((func)(dstbuf, pd - dstbuf, param))
+					break;
+
+				pd = dstbuf;
+				dsize = 1024;
+			}
+			else
+			{
+				//入力に不完全なもの・無効な文字があった場合など
+				break;
+			}
+		}
+		else
+		{
+			//完了した
+			
+			if(freset)
+				break;
+			else
+			{
+				//最後に状態をリセット
+				freset = TRUE;
+				ssize = 0;
+			}
+		}
+	}
+
+	//残り
+
+	if(pd != dstbuf)
+		(func)(dstbuf, pd - dstbuf, param);
+
+	mFree(dstbuf);
+}
+
 /**@ コールバック関数を使って文字コード変換
  *
- * @d:各バッファを確保し、in 関数で入力文字列をセット、
- * out 関数で出力を処理する。\
+ * @d:入出力用のバッファを確保し、in 関数で入力文字列をセット、out 関数で出力を処理する。\
  * \
  * コールバック関数は、負の値を返すとエラー終了する。\
  * in 関数では、セットした文字列の長さを返す。0 でデータの終了となる。\
@@ -631,53 +709,57 @@ void *mLocaletoWide(const char *src,int len,int *dstlen)
 //==============================
 
 
-/**@ UTF-8 文字列を標準出力に出力
+/* FILE * に出力 */
+
+static int _put_utf8(void *buf,int size,void *param)
+{
+	fwrite(buf, 1, size, (FILE *)param);
+
+	return 0;
+}
+
+/**@ UTF-8 文字列をロケール文字列として出力
  *
- * @d:ロケールの文字セットが UTF-8 以外の場合は、
- * ロケール文字列に変換して出力される。
+ * @g:UTF-8 文字列出力
  *
- * @p:str NULL で何もしない */
+ * @p:fp FILE*
+ * @p:str NULL で何もしない
+ * @p:len 負の値でヌル文字まで */
+
+void mPutUTF8(void *fp,const char *str,int len)
+{
+	mIconv ic;
+
+	if(!str) return;
+
+	if(len < 0)
+		len = strlen(str);
+
+	if(g_charset.is_utf8)
+		fwrite(str, 1, len, fp);
+	else
+	{
+		if(mIconvOpen(&ic, "UTF-8", g_charset.name))
+		{
+			mIconvConvert_outfunc(ic, str, len, _put_utf8, fp);
+
+			mIconvClose(ic);
+		}
+	}
+}
+
+/**@ UTF-8 文字列を標準出力に出力 */
 
 void mPutUTF8_stdout(const char *str)
 {
-	if(!str) return;
-
-	if(g_charset.is_utf8)
-		fputs(str, stdout);
-	else
-	{
-		char *buf;
-
-		buf = mUTF8toLocale(str, -1, NULL);
-
-		if(buf)
-		{
-			fputs(buf, stdout);
-			mFree(buf);
-		}
-	}
+	mPutUTF8(stdout, str, -1);
 }
 
 /**@ UTF-8 文字列を標準エラー出力に出力 */
 
 void mPutUTF8_stderr(const char *str)
 {
-	if(!str) return;
-
-	if(g_charset.is_utf8)
-		fputs(str, stderr);
-	else
-	{
-		char *buf;
-
-		buf = mUTF8toLocale(str, -1, NULL);
-
-		if(buf)
-		{
-			fputs(buf, stderr);
-			mFree(buf);
-		}
-	}
+	mPutUTF8(stderr, str, -1);
 }
 
 /**@ UTF-8 文字列を標準出力に出力

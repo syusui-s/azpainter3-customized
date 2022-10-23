@@ -298,19 +298,26 @@ static int _read_infoheader(bmpdata *p,mLoadImage *pli)
 	pli->height = height;
 	pli->bits_per_sample = 8;
 
-	//カラータイプ
+	//元のカラータイプ
 
-	if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGB)
-		n = MLOADIMAGE_COLTYPE_RGB;
-	else if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGBA)
-		n = MLOADIMAGE_COLTYPE_RGBA;
-	else if(p->bits <= 8)
+	if(p->bits <= 8)
 		n = MLOADIMAGE_COLTYPE_PALETTE;
 	else if(p->maskA)
 		n = MLOADIMAGE_COLTYPE_RGBA;
 	else
 		//32bit でアルファ値無効の場合、RGB
 		n = MLOADIMAGE_COLTYPE_RGB;
+
+	pli->src_coltype = n;
+
+	//カラータイプ
+
+	if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGB)
+		n = MLOADIMAGE_COLTYPE_RGB;
+	else if(pli->convert_type == MLOADIMAGE_CONVERT_TYPE_RGBA)
+		n = MLOADIMAGE_COLTYPE_RGBA;
+	else
+		n = pli->src_coltype;
 
 	pli->coltype = n;
 

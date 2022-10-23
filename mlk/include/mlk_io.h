@@ -54,6 +54,7 @@ int mIO_readSkip(mIO *p,int32_t size);
 
 int mIO_readByte(mIO *p,void *buf);
 int mIO_read16(mIO *p,void *buf);
+int mIO_read24(mIO *p,void *buf);
 int mIO_read32(mIO *p,void *buf);
 int mIO_readFormat(mIO *p,const char *format,...);
 

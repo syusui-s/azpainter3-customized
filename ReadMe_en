@@ -8,7 +8,7 @@
 **********************************************
 
 This software is released under the GPL3 License.
-Please see the file GPL3 for details.
+Please see the file COPYING for details.
 
 
 =====================================
@@ -22,7 +22,7 @@ Paint software for editing illustrations and images.
  * Operating environment
 =====================================
 
-- Linux/FreeBSD/macOS(need XQuartz)
+- Linux, macOS(need XQuartz) others
 
 - X11R6 or later
 
@@ -33,41 +33,38 @@ Paint software for editing illustrations and images.
 
 - C compiler
 - ninja (build tool)
+- pkg-config
 - development files for various libraries:
   x11 xext xcursor xinput
-  zlib libpng jpeglib(jpeg-turbo) fontconfig freetype2
-  tiff webp
+  zlib libpng jpeglib(jpeg-turbo) tiff webp fontconfig freetype2
+  other than Linux: libiconv
 
 
 --- Required packages  ---
 
 (Debian/Ubuntu)
 
-  gcc or clang, ninja-build
+  gcc or clang, ninja-build pkg-config
   libx11-dev libxext-dev libxcursor-dev libxi-dev
   libfreetype6-dev libfontconfig1-dev
   zlib1g-dev libpng-dev libjpeg-dev libtiff-dev libwebp-dev
 
 (RedHat)
 
-  gcc or clang, ninja-build
+  gcc or clang, ninja-build pkg-config
   libX11-devel libXext-devel libXcursor-devel libXi-devel
   libfreetype6-devel libfontconfig-devel
   zlib-devel libpng-devel libjpeg-devel libtiff-devel libwebp-devel
 
 (Arch Linux)
 
-  gcc or clang, ninja
+  gcc or clang, ninja pkgconf
   libx11 libxext libxcursor libxi freetype2 fontconfig
   zlib libpng libjpeg-turbo libtiff libwebp
   
-(FreeBSD)
-
-  ninja png jpeg-turbo tiff webp
-
 (macOS)
 
-  xcode ninja libpng jpeg-turbo libtiff webp
+  xcode ninja pkg-config libpng jpeg-turbo libtiff webp
 
   [*] It is assumed that XQuartz is installed.
 
@@ -84,19 +81,16 @@ $ ninja
 # ninja install
 
 
-By default, it will be installed under "/usr/local".
+- By default, it will be installed under "/usr/local".
+- You can get help with $ ./configure --help.
 
-You can change the settings by specifying options when you run ./configure.
-You can get help with $ ./configure --help.
-
-[Exsample] Install in /usr
+## Install in /usr
 $ ./configure --prefix=/usr
 
-
-## Uninstall
+## Uninstall (build/)
 # ninja uninstall
 
-## Generate files for package file
+## Generate files for package file (build/)
 $ DESTDIR=<DIR> ninja install
 
 

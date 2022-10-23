@@ -24,6 +24,10 @@ $*/
 extern "C" {
 #endif
 
+void **mAllocArrayBuf(int size,int num);
+void **mAllocArrayBuf_align(int size,int alignment,int num);
+void mFreeArrayBuf(void **ppbuf,int num);
+
 mlkbool mIsByteOrderLE(void);
 uint32_t mRGBAtoHostOrder(uint32_t c);
 
@@ -55,6 +59,8 @@ int mGetBuf_format(const void *buf,const char *format,...);
 
 void mCopyBuf_16bit_BEtoHOST(void *dst,const void *src,uint32_t cnt);
 void mCopyBuf_32bit_BEtoHOST(void *dst,const void *src,uint32_t cnt);
+void mConvBuf_16bit_BEtoHOST(void *buf,uint32_t cnt);
+void mConvBuf_32bit_BEtoHOST(void *buf,uint32_t cnt);
 void mReverseBit(uint8_t *buf,uint32_t bytes);
 void mReverseVal_8bit(uint8_t *buf,uint32_t cnt);
 void mReverseVal_16bit(void *buf,uint32_t cnt);

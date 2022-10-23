@@ -104,6 +104,7 @@ mlkbool mStrCompareEq_len(mStr *str,const char *text,int len);
 mlkbool mStrPathIsTop(mStr *str);
 void mStrPathAppendDirSep(mStr *str);
 void mStrPathJoin(mStr *str,const char *path);
+void mStrPathJoin_before(mStr *str,const char *path);
 void mStrPathNormalize(mStr *str);
 
 void mStrPathSetHome(mStr *str);
@@ -114,6 +115,7 @@ void mStrPathSetTempDir(mStr *str);
 void mStrPathRemoveBottomDirSep(mStr *str);
 void mStrPathRemoveBasename(mStr *str);
 void mStrPathRemoveExt(mStr *str);
+void mStrPathRemoveDir(mStr *str);
 void mStrPathReplaceDisableChar(mStr *str,char rep);
 void mStrPathGetDir(mStr *dst,const char *path);
 void mStrPathGetBasename(mStr *dst,const char *path);

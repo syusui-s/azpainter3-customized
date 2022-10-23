@@ -257,6 +257,22 @@ static int _read_transparent(pngdata *p,mLoadImage *pli,int coltype,int bits)
 	return MLKERR_OK;
 }
 
+/* PNG のカラータイプから取得 */
+
+static int _get_colortype(int coltype)
+{
+	if(coltype == PNG_COLOR_TYPE_RGB)
+		return MLOADIMAGE_COLTYPE_RGB;
+	else if(coltype == PNG_COLOR_TYPE_RGB_ALPHA)
+		return MLOADIMAGE_COLTYPE_RGBA;
+	else if(coltype == PNG_COLOR_TYPE_GRAY)
+		return MLOADIMAGE_COLTYPE_GRAY;
+	else if(coltype == PNG_COLOR_TYPE_GRAY_ALPHA)
+		return MLOADIMAGE_COLTYPE_GRAY_A;
+	else
+		return MLOADIMAGE_COLTYPE_PALETTE;
+}
+
 /* PNG 情報読み込み＆設定 */
 
 static int _proc_info(pngdata *p,mLoadImage *pli)
@@ -296,6 +312,10 @@ static int _proc_info(pngdata *p,mLoadImage *pli)
 		n = _read_transparent(p, pli, coltype, depth);
 		if(n) return n;
 	}
+
+	//元のカラータイプ
+
+	pli->src_coltype = _get_colortype(coltype);
 
 	//----- イメージ展開方法セット
 
@@ -408,16 +428,10 @@ static int _proc_info(pngdata *p,mLoadImage *pli)
 
 	//カラータイプ
 
-	if(coltype == PNG_COLOR_TYPE_RGB)
-		n = MLOADIMAGE_COLTYPE_RGB;
-	else if(coltype == PNG_COLOR_TYPE_RGB_ALPHA || p->fconvpal)
+	if(p->fconvpal)
 		n = MLOADIMAGE_COLTYPE_RGBA;
-	else if(coltype == PNG_COLOR_TYPE_GRAY)
-		n = MLOADIMAGE_COLTYPE_GRAY;
-	else if(coltype == PNG_COLOR_TYPE_GRAY_ALPHA)
-		n = MLOADIMAGE_COLTYPE_GRAY_A;
 	else
-		n = MLOADIMAGE_COLTYPE_PALETTE;
+		n = _get_colortype(coltype);
 
 	pli->coltype = n;
 

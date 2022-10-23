@@ -128,7 +128,8 @@ void *mRealloc_r(void *ptr,mlksize size)
 /**@ アラインメントされたメモリ確保 (非デバッグ)
  *
  * @d:ポインタは mFree() で解放できる。
- * @p:size alignment の倍数である必要はない。
+ * @p:size 確保するサイズ。\
+ *  alignment の倍数である必要はないので、アラインメントの単位には合わせない。
  * @p:alignment このバイト単位の位置に配置される。\
  * 2 のべき乗で、かつポインタのサイズ [sizeof(void*)] の倍数であること。\
  * \
